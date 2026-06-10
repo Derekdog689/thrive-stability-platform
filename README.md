@@ -101,6 +101,14 @@ Next priorities:
 
 No blind rebuilds. No casual deletion. No real beneficiary, trust, financial, or recovery-related data should be entered until the database security model is reviewed and Row Level Security policies are properly designed.
 
+## Product Specifications
+
+The controlled product specification is maintained in:
+
+- `docs/SPECS.md`
+
+This file defines the product modules, MVP boundaries, data model concepts, language standards, Supabase inventory notes, and future feature parking lot.
+
 ## Repository Stewardship
 
 This repository should stay clean and purposeful.

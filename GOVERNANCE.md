@@ -152,6 +152,14 @@ Preferred baseline:
 - Verify before changing
 - Commit after stable checkpoints
 
+## Product Specification Control
+
+The active product specification is maintained in:
+
+- `docs/SPECS.md`
+
+Any meaningful change to modules, MVP scope, data model direction, legal/ethical product boundaries, or future feature priorities should be reflected in the specs file.
+
 ## Current Roadmap
 
 ### Phase 0: Foundation
