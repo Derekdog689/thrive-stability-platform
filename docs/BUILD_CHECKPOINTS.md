@@ -147,3 +147,28 @@ Security boundary:
 - This checkpoint broadcasts only a selected workspace ID in the browser.
 - This checkpoint does not load protected financial, trust, beneficiary, clinical, recovery, or case records.
 - Full server-side route protection and role-based authorization remain future work.
+
+## Checkpoint 008: Dashboard Workspace Listener Complete
+
+Stable truth:
+
+- `npm run build` passed.
+- `src/app/DashboardWorkspaceScope.tsx` was created.
+- `src/app/page.tsx` now displays the dashboard workspace scope panel below the workspace context panel.
+- The dashboard scope panel listens for the browser event `thrive:selectedWorkspaceChanged`.
+- The dashboard scope panel reads the persisted selected workspace ID from browser `localStorage`.
+- Changing the active workspace updates the dashboard scope display immediately.
+- This confirms the dashboard shell can react to selected workspace context.
+- `/login` remains available for authentication testing.
+- `/workspace-test` remains available for authenticated workspace and RLS testing.
+- Local commit succeeded.
+- Push to GitHub succeeded.
+- Current commit: `aa19fb0 Add dashboard workspace scope listener`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
+- This checkpoint displays only the selected workspace ID.
+- This checkpoint does not load protected financial, trust, beneficiary, clinical, recovery, or case records.
+- Full server-side route protection and role-based authorization remain future work.
