@@ -78,3 +78,26 @@ Security boundary:
 - THRIVE remains mock/test only.
 - No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
 - This checkpoint protects the app shell visually and behaviorally, but full server-side route protection and role-based authorization are still future work.
+
+## Checkpoint 005: Workspace Selection Foundation Complete
+
+Stable truth:
+
+- `npm run build` passed.
+- `src/app/WorkspaceContextPanel.tsx` was created.
+- `src/app/page.tsx` now displays the workspace context panel below the dashboard header.
+- The panel checks the current Supabase session before loading workspace records.
+- The panel loads only workspace records visible to the authenticated user through Supabase RLS.
+- The panel allows selection of a visible workspace.
+- `/login` remains available for authentication testing.
+- `/workspace-test` remains available for authenticated workspace and RLS testing.
+- Local commit succeeded.
+- Push to GitHub succeeded.
+- Current commit: `c62f7f1 Add workspace context panel`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
+- Workspace selection is a foundation layer only. It does not yet load protected financial, trust, beneficiary, clinical, recovery, or case records.
+- Test workspaces may exist only as development records used to prove authentication, workspace membership, and RLS behavior.
