@@ -247,13 +247,81 @@ with check (
 );
 
 -- ============================================================
--- SECTION 006: Draft Status
+-- SECTION 006: Workspace Bootstrap Function
+
+-- Creates a workspace and immediately assigns the creator as admin.
+-- This avoids a half-created workspace with no admin member.
+
+create or replace function public.create_workspace_with_admin(
+  p_name text,
+  p_workspace_type text default 'demo'
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_workspace_id uuid;
+  v_actor_id uuid;
+begin
+  v_actor_id := auth.uid();
+
+  if v_actor_id is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if p_workspace_type not in (
+    'personal',
+    'trust_support',
+    'recovery_support',
+    'case_support',
+    'demo'
+  ) then
+    raise exception 'Invalid workspace_type: %', p_workspace_type;
+  end if;
+
+  insert into public.workspaces (
+    name,
+    workspace_type,
+    status,
+    created_by
+  )
+  values (
+    p_name,
+    p_workspace_type,
+    'active',
+    v_actor_id
+  )
+  returning id into v_workspace_id;
+
+  insert into public.workspace_members (
+    workspace_id,
+    user_id,
+    member_role,
+    status
+  )
+  values (
+    v_workspace_id,
+    v_actor_id,
+    'admin',
+    'active'
+  );
+
+  return v_workspace_id;
+end;
+$$;
+
+revoke all on function public.create_workspace_with_admin(text, text) from public;
+
+grant execute on function public.create_workspace_with_admin(text, text) to authenticated;
 -- ============================================================
 
 -- This draft currently includes:
 -- profiles
 -- workspaces
 -- workspace_members
+-- workspace bootstrap function
 -- starter RLS policies
 --
 -- Not yet included:
