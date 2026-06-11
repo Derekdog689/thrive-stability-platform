@@ -86,3 +86,19 @@ Approved for controlled first Supabase SQL test after one final syntax review.
 Do not add real financial, trust, beneficiary, clinical, recovery, or personally identifying data during early testing.
 
 Mock/test records only.
+
+## Bootstrap Function Test 001
+
+Tested `public.create_workspace_with_admin(text, text)` from Supabase SQL Editor.
+
+Result:
+
+`ERROR: P0001: Authentication required`
+
+Interpretation:
+
+This is an expected protective failure. The function exists and executes, but Supabase SQL Editor does not provide an authenticated app-user context through `auth.uid()`. The function correctly blocks workspace creation when no authenticated user is present.
+
+Decision:
+
+Do not weaken the function for SQL Editor convenience. Future successful testing should occur through an authenticated app route, Supabase Auth session, or a separate controlled development-only test method.
