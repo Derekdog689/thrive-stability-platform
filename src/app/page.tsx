@@ -2,6 +2,7 @@ import AuthStatusPanel from "./AuthStatusPanel";
 import AuthGate from "./AuthGate";
 import WorkspaceContextPanel from "./WorkspaceContextPanel";
 import DashboardWorkspaceScope from "./DashboardWorkspaceScope";
+import ProgramContextPanel from "./ProgramContextPanel";
 
 const checkInMetrics = [
   { label: "Stress", value: 6, note: "Moderate pressure" },
@@ -112,6 +113,7 @@ export default function Home() {
   </div>
 </header>
 <WorkspaceContextPanel />
+ <ProgramContextPanel />
   <DashboardWorkspaceScope />
           <section className="grid gap-4 md:grid-cols-4">
             <div className="rounded-3xl bg-emerald-700 p-5 text-white shadow-sm">
