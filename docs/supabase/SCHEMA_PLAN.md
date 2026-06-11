@@ -155,10 +155,12 @@ Planned columns:
 Security:
 Workspace-scoped.
 
-### 6. `transactions_mock`
+### 6. "transactions"
 
 Purpose:
 Stores mock transaction records for early dashboard and workflow development.
+
+| data_source | text | Initial value: `mock`; future values may include `manual`, `csv_import`, `bank_connection`, `trust_ledger` |
 
 Planned columns:
 
@@ -252,7 +254,7 @@ Tables should be created in this order:
 2. `workspaces`
 3. `workspace_members`
 4. `budget_categories`
-5. `transactions_mock`
+5.  `transactions`
 6. `daily_checkins`
 7. `support_notes`
 8. `reports`
@@ -270,13 +272,13 @@ Initial policy direction:
 | `workspaces` | Members can read assigned workspaces |
 | `workspace_members` | Members can read their own membership; admin manages membership |
 | `budget_categories` | Workspace members can read; admin/support can manage |
-| `transactions_mock` | Workspace members can read mock data; admin/support can manage |
+| `transactions` | Workspace members can read mock data; admin/support can manage |
 | `daily_checkins` | User can create own check-ins; role-scoped read access later |
 | `support_notes` | Role-scoped access only |
 | `reports` | Role-scoped access by report type |
 | `audit_log` | Admin-only or restricted audit access |
 
-## Out of Scope for Initial Schema
+## Deferred Until Post-MVP Evolution
 
 The initial schema will not include:
 
@@ -289,14 +291,92 @@ The initial schema will not include:
 - Complex permissions engine
 - Multi-organization SaaS billing
 - Production client onboarding
+These items are not abandoned. They are intentionally deferred so the MVP can establish a clean, secure, understandable foundation first. The schema should not block these future layers.
 
-## Open Design Questions
+## Resolved Design Decisions
 
-1. Should `workspace_type` be enforced through a check constraint or left flexible at first?
-2. Should support-circle consent be a separate table before support summaries are built?
-3. Should `transactions_mock` be temporary only, or become `transactions` with a `data_source` field?
-4. Should reports store rendered text, JSON snapshots, or both?
-5. Should `audit_log.record_id` be text instead of uuid to support mixed table identifiers?
+### Decision 001: `workspace_type` Will Use a Check Constraint
+
+Decision:
+`workspace_type` should be constrained to approved values.
+
+Initial allowed values:
+
+- `personal`
+- `trust_support`
+- `recovery_support`
+- `case_support`
+- `demo`
+
+Reason:
+This prevents inconsistent workspace labels and protects the long-term schema from naming drift.
+
+### Decision 002: Consent Should Become Its Own Table
+
+Decision:
+Support-circle consent should become a separate table, likely named `support_consents`.
+
+Reason:
+Consent is a legal, ethical, and operational boundary. It should not be buried inside notes, reports, or membership records.
+
+MVP status:
+Deferred until support-sharing features are built.
+
+### Decision 003: Use `transactions`, Not `transactions`
+
+Decision:
+The MVP should use a real `transactions` table with a `data_source` field rather than a temporary `transactions` table.
+
+Initial data source:
+
+- `mock`
+
+Future data sources may include:
+
+- `manual`
+- `csv_import`
+- `bank_connection`
+- `trust_ledger`
+
+Reason:
+This allows the UI and reporting pipeline to mature without being rebuilt later. The MVP remains mock-only, but the table design can evolve.
+
+### Decision 004: Reports Should Store Both JSON and Rendered Text
+
+Decision:
+Reports should store structured report data and human-readable report text.
+
+Recommended fields:
+
+- `report_content jsonb`
+- `rendered_text text`
+
+Reason:
+JSON supports dashboards, calculations, and future exports. Rendered text supports human-facing summaries, memos, and PDF generation.
+
+### Decision 005: `audit_log.record_id` Should Be Text
+
+Decision:
+`audit_log.record_id` should use `text` rather than `uuid`.
+
+Reason:
+Audit logs may eventually reference records from different systems or tables that do not all use UUIDs.
+
+### Decision 006: SQL Execution and RLS Testing Must Be Separated
+
+Decision:
+Schema SQL may be executed by the project owner through the Supabase SQL Editor. RLS behavior must later be tested through real app access patterns.
+
+Required test perspectives:
+
+- Anonymous visitor
+- Authenticated user with no workspace access
+- Authenticated user with correct workspace access
+- Workspace admin
+- Support or trustee role, when applicable
+
+Reason:
+Creating tables as an admin does not prove application security. RLS must be tested from the perspective of actual app users.
 
 ## Current Decision
 
@@ -315,3 +395,6 @@ Created initial THRIVE schema plan for clean Supabase project.
 No database tables created.
 No RLS policies created.
 No app connection code written.
+
+Security:
+Workspace-scoped. MVP records must use mock data only. No real transaction data until security boundaries and import design are approved.
