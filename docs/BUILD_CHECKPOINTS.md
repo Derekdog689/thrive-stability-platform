@@ -38,3 +38,22 @@ Current application state:
 
 Next recommended milestone:
 Checkpoint 002 should add a controlled authenticated test path or a mock workspace UI layer before connecting real workspace data.
+
+## Checkpoint 003: Auth-Aware Dashboard Entry Point Complete
+
+Stable truth:
+
+- `npm run build` passed.
+- `src/app/AuthStatusPanel.tsx` was created.
+- `src/app/page.tsx` now displays authenticated dashboard status.
+- `/login` works.
+- `/workspace-test` works.
+- Local commit succeeded.
+- Push to GitHub succeeded.
+- Current commit: `fc98447 Add auth-aware dashboard status panel`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
+- Test workspaces may exist only as development records used to prove authentication and RLS behavior.
