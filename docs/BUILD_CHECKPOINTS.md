@@ -203,3 +203,27 @@ Security boundary:
 * Program records are organizational support lanes only.
 * Program creation does not create legal, clinical, fiduciary, credit repair, bankruptcy, investment, or crisis-service authority.
 * Full program integration into dashboard workflows remains future work.
+
+## Checkpoint 014: Program Context Dashboard Integration Complete
+
+Stable truth:
+
+- `src/app/ProgramContextPanel.tsx` was created.
+- `ProgramContextPanel` loads active programs for the selected workspace through Supabase RLS.
+- Program selection is browser-local only.
+- Selected program ID is persisted in browser `localStorage`.
+- Selected program context is broadcast using the browser event `thrive:selectedProgramChanged`.
+- `src/app/page.tsx` now displays the program context panel below the workspace context panel.
+- The dashboard now shows the active workspace context and active program context before mock dashboard data.
+- `npm run build` passed.
+- Local commit succeeded.
+- Push to GitHub succeeded.
+- Current commit: `4df2e23 Add program context to dashboard`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- Program context does not load real financial, trust, beneficiary, clinical, recovery, or private case records.
+- Program selection does not create legal, clinical, fiduciary, credit repair, bankruptcy, investment, or crisis-service authority.
+- Program context is an organizational support layer only.
+- Future protected records must still be built with table-level RLS and app-based access testing.
