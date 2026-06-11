@@ -57,3 +57,24 @@ Security boundary:
 - THRIVE remains mock/test only.
 - No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
 - Test workspaces may exist only as development records used to prove authentication and RLS behavior.
+
+## Checkpoint 004: Auth-Protected App Shell Complete
+
+Stable truth:
+
+- `npm run build` passed.
+- `src/app/AuthGate.tsx` was created.
+- `src/app/page.tsx` now wraps the dashboard in `AuthGate`.
+- Signed-in users can view the THRIVE dashboard.
+- Signed-out users are shown a protected access message and login link.
+- `/login` remains available for authentication testing.
+- `/workspace-test` remains available for authenticated workspace and RLS testing.
+- Local commit succeeded.
+- Push to GitHub succeeded.
+- Current commit: `7f09539 Add auth-protected app shell`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
+- This checkpoint protects the app shell visually and behaviorally, but full server-side route protection and role-based authorization are still future work.
