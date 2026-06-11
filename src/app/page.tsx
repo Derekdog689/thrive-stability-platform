@@ -1,4 +1,5 @@
 import AuthStatusPanel from "./AuthStatusPanel";
+import AuthGate from "./AuthGate";
 
 const checkInMetrics = [
   { label: "Stress", value: 6, note: "Moderate pressure" },
@@ -26,7 +27,9 @@ const supabaseConfigured =
   Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 export default function Home() {
+  
   return (
+  <AuthGate>
     <main className="min-h-screen bg-[#eef4ef] px-6 py-6 text-slate-950">
       <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[260px_1fr]">
         <aside className="rounded-3xl border border-emerald-100 bg-white/85 p-5 shadow-sm">
@@ -245,6 +248,7 @@ export default function Home() {
           </section>
         </section>
       </section>
-    </main>
-  );
+        </main>
+  </AuthGate>
+);
 }
