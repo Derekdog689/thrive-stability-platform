@@ -1,5 +1,6 @@
 import AuthStatusPanel from "./AuthStatusPanel";
 import AuthGate from "./AuthGate";
+import WorkspaceContextPanel from "./WorkspaceContextPanel";
 
 const checkInMetrics = [
   { label: "Stress", value: 6, note: "Moderate pressure" },
@@ -109,7 +110,7 @@ export default function Home() {
     </div>
   </div>
 </header>
-
+<WorkspaceContextPanel />
           <section className="grid gap-4 md:grid-cols-4">
             <div className="rounded-3xl bg-emerald-700 p-5 text-white shadow-sm">
               <p className="text-sm font-bold text-emerald-100">Available balance</p>
