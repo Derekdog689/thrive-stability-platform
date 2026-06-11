@@ -123,3 +123,27 @@ Security boundary:
 - No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
 - Local workspace persistence stores only a workspace ID in the browser.
 - This checkpoint does not load protected financial, trust, beneficiary, clinical, recovery, or case records.
+
+## Checkpoint 007: Workspace-Scoped Dashboard Shell Complete
+
+Stable truth:
+
+- `npm run build` passed.
+- `src/app/WorkspaceContextPanel.tsx` now broadcasts the selected workspace ID using the browser event `thrive:selectedWorkspaceChanged`.
+- The selected workspace ID is broadcast when workspace context first loads.
+- The selected workspace ID is broadcast when the user changes the active workspace.
+- The selected workspace ID remains persisted in browser `localStorage`.
+- This creates the browser-side foundation for workspace-scoped dashboard behavior.
+- `/login` remains available for authentication testing.
+- `/workspace-test` remains available for authenticated workspace and RLS testing.
+- Local commit succeeded.
+- Push to GitHub succeeded.
+- Current commit: `552d95e Broadcast selected workspace context`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
+- This checkpoint broadcasts only a selected workspace ID in the browser.
+- This checkpoint does not load protected financial, trust, beneficiary, clinical, recovery, or case records.
+- Full server-side route protection and role-based authorization remain future work.
