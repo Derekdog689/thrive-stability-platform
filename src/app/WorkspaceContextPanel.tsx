@@ -12,6 +12,8 @@ type WorkspaceRecord = {
 
 type PanelState = "checking" | "signed-out" | "loading" | "ready" | "error";
 
+const SELECTED_WORKSPACE_STORAGE_KEY = "thrive:selectedWorkspaceId";
+
 export default function WorkspaceContextPanel() {
   const [panelState, setPanelState] = useState<PanelState>("checking");
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>([]);
@@ -58,9 +60,21 @@ export default function WorkspaceContextPanel() {
       }
 
       const visibleWorkspaces = data ?? [];
+      const savedWorkspaceId = window.localStorage.getItem(
+        SELECTED_WORKSPACE_STORAGE_KEY,
+      );
+
+      const savedWorkspaceStillVisible = visibleWorkspaces.some(
+        (workspace) => workspace.id === savedWorkspaceId,
+      );
+
+      const nextSelectedWorkspaceId =
+        savedWorkspaceStillVisible && savedWorkspaceId
+          ? savedWorkspaceId
+          : visibleWorkspaces[0]?.id ?? "";
 
       setWorkspaces(visibleWorkspaces);
-      setSelectedWorkspaceId(visibleWorkspaces[0]?.id ?? "");
+      setSelectedWorkspaceId(nextSelectedWorkspaceId);
       setPanelState("ready");
       setMessage(
         visibleWorkspaces.length > 0
@@ -75,6 +89,14 @@ export default function WorkspaceContextPanel() {
       isMounted = false;
     };
   }, []);
+
+  function handleWorkspaceChange(nextWorkspaceId: string) {
+    setSelectedWorkspaceId(nextWorkspaceId);
+    window.localStorage.setItem(
+      SELECTED_WORKSPACE_STORAGE_KEY,
+      nextWorkspaceId,
+    );
+  }
 
   const selectedWorkspace = workspaces.find(
     (workspace) => workspace.id === selectedWorkspaceId,
@@ -149,12 +171,12 @@ export default function WorkspaceContextPanel() {
             </span>
             <select
               value={selectedWorkspaceId}
-              onChange={(event) => setSelectedWorkspaceId(event.target.value)}
+              onChange={(event) => handleWorkspaceChange(event.target.value)}
               className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900"
             >
               {workspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
-                  {workspace.name} — {workspace.workspace_type}
+                  {workspace.name} - {workspace.workspace_type}
                 </option>
               ))}
             </select>
