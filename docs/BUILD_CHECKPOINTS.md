@@ -172,3 +172,34 @@ Security boundary:
 - This checkpoint displays only the selected workspace ID.
 - This checkpoint does not load protected financial, trust, beneficiary, clinical, recovery, or case records.
 - Full server-side route protection and role-based authorization remain future work.
+
+
+## Checkpoint 013: Program RLS App Test Complete
+
+Stable truth:
+
+* `public.programs` table was created in Supabase.
+* `public.programs` has RLS enabled.
+* Program RLS policies were confirmed in Supabase:
+
+  * `programs_insert_for_workspace_admins`
+  * `programs_select_for_workspace_members`
+  * `programs_update_for_workspace_admins`
+* `public.create_program_for_workspace(...)` exists as a security definer function.
+* `/program-test` was created as the application-based program RLS test page.
+* `npm run build` passed.
+* `/program-test` appears in the successful Next.js build route list.
+* A mock/test program was created through the authenticated application path.
+* Program records loaded through authenticated RLS.
+* Local commit succeeded.
+* Push to GitHub succeeded.
+* Current commit: `d34818b Add program RLS app test page`.
+
+Security boundary:
+
+* THRIVE remains mock/test only.
+* The program test page is for RLS verification only.
+* No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered.
+* Program records are organizational support lanes only.
+* Program creation does not create legal, clinical, fiduciary, credit repair, bankruptcy, investment, or crisis-service authority.
+* Full program integration into dashboard workflows remains future work.
