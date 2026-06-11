@@ -75,6 +75,15 @@ export default function WorkspaceContextPanel() {
 
       setWorkspaces(visibleWorkspaces);
       setSelectedWorkspaceId(nextSelectedWorkspaceId);
+
+      if (nextSelectedWorkspaceId) {
+        window.localStorage.setItem(
+          SELECTED_WORKSPACE_STORAGE_KEY,
+          nextSelectedWorkspaceId,
+        );
+        broadcastSelectedWorkspace(nextSelectedWorkspaceId);
+      }
+
       setPanelState("ready");
       setMessage(
         visibleWorkspaces.length > 0
@@ -90,12 +99,21 @@ export default function WorkspaceContextPanel() {
     };
   }, []);
 
+  function broadcastSelectedWorkspace(nextWorkspaceId: string) {
+    window.dispatchEvent(
+      new CustomEvent("thrive:selectedWorkspaceChanged", {
+        detail: { workspaceId: nextWorkspaceId },
+      }),
+    );
+  }
+
   function handleWorkspaceChange(nextWorkspaceId: string) {
     setSelectedWorkspaceId(nextWorkspaceId);
     window.localStorage.setItem(
       SELECTED_WORKSPACE_STORAGE_KEY,
       nextWorkspaceId,
     );
+    broadcastSelectedWorkspace(nextWorkspaceId);
   }
 
   const selectedWorkspace = workspaces.find(
