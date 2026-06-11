@@ -1,3 +1,5 @@
+import AuthStatusPanel from "./AuthStatusPanel";
+
 const checkInMetrics = [
   { label: "Stress", value: 6, note: "Moderate pressure" },
   { label: "Spending urge", value: 5, note: "Watch cash access" },
@@ -68,37 +70,42 @@ export default function Home() {
 
         <section className="space-y-6">
           <header className="rounded-3xl bg-gradient-to-br from-white to-emerald-50 p-7 shadow-sm">
-            <p className="text-sm font-bold uppercase text-emerald-700">
-              Wednesday, June 10
-            </p>
-            <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-              <div>
-                <h2 className="max-w-3xl text-4xl font-black tracking-tight">
-                  Protect essentials first. Keep support visible. Move with clarity.
-                </h2>
-                <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-                  THRIVE combines safe-to-spend budgeting, daily check-ins, spending pattern
-                  review, and consent-based support summaries for individuals and approved
-                  support teams.
-                </p>
-              </div>
-              <div className="space-y-2">
-  <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-semibold text-emerald-800">
-    Mock bank feed synced 18 min ago
-  </div>
+  <p className="text-sm font-bold uppercase text-emerald-700">
+    Wednesday, June 10
+  </p>
 
-  <div
-    className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
-      supabaseConfigured
-        ? "border-emerald-100 bg-emerald-50 text-emerald-800"
-        : "border-amber-100 bg-amber-50 text-amber-800"
-    }`}
-  >
-    Supabase environment: {supabaseConfigured ? "Configured" : "Not configured"}
+  <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+    <div>
+      <h2 className="max-w-3xl text-4xl font-black tracking-tight">
+        Protect essentials first. Keep support visible. Move with clarity.
+      </h2>
+
+      <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
+        THRIVE combines safe-to-spend budgeting, daily check-ins, spending pattern
+        review, and consent-based support summaries for individuals and approved
+        support teams.
+      </p>
+    </div>
+
+    <div className="space-y-2">
+      <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-semibold text-emerald-800">
+        Mock bank feed synced 18 min ago
+      </div>
+
+      <div
+        className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+          supabaseConfigured
+            ? "border-emerald-100 bg-emerald-50 text-emerald-800"
+            : "border-amber-100 bg-amber-50 text-amber-800"
+        }`}
+      >
+        Supabase environment: {supabaseConfigured ? "Configured" : "Not configured"}
+      </div>
+
+      <AuthStatusPanel />
+    </div>
   </div>
-</div>
-            </div>
-          </header>
+</header>
 
           <section className="grid gap-4 md:grid-cols-4">
             <div className="rounded-3xl bg-emerald-700 p-5 text-white shadow-sm">
