@@ -101,3 +101,25 @@ Security boundary:
 - No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
 - Workspace selection is a foundation layer only. It does not yet load protected financial, trust, beneficiary, clinical, recovery, or case records.
 - Test workspaces may exist only as development records used to prove authentication, workspace membership, and RLS behavior.
+
+## Checkpoint 006: Selected Workspace Persistence Complete
+
+Stable truth:
+
+- `npm run build` passed.
+- `src/app/WorkspaceContextPanel.tsx` now persists the selected workspace ID in browser `localStorage`.
+- The selected workspace is restored after page refresh when it remains visible to the authenticated user through Supabase RLS.
+- If the saved workspace is no longer visible, the panel safely falls back to the first visible workspace.
+- Workspace selection remains browser-local only.
+- `/login` remains available for authentication testing.
+- `/workspace-test` remains available for authenticated workspace and RLS testing.
+- Local commit succeeded.
+- Push to GitHub succeeded.
+- Current commit: `775c39e Persist selected workspace context`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data should be entered during this stage.
+- Local workspace persistence stores only a workspace ID in the browser.
+- This checkpoint does not load protected financial, trust, beneficiary, clinical, recovery, or case records.
