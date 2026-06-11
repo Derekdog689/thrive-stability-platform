@@ -79,3 +79,21 @@ However, those tables are not the THRIVE target schema.
 4. Design the THRIVE schema from scratch.
 5. Enable RLS from the beginning.
 6. Use mock/test records only during early development.
+
+## Active THRIVE Supabase Project
+
+Active project name:
+
+`thrive-stewardship-stability-platform`
+
+Project purpose:
+
+Clean Supabase foundation for the THRIVE Stewardship & Stability Platform.
+
+Status:
+
+Created after the legacy database decision. This project should receive only intentional THRIVE schema objects.
+
+Secret handling:
+
+Project URL and anon key may be stored locally in `.env.local`. Service role keys, database passwords, JWT secrets, and other private credentials must never be committed to GitHub.
