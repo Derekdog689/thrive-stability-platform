@@ -154,11 +154,10 @@ using (
   )
 );
 
-create policy "Authenticated users can create workspaces"
-on public.workspaces
-for insert
-to authenticated
-with check (auth.uid() = created_by);
+
+-- Direct workspace inserts are intentionally not allowed for MVP.
+-- Workspaces should be created through public.create_workspace_with_admin()
+-- so every workspace receives an initial admin membership.
 
 create policy "Workspace admins can update workspaces"
 on public.workspaces
