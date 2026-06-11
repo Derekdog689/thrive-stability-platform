@@ -102,3 +102,41 @@ This is an expected protective failure. The function exists and executes, but Su
 Decision:
 
 Do not weaken the function for SQL Editor convenience. Future successful testing should occur through an authenticated app route, Supabase Auth session, or a separate controlled development-only test method.
+
+
+## RLS Recursion Fix 001
+
+Issue:
+
+After authenticated workspace creation succeeded, loading visible workspace records failed with:
+
+`infinite recursion detected in policy for relation "workspace_members"`
+
+Cause:
+
+The original `workspace_members` policies checked `workspace_members` from inside policies already being evaluated on `workspace_members`. This caused recursive RLS evaluation.
+
+Resolution:
+
+Added SECURITY DEFINER helper functions:
+
+- `public.is_workspace_member(uuid)`
+- `public.is_workspace_admin(uuid)`
+
+These functions check membership/admin status without causing policy recursion.
+
+Updated RLS policies now call these helper functions instead of directly querying `workspace_members` inside recursive policy paths.
+
+Result:
+
+Authenticated user `derek@dssenterprisesusa.llc` successfully loaded the created workspace through the RLS-protected application path.
+
+Confirmed visible workspace:
+
+- Workspace name: `THRIVE Demo Workspace`
+- Workspace ID: `38b3064f-f415-46a4-b204-a19ac6911cd4`
+- Workspace type/status: `personal / active`
+
+Security decision:
+
+Do not weaken RLS for app convenience. Use helper functions for safe policy checks. Keep all early data mock/test only.
