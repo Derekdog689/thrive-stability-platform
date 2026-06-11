@@ -1,15 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import type { User } from "@supabase/supabase-js";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  async function refreshSessionStatus() {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      setError(error.message);
+      setCurrentUser(null);
+      return;
+    }
+
+    setCurrentUser(session?.user ?? null);
+  }
+
+  useEffect(() => {
+    refreshSessionStatus();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   async function handleSignIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,6 +60,7 @@ export default function LoginPage() {
       return;
     }
 
+    await refreshSessionStatus();
     setMessage("Login successful. Supabase authenticated user session is active.");
     setLoading(false);
   }
@@ -68,6 +100,7 @@ export default function LoginPage() {
       return;
     }
 
+    setCurrentUser(null);
     setMessage("Signed out successfully.");
     setLoading(false);
   }
@@ -84,6 +117,32 @@ export default function LoginPage() {
             Controlled Supabase email/password authentication test. Use mock/test
             accounts only during early development.
           </p>
+        </div>
+
+        <div
+          className={`mb-5 rounded-2xl border p-4 text-sm font-semibold ${
+            currentUser
+              ? "border-emerald-100 bg-emerald-50 text-emerald-800"
+              : "border-amber-100 bg-amber-50 text-amber-800"
+          }`}
+        >
+          <p>
+            Auth status:{" "}
+            <span className="font-black">
+              {currentUser ? "Authenticated" : "Not signed in"}
+            </span>
+          </p>
+
+          {currentUser ? (
+            <div className="mt-3 space-y-1 break-words text-xs leading-5">
+              <p>
+                <span className="font-black">Email:</span> {currentUser.email}
+              </p>
+              <p>
+                <span className="font-black">User ID:</span> {currentUser.id}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <form onSubmit={handleSignIn} className="space-y-4">
