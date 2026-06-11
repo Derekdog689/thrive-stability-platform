@@ -65,4 +65,8 @@ Not started.
 
 ## Next Technical Step
 
-Review the current Supabase Auth setup and decide whether to use email/password, magic link, or temporary development-only test auth for the first controlled app test.
+Proceed with real Supabase email/password authentication as the first controlled auth path.
+
+Magic link/passwordless authentication may be added later, but the first test path will use email and password because it is easier to verify during development, supports repeatable test login/logout behavior, and allows the app to test `auth.uid()` against RLS and the workspace bootstrap function.
+
+The app should not weaken database functions or RLS policies for SQL Editor convenience. Authentication must be proven through the application layer.
