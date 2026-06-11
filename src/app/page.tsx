@@ -19,6 +19,10 @@ const recentActivity = [
   { merchant: "Late-night convenience store", category: "Flexible", amount: "$18.94", flag: "High-risk time" },
 ];
 
+const supabaseConfigured =
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#eef4ef] px-6 py-6 text-slate-950">
@@ -78,9 +82,21 @@ export default function Home() {
                   support teams.
                 </p>
               </div>
-              <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-semibold text-emerald-800">
-                Mock bank feed synced 18 min ago
-              </div>
+              <div className="space-y-2">
+  <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-semibold text-emerald-800">
+    Mock bank feed synced 18 min ago
+  </div>
+
+  <div
+    className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+      supabaseConfigured
+        ? "border-emerald-100 bg-emerald-50 text-emerald-800"
+        : "border-amber-100 bg-amber-50 text-amber-800"
+    }`}
+  >
+    Supabase environment: {supabaseConfigured ? "Configured" : "Not configured"}
+  </div>
+</div>
             </div>
           </header>
 
