@@ -227,3 +227,26 @@ Security boundary:
 - Program selection does not create legal, clinical, fiduciary, credit repair, bankruptcy, investment, or crisis-service authority.
 - Program context is an organizational support layer only.
 - Future protected records must still be built with table-level RLS and app-based access testing.
+
+## Checkpoint 015: Dashboard Program Listener Complete
+
+Stable truth:
+
+- `src/app/DashboardProgramScope.tsx` was created.
+- `DashboardProgramScope` listens for the browser event `thrive:selectedProgramChanged`.
+- `DashboardProgramScope` reads the selected program ID from browser `localStorage`.
+- `src/app/page.tsx` now displays the program dashboard scope below the workspace dashboard scope.
+- The dashboard visually confirms the active selected program ID.
+- The dashboard now has both workspace-level and program-level listening proof.
+- `npm run build` passed.
+- Local commit succeeded.
+- Push to GitHub succeeded.
+- Current commit: `57de3bb Add dashboard program scope listener`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- Dashboard program listening does not load protected records.
+- Program context remains an organizational support layer only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data is authorized at this layer.
+- Future protected tables must still be created with RLS, tested through authenticated app paths, and documented before use.
