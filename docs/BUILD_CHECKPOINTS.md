@@ -250,3 +250,34 @@ Security boundary:
 - Program context remains an organizational support layer only.
 - No real financial, trust, beneficiary, clinical, recovery, or personally identifying data is authorized at this layer.
 - Future protected tables must still be created with RLS, tested through authenticated app paths, and documented before use.
+
+## Checkpoint 017: Budget Categories SQL Draft Complete
+
+Stable truth:
+
+- `docs/supabase/BUDGET_CATEGORIES_PLAN.md` was created.
+- `docs/supabase/BUDGET_CATEGORIES_SQL_DRAFT.sql` was created.
+- The budget category layer is planned as workspace-scoped and program-scoped.
+- Budget categories include protected, flexible, support, and reserve category types.
+- Budget categories include planned, spent, and remaining amount fields.
+- The SQL draft includes RLS enablement.
+- The SQL draft includes select policy for authenticated workspace members.
+- The SQL draft includes insert/update policy for workspace admins.
+- The SQL draft includes a program/workspace validation helper.
+- The SQL draft includes a controlled creation function for app-based testing.
+- `npm run build` passed before this checkpoint.
+- The SQL draft was committed and pushed to GitHub.
+- Current commit: `a7cb16e Add budget categories SQL draft`.
+
+Security boundary:
+
+- THRIVE remains mock/test only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data is authorized at this layer.
+- Budget categories are planning and visibility tools only.
+- Budget categories do not create legal, clinical, fiduciary, credit repair, bankruptcy, investment, or crisis-service authority.
+- No live Supabase budget category SQL has been executed yet.
+- Budget category RLS must be tested through authenticated app paths before future protected records rely on this layer.
+
+Next required step:
+
+- Create `docs/supabase/BUDGET_CATEGORIES_RLS_TEST_PLAN.md` before running budget category SQL in Supabase.
