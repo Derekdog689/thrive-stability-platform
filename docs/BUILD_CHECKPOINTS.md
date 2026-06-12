@@ -281,3 +281,36 @@ Security boundary:
 Next required step:
 
 - Create `docs/supabase/BUDGET_CATEGORIES_RLS_TEST_PLAN.md` before running budget category SQL in Supabase.
+
+## Checkpoint 018: Budget Categories SQL Executed in Supabase
+
+Stable truth:
+
+- The budget category SQL draft was executed in the THRIVE Supabase project.
+- Supabase returned success with no rows returned, which is expected for schema SQL.
+- `public.budget_categories` now exists.
+- The `budget_categories` table is currently empty.
+- RLS policies were created for budget categories.
+- The following policies were verified:
+  - `budget_categories_insert_for_workspace_admins`
+  - `budget_categories_select_for_workspace_members`
+  - `budget_categories_update_for_workspace_admins`
+- The following functions were verified:
+  - `create_budget_category_for_program`
+  - `is_program_in_workspace`
+  - `set_budget_categories_updated_at`
+- The select policy was hardened before execution to require both workspace membership and program/workspace validation.
+- No budget category records were created during SQL execution.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data was entered.
+
+Security boundary:
+
+- Budget categories remain mock/test only.
+- Budget categories are planning and visibility tools only.
+- Budget categories do not create legal, fiduciary, clinical, credit repair, bankruptcy, investment, or crisis-service authority.
+- RLS must still be proven through the authenticated application path before dashboard cards or protected workflows rely on this table.
+- No service role key is used in the client application.
+
+Next required step:
+
+- Create a temporary app route at `src/app/budget-test/page.tsx` to test budget category creation and visibility through authenticated Supabase RLS.
