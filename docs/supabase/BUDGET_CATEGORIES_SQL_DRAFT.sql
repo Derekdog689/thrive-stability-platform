@@ -148,6 +148,7 @@ for select
 to authenticated
 using (
   public.is_workspace_member(workspace_id)
+  and public.is_program_in_workspace(program_id, workspace_id)
 );
 
 drop policy if exists "budget_categories_insert_for_workspace_admins"
