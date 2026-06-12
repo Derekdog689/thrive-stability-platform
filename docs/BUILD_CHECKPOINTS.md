@@ -314,3 +314,43 @@ Security boundary:
 Next required step:
 
 - Create a temporary app route at `src/app/budget-test/page.tsx` to test budget category creation and visibility through authenticated Supabase RLS.
+
+
+## Checkpoint 019: Budget Category RLS App Proof Complete
+
+Stable truth:
+
+- The temporary app route `src/app/budget-test/page.tsx` was created.
+- `npm run build` passed with `/budget-test` included in the route list.
+- The budget test page loaded successfully at `/budget-test`.
+- The page authenticated the signed-in Supabase user.
+- The page loaded visible workspaces through authenticated RLS.
+- The correct workspace was selected:
+  - `b0cad5e3-8b0-40aa-adf8-9f75f6a092b5`
+- The correct active program was selected:
+  - `477ccd11-510f-4d85-8367-be9020f219f5`
+- The page created mock/test budget categories through the controlled Supabase RPC function:
+  - `create_budget_category_for_program`
+- The page reloaded and displayed budget categories through authenticated RLS.
+- Four mock/test categories were created and displayed:
+  - Housing
+  - Food
+  - Flexible Spending
+  - Emergency Reserve
+- Remaining amounts calculated correctly.
+- The app proof was committed and pushed to GitHub.
+- Current commit: `2ea7814 Add budget category RLS app test page`.
+
+Security boundary:
+
+- Budget category testing used mock/test records only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data was entered.
+- The test page is a temporary RLS proof route, not the final production budget UI.
+- Budget categories remain planning and visibility tools only.
+- THRIVE does not create legal, fiduciary, clinical, credit repair, bankruptcy, investment, or crisis-service authority.
+- DSS may support organization and reporting, while authorized decision-makers remain responsible for final decisions.
+
+Next required step:
+
+- Decide whether to keep `/budget-test` as a temporary development route or later remove/hide it before production rollout.
+- Begin planning the real budget dashboard integration using the proven `budget_categories` layer.
