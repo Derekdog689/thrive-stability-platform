@@ -354,3 +354,133 @@ Next required step:
 
 - Decide whether to keep `/budget-test` as a temporary development route or later remove/hide it before production rollout.
 - Begin planning the real budget dashboard integration using the proven `budget_categories` layer.
+
+
+## Checkpoint 020: Budget Dashboard Integration Complete
+
+Stable truth:
+
+- The real dashboard at `src/app/page.tsx` was connected to live mock budget category data.
+- A new component was created:
+  - `src/app/BudgetCategoriesDashboardCard.tsx`
+- The old static `protectedCategories` array was removed from the dashboard.
+- The dashboard budget card now reads from `public.budget_categories`.
+- Budget category records load through authenticated Supabase RLS.
+- Budget category records are scoped by:
+  - selected workspace ID
+  - selected program ID
+- The dashboard listens to existing browser-local workspace and program context.
+- `/budget-test` remains a temporary development proof route.
+- `npm run build` passed.
+- Browser smoke test confirmed the dashboard displayed:
+  - Housing
+  - Food
+  - Flexible Spending
+  - Emergency Reserve
+- The checkpoint was committed and pushed to GitHub.
+- Current commit: `2dba9c5 Integrate live budget categories into dashboard`.
+
+Security boundary:
+
+- The dashboard uses mock/test budget records only.
+- No real financial, trust, beneficiary, clinical, recovery, or personally identifying data was entered.
+- Budget categories remain planning, organization, reporting, and visibility support tools only.
+- THRIVE does not provide legal advice, fiduciary decision-making, clinical services, credit repair, bankruptcy advice, investment advice, or crisis intervention.
+- DSS supports organization and reporting; authorized decision-makers remain responsible for final decisions.
+
+Next required step:
+
+- Improve login flow so successful sign-in redirects users to the main dashboard.
+
+
+## Checkpoint 021: Login Redirect to Dashboard Complete
+
+Stable truth:
+
+- `src/app/login/page.tsx` was updated to use Next.js router navigation.
+- Successful Supabase email/password sign-in now redirects users from `/login` to `/`.
+- The login page still supports sign-in, sign-up, and sign-out during MVP development.
+- The main dashboard remains the correct post-login destination.
+- `npm run build` passed.
+- Browser smoke test confirmed:
+  - user can sign out
+  - user can sign back in
+  - successful sign-in redirects to `/`
+- The checkpoint was committed and pushed to GitHub.
+- Current commit: `b73c7f7 Redirect login to dashboard after sign in`.
+
+Security boundary:
+
+- Authentication remains Supabase email/password for MVP testing.
+- No role-based dashboard routing has been added yet.
+- All authenticated users currently land on the same main dashboard.
+- No real beneficiary, trust, clinical, financial, recovery, or private case data should be entered during testing.
+
+Next required step:
+
+- Improve the live budget category dashboard card so it is clearer for human use.
+
+
+## Checkpoint 022: Budget Category Dashboard Card Usability Complete
+
+Stable truth:
+
+- `src/app/BudgetCategoriesDashboardCard.tsx` was updated for clearer dashboard language.
+- The card title changed from `Protected categories` to `Budget categories`.
+- The section label changed to `Budget guardrails`.
+- The card now explains that live mock budget categories are loaded through authenticated Supabase RLS for the selected workspace and program.
+- Each category now displays:
+  - planned amount
+  - spent amount
+  - remaining amount
+- The card continues to load live mock records from `public.budget_categories`.
+- The card continues to scope records by selected workspace and selected program.
+- `npm run build` passed.
+- Browser smoke test confirmed the dashboard card displayed the updated budget category layout.
+- The checkpoint was committed and pushed to GitHub.
+- Current commit: `8a2caf3 Improve budget category dashboard card`.
+
+Security boundary:
+
+- Budget category data remains mock/test only.
+- Budget category information is for planning, organization, reporting, and visibility support only.
+- THRIVE does not create legal, fiduciary, clinical, credit repair, bankruptcy, investment, or crisis-service authority.
+- DSS remains a support and reporting layer only.
+
+Next required step:
+
+- Wire the dashboard sidebar so navigation labels accurately reflect current MVP route status.
+
+
+## Checkpoint 023: Dashboard Sidebar Navigation States Complete
+
+Stable truth:
+
+- `src/app/page.tsx` was updated to import `Link` from `next/link`.
+- A `navItems` array was added to define the dashboard sidebar navigation state.
+- The sidebar now treats `Dashboard` as the active route to `/`.
+- Future feature areas are visibly marked as `Soon`:
+  - Budget
+  - Check-in
+  - Patterns
+  - Trust Mode
+  - Reports
+- Temporary development proof routes are not exposed in the main sidebar:
+  - `/budget-test`
+  - `/workspace-test`
+  - `/program-test`
+- `npm run build` passed.
+- Browser smoke test confirmed the sidebar renders accurate navigation states.
+- The checkpoint was committed and pushed to GitHub.
+- Current commit: `a9df004 Wire dashboard sidebar navigation states`.
+
+Security boundary:
+
+- Sidebar navigation does not expose development proof routes as user-facing workflows.
+- Future feature routes remain parked until intentionally built.
+- THRIVE remains an MVP planning, organization, reporting, and visibility support tool.
+- No legal, fiduciary, clinical, credit repair, bankruptcy, investment, or crisis-service authority is created by navigation labels.
+
+Next required step:
+
+- Create a real `/budget` route shell before changing the sidebar Budget item from `Soon` to an active link.
