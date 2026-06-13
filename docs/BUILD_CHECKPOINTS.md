@@ -193,7 +193,7 @@ Stable truth:
 * Program records loaded through authenticated RLS.
 * Local commit succeeded.
 * Push to GitHub succeeded.
-* Current commit: `d34818b Add program RLS app test page`.
+- Current commit: `d34818b Add program RLS app test page`.
 
 Security boundary:
 
