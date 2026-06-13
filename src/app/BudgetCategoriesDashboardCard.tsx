@@ -132,11 +132,11 @@ export default function BudgetCategoriesDashboardCard() {
 
   return (
     <div className="rounded-3xl bg-white p-6 shadow-sm">
-      <p className="text-xs font-bold uppercase text-emerald-700">Guardrails</p>
-      <h3 className="text-2xl font-black">Protected categories</h3>
+      <p className="text-xs font-bold uppercase text-emerald-700">Budget guardrails</p>
+      <h3 className="text-2xl font-black">Budget categories</h3>
 
       <p className="mt-2 text-sm leading-6 text-slate-500">
-        Live mock budget categories loaded through authenticated Supabase RLS.
+        Live mock budget categories loaded through authenticated Supabase RLS for the selected workspace and program.
       </p>
 
       <div className="mt-5 space-y-3">
@@ -156,16 +156,34 @@ export default function BudgetCategoriesDashboardCard() {
             >
               <div className="flex justify-between gap-4 font-bold">
                 <span>{category.category_name}</span>
-                <span>{formatMoney(category.remaining_amount)}</span>
+                <span>{formatMoney(category.remaining_amount)} left</span>
               </div>
 
-              <div className="mt-2 flex justify-between gap-4 text-sm">
-                <span className="text-slate-500">
-                  {formatCategoryType(category.category_type)}
-                </span>
-                <span className="text-slate-500">
-                  Planned: {formatMoney(category.planned_amount)}
-                </span>
+              <p className="mt-1 text-sm font-semibold text-slate-500">
+                {formatCategoryType(category.category_type)}
+              </p>
+
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-semibold text-slate-500">
+                <div className="rounded-xl bg-slate-50 p-2">
+                  <p className="uppercase tracking-wide">Planned</p>
+                  <p className="mt-1 text-slate-800">
+                    {formatMoney(category.planned_amount)}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-2">
+                  <p className="uppercase tracking-wide">Spent</p>
+                  <p className="mt-1 text-slate-800">
+                    {formatMoney(category.spent_amount)}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-2">
+                  <p className="uppercase tracking-wide">Remaining</p>
+                  <p className="mt-1 text-slate-800">
+                    {formatMoney(category.remaining_amount)}
+                  </p>
+                </div>
               </div>
             </div>
           ))
