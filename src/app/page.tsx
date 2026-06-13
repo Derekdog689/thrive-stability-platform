@@ -4,19 +4,13 @@ import WorkspaceContextPanel from "./WorkspaceContextPanel";
 import DashboardWorkspaceScope from "./DashboardWorkspaceScope";
 import ProgramContextPanel from "./ProgramContextPanel";
 import DashboardProgramScope from "./DashboardProgramScope";
+import BudgetCategoriesDashboardCard from "./BudgetCategoriesDashboardCard";
 
 const checkInMetrics = [
   { label: "Stress", value: 6, note: "Moderate pressure" },
   { label: "Spending urge", value: 5, note: "Watch cash access" },
   { label: "Sleep quality", value: 7, note: "Protect routine" },
   { label: "Recovery support", value: 8, note: "Connected today" },
-];
-
-const protectedCategories = [
-  { name: "Rent reserve", amount: "$425.00", status: "Protected" },
-  { name: "Phone", amount: "$95.00", status: "Upcoming" },
-  { name: "Food and groceries", amount: "$146.00", status: "Available" },
-  { name: "Transportation", amount: "$58.00", status: "Available" },
 ];
 
 const recentActivity = [
@@ -197,21 +191,7 @@ export default function Home() {
           </section>
 
           <section className="grid gap-6 lg:grid-cols-3">
-            <div className="rounded-3xl bg-white p-6 shadow-sm">
-              <p className="text-xs font-bold uppercase text-emerald-700">Guardrails</p>
-              <h3 className="text-2xl font-black">Protected categories</h3>
-              <div className="mt-5 space-y-3">
-                {protectedCategories.map((item) => (
-                  <div key={item.name} className="rounded-2xl border border-slate-100 p-4">
-                    <div className="flex justify-between font-bold">
-                      <span>{item.name}</span>
-                      <span>{item.amount}</span>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-500">{item.status}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <BudgetCategoriesDashboardCard />
 
             <div className="rounded-3xl bg-white p-6 shadow-sm">
               <p className="text-xs font-bold uppercase text-emerald-700">Recent activity</p>
