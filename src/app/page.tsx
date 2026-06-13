@@ -1,3 +1,4 @@
+import Link from "next/link";
 import AuthStatusPanel from "./AuthStatusPanel";
 import AuthGate from "./AuthGate";
 import WorkspaceContextPanel from "./WorkspaceContextPanel";
@@ -18,6 +19,15 @@ const recentActivity = [
   { merchant: "ATM withdrawal", category: "Cash", amount: "$60.00", flag: "Cash access flag" },
   { merchant: "Transit pass", category: "Transportation", amount: "$22.50", flag: "Essential" },
   { merchant: "Late-night convenience store", category: "Flexible", amount: "$18.94", flag: "High-risk time" },
+];
+
+const navItems = [
+  { label: "Dashboard", href: "/", status: "active" },
+  { label: "Budget", href: null, status: "coming soon" },
+  { label: "Check-in", href: null, status: "coming soon" },
+  { label: "Patterns", href: null, status: "coming soon" },
+  { label: "Trust Mode", href: null, status: "coming soon" },
+  { label: "Reports", href: null, status: "coming soon" },
 ];
 
 const supabaseConfigured =
@@ -44,17 +54,27 @@ export default function Home() {
           </div>
 
           <nav className="space-y-2 text-sm font-semibold">
-            {["Dashboard", "Budget", "Check-in", "Patterns", "Trust Mode", "Reports"].map(
-              (item, index) => (
-                <div
-                  key={item}
-                  className={`rounded-2xl px-4 py-3 ${
-                    index === 0
-                      ? "bg-emerald-100 text-emerald-900"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
+            {navItems.map((item) =>
+              item.href ? (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="block rounded-2xl bg-emerald-100 px-4 py-3 text-emerald-900"
                 >
-                  {item}
+                  {item.label}
+                </Link>
+              ) : (
+                <div
+                  key={item.label}
+                  className="rounded-2xl px-4 py-3 text-slate-500"
+                  aria-disabled="true"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{item.label}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                      Soon
+                    </span>
+                  </div>
                 </div>
               ),
             )}
