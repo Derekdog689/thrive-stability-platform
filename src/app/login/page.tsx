@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { User } from "@supabase/supabase-js";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -61,8 +63,9 @@ export default function LoginPage() {
     }
 
     await refreshSessionStatus();
-    setMessage("Login successful. Supabase authenticated user session is active.");
+    setMessage("Login successful. Redirecting to dashboard...");
     setLoading(false);
+    router.push("/");
   }
 
   async function handleSignUp() {
