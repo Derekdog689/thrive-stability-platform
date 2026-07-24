@@ -1,0 +1,55 @@
+-- THRIVE Monthly Financial Ingestion Spine
+-- Candidate version: v0.1
+-- Status: DESIGN CANDIDATE ONLY
+-- DO NOT EXECUTE WITHOUT SOURCE RECONCILIATION AND APPROVAL
+--
+-- Initial historical implementation:
+-- January 2025
+--
+-- Planned validation sequence:
+-- 1. January 2025
+-- 2. February 2025
+-- 3. March 2025
+-- 4. Q1 2025 reporting validation
+-- 5. Continue month by month through the approved historical boundary
+--
+-- Governing rule:
+-- The bank feed supplies observational data.
+-- The reviewed trust record remains authoritative.
+--
+-- This candidate must eventually define:
+-- 1. financial_sources
+-- 2. financial_import_batches
+-- 3. staged_financial_transactions
+-- 4. financial_transaction_reviews
+--
+-- Required controls:
+-- - workspace and program ownership
+-- - authenticated RLS
+-- - workspace membership checks
+-- - workspace/program consistency checks
+-- - source lineage
+-- - import batch traceability
+-- - duplicate detection fields
+-- - explicit statement month
+-- - explicit historical/current boundary
+-- - human review states
+-- - no automatic trust conclusions
+-- - restricted rollback for uncommitted test batches
+--
+-- Each imported month must remain a separate batch.
+-- Quarterly and annual views will aggregate reviewed monthly records.
+-- Quarterly reporting must not replace month-level source traceability.
+--
+-- Existing security posture confirmed:
+-- - RLS enabled on all current public tables
+-- - FORCE ROW LEVEL SECURITY is not currently enabled
+-- - Existing helper functions:
+-- is_workspace_member(uuid)
+-- is_workspace_admin(uuid)
+-- is_program_in_workspace(uuid, uuid)
+--
+-- January 2025 source reconciliation is complete.
+-- The next pass will define the first review-only table candidates,
+-- constraints, indexes, RLS policies, and controlled lifecycle rules.
+-- No SQL in this file is authorized for execution until separately reviewed.
