@@ -714,3 +714,24 @@ Security boundary:
 - Status labels are client-side presentation derived from existing mock/test budget records.
 - Labels are informational and do not constitute financial, fiduciary, clinical, legal, or investment advice.
 - No authentication, Supabase, RLS, schema, or database changes were made.
+
+## Checkpoint 035: Remaining Development Identifiers Removed
+
+Stable truth:
+
+- The normal dashboard no longer displays the authenticated Supabase user UUID.
+- The normal dashboard no longer displays the selected program UUID.
+- The login page no longer displays the authenticated user UUID.
+- The dashboard authentication panel no longer exposes the Workspace Test link.
+- Authentication status and email remain visible.
+- Workspace and program selection remain functional.
+- Budget records continue loading through authenticated Supabase RLS.
+- Development test routes remain available directly.
+- `npm run build` passed.
+- Browser smoke testing confirmed `/`, `/budget`, and `/login` remained functional.
+
+Security boundary:
+
+- Internal identifiers remain available to application logic but are not displayed on normal user-facing screens.
+- This checkpoint did not alter authentication, authorization, Supabase RLS, schema, or database behavior.
+- No real financial, trust, beneficiary, clinical, recovery, or private case data was introduced.
