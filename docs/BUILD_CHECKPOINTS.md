@@ -807,3 +807,24 @@ Security boundary:
 - It does not add offline caching, background synchronization, notifications, or a service worker.
 - No authentication, Supabase, RLS, schema, database, or authorization behavior changed.
 - No real financial, trust, beneficiary, clinical, recovery, or private case data was introduced.
+
+## Checkpoint 039: THRIVE App Shell PWA Metadata Complete
+
+Stable truth:
+
+- The root app shell now uses the title `THRIVE Stability Platform`.
+- A title template is configured for future page-specific titles.
+- The THRIVE description and application name are configured.
+- The web app manifest is linked from the root metadata.
+- Standard app icons and an Apple touch icon are configured.
+- Apple standalone web-app metadata is configured.
+- The viewport uses device width and the THRIVE theme color.
+- Telephone number auto-detection is disabled.
+- `npm run build` passed.
+- Generated HTML confirmed the title, manifest, theme color, and Apple touch icon metadata.
+
+Security boundary:
+
+- This checkpoint changed application metadata and installation presentation only.
+- No service worker, offline cache, notifications, background synchronization, or device permissions were added.
+- No authentication, Supabase, RLS, schema, database, or authorization behavior changed.
