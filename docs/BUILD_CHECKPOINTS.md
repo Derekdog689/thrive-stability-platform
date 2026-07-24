@@ -778,3 +778,32 @@ Security boundary:
 - This checkpoint changed responsive presentation only.
 - No authentication, Supabase, RLS, schema, database, or authorization behavior changed.
 - No real trust, bank, beneficiary, clinical, recovery, or private case data was introduced.
+
+## Checkpoint 038: THRIVE PWA Manifest and Icons Complete
+
+Stable truth:
+
+- `src/app/manifest.ts` now provides the THRIVE web app manifest.
+- The manifest defines:
+  - Application name: `THRIVE Stability Platform`
+  - Short name: `THRIVE`
+  - Start URL: `/`
+  - Display mode: `standalone`
+  - Portrait orientation
+  - THRIVE background and theme colors
+  - Finance, lifestyle, and productivity categories
+- Branded PWA icon assets were created:
+  - `/icon-192.png`
+  - `/icon-512.png`
+  - `/icon-512-maskable.png`
+- `public/thrive-icon.svg` remains the source icon.
+- `/manifest.webmanifest` is served successfully.
+- `npm run build` passed.
+- Browser testing confirmed the manifest response contains the expected metadata and icon references.
+
+Security boundary:
+
+- This checkpoint adds install metadata and visual assets only.
+- It does not add offline caching, background synchronization, notifications, or a service worker.
+- No authentication, Supabase, RLS, schema, database, or authorization behavior changed.
+- No real financial, trust, beneficiary, clinical, recovery, or private case data was introduced.
