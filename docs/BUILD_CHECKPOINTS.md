@@ -484,3 +484,16 @@ Security boundary:
 Next required step:
 
 - Create a real `/budget` route shell before changing the sidebar Budget item from `Soon` to an active link.
+
+Checkpoint 025: Read-Only Budget Route Shell Complete
+
+Success means:
+
+/budget builds.
+Authentication is enforced.
+Workspace and program selection work.
+Existing budget records load through RLS.
+Totals calculate correctly.
+No edit controls exist.
+No real trust or bank information is introduced.
+The dashboard Budget item changes from Soon to an active /budget link only after browser proof.
