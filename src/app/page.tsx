@@ -55,13 +55,7 @@ export default function Home() {
       </div>
     </div>
 
-    <Link
-      href="/budget"
-      className="rounded-2xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white lg:hidden"
-    >
-      Budget
-    </Link>
-  </div>
+   </div>
 
   <nav className="mt-5 lg:mt-0">
     <div className="flex gap-2 overflow-x-auto pb-2 text-sm font-semibold lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
