@@ -759,3 +759,22 @@ Security boundary:
 - It does not create financial, fiduciary, legal, clinical, or investment advice.
 - No authentication, Supabase, RLS, schema, or database changes were made.
 - No real trust, bank, beneficiary, clinical, recovery, or private case data was introduced.
+
+## Checkpoint 037: Mobile Budget Summary Compression Complete
+
+Stable truth:
+
+- The budget totals display in a compact two-column layout on mobile.
+- The budget attention summary displays in a compact two-column layout on mobile.
+- The fifth status tile wraps cleanly to the next row.
+- Budget category cards display in two columns at the tested mobile width.
+- Progress bars and category status labels remain readable.
+- Desktop layouts remain unchanged.
+- Budget records continue loading through authenticated Supabase RLS.
+- Browser smoke testing confirmed the mobile budget page remained functional.
+
+Security boundary:
+
+- This checkpoint changed responsive presentation only.
+- No authentication, Supabase, RLS, schema, database, or authorization behavior changed.
+- No real trust, bank, beneficiary, clinical, recovery, or private case data was introduced.
