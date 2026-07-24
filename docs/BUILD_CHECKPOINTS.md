@@ -644,3 +644,22 @@ Planned scope:
 - Preserve workspace and program selection.
 - Preserve authenticated Supabase RLS behavior.
 - Make no database changes.
+
+## Checkpoint 032: Budget Mobile Header Cleanup Complete
+
+Stable truth:
+
+- The `/budget` header uses tighter spacing on mobile.
+- The page title uses a smaller mobile font while preserving the larger desktop presentation.
+- The introductory description uses reduced mobile spacing.
+- The mock/test development notice uses reduced padding on smaller screens.
+- The shared THRIVE sidebar and route-aware navigation remain intact.
+- Workspace and program selectors remain functional.
+- Budget totals and category records continue loading through authenticated Supabase RLS.
+- `npm run build` passed.
+- Browser smoke testing confirmed the mobile budget layout remained functional.
+
+Security boundary:
+
+- This checkpoint changed presentation only.
+- No authentication, Supabase, RLS, schema, financial-data, beneficiary-data, or trust-data behavior changed.
