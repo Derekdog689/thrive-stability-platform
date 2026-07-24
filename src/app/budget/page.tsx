@@ -194,18 +194,18 @@ export default function BudgetPage() {
     <ThriveSidebar />
 
     <section className="space-y-6">
-          <header className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
+          <header className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
                   THRIVE budget
                 </p>
 
-                <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+                <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-4xl">
                   Protect essentials. See what remains.
                 </h1>
 
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:mt-3 sm:text-base">
                   This read-only workspace displays live mock/test budget
                   categories visible through authenticated Supabase Row Level
                   Security for the selected workspace and program.
@@ -215,7 +215,7 @@ export default function BudgetPage() {
              
             </div>
 
-            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 sm:mt-5 sm:p-4">
               <p className="text-sm font-bold text-amber-900">
                 Development data notice
               </p>
