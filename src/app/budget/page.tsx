@@ -244,6 +244,46 @@ export default function BudgetPage() {
     );
   }, [categories]);
 
+  const statusSummary = useMemo(() => {
+  return categories.reduce(
+    (summary, category) => {
+      const status = getBudgetStatus(
+        category.spent_amount,
+        category.planned_amount,
+      ).label;
+
+      if (status === "On track") {
+        summary.onTrack += 1;
+      }
+
+      if (status === "Needs attention") {
+        summary.needsAttention += 1;
+      }
+
+      if (status === "Fully used") {
+        summary.fullyUsed += 1;
+      }
+
+      if (status === "Over budget") {
+        summary.overBudget += 1;
+      }
+
+      if (status === "No plan set") {
+        summary.noPlan += 1;
+      }
+
+      return summary;
+    },
+    {
+      onTrack: 0,
+      needsAttention: 0,
+      fullyUsed: 0,
+      overBudget: 0,
+      noPlan: 0,
+    },
+  );
+}, [categories]);
+
   return (
     <AuthGate>
       <main className="min-h-screen bg-[#eef4ef] px-4 py-5 text-slate-950 sm:px-6">
@@ -340,6 +380,60 @@ export default function BudgetPage() {
               </p>
             </div>
           </section>
+
+          <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
+  <div>
+    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+      Budget status
+    </p>
+
+    <h2 className="mt-2 text-2xl font-black">
+      What needs attention
+    </h2>
+
+    <p className="mt-2 text-sm leading-6 text-slate-600">
+      A read-only summary of the current category status for the selected
+      workspace and program.
+    </p>
+  </div>
+
+  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="rounded-2xl bg-emerald-50 p-4">
+      <p className="text-sm font-bold text-emerald-800">On track</p>
+      <p className="mt-2 text-3xl font-black text-emerald-950">
+        {statusSummary.onTrack}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-amber-50 p-4">
+      <p className="text-sm font-bold text-amber-800">Needs attention</p>
+      <p className="mt-2 text-3xl font-black text-amber-950">
+        {statusSummary.needsAttention}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-amber-100 p-4">
+      <p className="text-sm font-bold text-amber-900">Fully used</p>
+      <p className="mt-2 text-3xl font-black text-amber-950">
+        {statusSummary.fullyUsed}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-rose-50 p-4">
+      <p className="text-sm font-bold text-rose-800">Over budget</p>
+      <p className="mt-2 text-3xl font-black text-rose-950">
+        {statusSummary.overBudget}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-slate-100 p-4">
+      <p className="text-sm font-bold text-slate-700">No plan set</p>
+      <p className="mt-2 text-3xl font-black text-slate-950">
+        {statusSummary.noPlan}
+      </p>
+    </div>
+  </div>
+</section>
 
           <section className="rounded-3xl bg-white p-6 shadow-sm">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
