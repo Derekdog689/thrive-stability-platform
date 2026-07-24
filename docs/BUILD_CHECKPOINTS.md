@@ -735,3 +735,27 @@ Security boundary:
 - Internal identifiers remain available to application logic but are not displayed on normal user-facing screens.
 - This checkpoint did not alter authentication, authorization, Supabase RLS, schema, or database behavior.
 - No real financial, trust, beneficiary, clinical, recovery, or private case data was introduced.
+
+## Checkpoint 036: Budget Attention Summary Complete
+
+Stable truth:
+
+- `/budget` now includes a read-only summary of category status.
+- The summary is derived from the existing category records and `getBudgetStatus()` logic.
+- Current displayed counts are:
+  - `On track`: 3
+  - `Needs attention`: 0
+  - `Fully used`: 1
+  - `Over budget`: 0
+  - `No plan set`: 0
+- The summary appears between the total cards and category detail.
+- Budget categories, progress bars, and status labels remain functional.
+- `npm run build` passed.
+- Browser smoke testing confirmed the summary rendered correctly.
+
+Security boundary:
+
+- The summary is informational and read-only.
+- It does not create financial, fiduciary, legal, clinical, or investment advice.
+- No authentication, Supabase, RLS, schema, or database changes were made.
+- No real trust, bank, beneficiary, clinical, recovery, or private case data was introduced.
