@@ -311,9 +311,6 @@ export default function ProgramContextPanel() {
         {message}
       </div>
 
-      <p className="mt-4 break-all text-xs font-semibold text-slate-500">
-        Selected workspace ID: {selectedWorkspaceId || "none"}
-      </p>
-    </div>
+     </div>
   );
 }

@@ -212,10 +212,7 @@ export default function WorkspaceContextPanel() {
             </p>
             <p className="text-sm font-semibold text-emerald-900">
               Status: {selectedWorkspace?.status ?? "none"}
-            </p>
-            <p className="mt-2 break-all text-xs text-emerald-800">
-              ID: {selectedWorkspace?.id ?? "none"}
-            </p>
+            </p>            
           </div>
         </div>
       ) : (
