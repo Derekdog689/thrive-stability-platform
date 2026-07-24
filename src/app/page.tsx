@@ -40,58 +40,74 @@ export default function Home() {
   <AuthGate>
     <main className="min-h-screen bg-[#eef4ef] px-6 py-6 text-slate-950">
       <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[260px_1fr]">
-        <aside className="rounded-3xl border border-emerald-100 bg-white/85 p-5 shadow-sm">
-          <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-700 text-lg font-black text-white">
-              T
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                DSS Enterprises
-              </p>
-              <h1 className="text-xl font-black">THRIVE</h1>
+        <aside className="rounded-3xl border border-emerald-100 bg-white/85 p-4 shadow-sm sm:p-5">
+  <div className="flex items-center justify-between gap-4 lg:mb-8 lg:block">
+    <div className="flex items-center gap-3">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-lg font-black text-white">
+        T
+      </div>
+
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+          DSS Enterprises
+        </p>
+        <h1 className="text-xl font-black">THRIVE</h1>
+      </div>
+    </div>
+
+    <Link
+      href="/budget"
+      className="rounded-2xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white lg:hidden"
+    >
+      Budget
+    </Link>
+  </div>
+
+  <nav className="mt-5 lg:mt-0">
+    <div className="flex gap-2 overflow-x-auto pb-2 text-sm font-semibold lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
+      {navItems.map((item) =>
+        item.href ? (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`shrink-0 rounded-2xl px-4 py-3 lg:block ${
+              item.href === "/"
+                ? "bg-emerald-100 text-emerald-900"
+                : "bg-slate-50 text-slate-700 hover:bg-slate-100 lg:bg-transparent"
+            }`}
+          >
+            {item.label}
+          </Link>
+        ) : (
+          <div
+            key={item.label}
+            className="shrink-0 rounded-2xl bg-slate-50 px-4 py-3 text-slate-500 lg:bg-transparent"
+            aria-disabled="true"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span>{item.label}</span>
+
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                Soon
+              </span>
             </div>
           </div>
+        ),
+      )}
+    </div>
+  </nav>
 
-          <nav className="space-y-2 text-sm font-semibold">
-            {navItems.map((item) =>
-              item.href ? (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`block rounded-2xl px-4 py-3 ${
-                    item.href === "/"
-                      ? "bg-emerald-100 text-emerald-900"
-                      : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <div
-                  key={item.label}
-                  className="rounded-2xl px-4 py-3 text-slate-500"
-                  aria-disabled="true"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span>{item.label}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
-                      Soon
-                    </span>
-                  </div>
-                </div>
-              ),
-            )}
-          </nav>
+  <div className="mt-5 rounded-2xl bg-slate-950 p-4 text-white lg:mt-8">
+    <p className="text-xs font-bold uppercase text-emerald-300">
+      Guardrail
+    </p>
 
-          <div className="mt-8 rounded-2xl bg-slate-950 p-4 text-white">
-            <p className="text-xs font-bold uppercase text-emerald-300">Guardrail</p>
-            <p className="mt-2 text-sm leading-6 text-slate-200">
-              Support tool only. Not legal, clinical, fiduciary, credit repair, bankruptcy,
-              or investment advice.
-            </p>
-          </div>
-        </aside>
+    <p className="mt-2 text-sm leading-6 text-slate-200">
+      Support tool only. Not legal, clinical, fiduciary, credit repair,
+      bankruptcy, or investment advice.
+    </p>
+  </div>
+</aside>
 
         <section className="space-y-6">
           <header className="rounded-3xl bg-gradient-to-br from-white to-emerald-50 p-7 shadow-sm">
