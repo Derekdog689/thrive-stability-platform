@@ -65,6 +65,49 @@ function getSpentPercentage(
   return Math.min((spent / planned) * 100, 100);
 }
 
+function getBudgetStatus(
+  spentValue: number | string,
+  plannedValue: number | string,
+) {
+  const spent = toNumber(spentValue);
+  const planned = toNumber(plannedValue);
+
+  if (planned <= 0) {
+    return {
+      label: "No plan set",
+      className: "bg-slate-100 text-slate-600",
+    };
+  }
+
+  const rawPercentage = (spent / planned) * 100;
+
+  if (rawPercentage > 100) {
+    return {
+      label: "Over budget",
+      className: "bg-rose-100 text-rose-700",
+    };
+  }
+
+  if (rawPercentage === 100) {
+    return {
+      label: "Fully used",
+      className: "bg-amber-100 text-amber-800",
+    };
+  }
+
+  if (rawPercentage >= 75) {
+    return {
+      label: "Needs attention",
+      className: "bg-amber-50 text-amber-700",
+    };
+  }
+
+  return {
+    label: "On track",
+    className: "bg-emerald-50 text-emerald-700",
+  };
+}
+
 export default function BudgetPage() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [selectedProgramId, setSelectedProgramId] = useState("");
@@ -343,9 +386,27 @@ export default function BudgetPage() {
                           </p>
                         </div>
 
-                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                          Active
-                        </span>
+                       <div className="flex flex-col items-end gap-2">
+  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+    Active
+  </span>
+
+  <span
+    className={`rounded-full px-3 py-1 text-xs font-bold ${
+      getBudgetStatus(
+        category.spent_amount,
+        category.planned_amount,
+      ).className
+    }`}
+  >
+    {
+      getBudgetStatus(
+        category.spent_amount,
+        category.planned_amount,
+      ).label
+    }
+  </span>
+</div>
                       </div>
 
                       <div className="mt-5 space-y-3">
