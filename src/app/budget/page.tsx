@@ -212,12 +212,7 @@ export default function BudgetPage() {
                 </p>
               </div>
 
-              <Link
-                href="/"
-                className="inline-flex w-fit items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50"
-              >
-                Return to dashboard
-              </Link>
+             
             </div>
 
             <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
