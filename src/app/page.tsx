@@ -23,7 +23,7 @@ const recentActivity = [
 
 const navItems = [
   { label: "Dashboard", href: "/", status: "active" },
-  { label: "Budget", href: null, status: "coming soon" },
+  { label: "Budget", href: "/budget", status: "active" },
   { label: "Check-in", href: null, status: "coming soon" },
   { label: "Patterns", href: null, status: "coming soon" },
   { label: "Trust Mode", href: null, status: "coming soon" },
@@ -59,7 +59,11 @@ export default function Home() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="block rounded-2xl bg-emerald-100 px-4 py-3 text-emerald-900"
+                  className={`block rounded-2xl px-4 py-3 ${
+                    item.href === "/"
+                      ? "bg-emerald-100 text-emerald-900"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
                 >
                   {item.label}
                 </Link>
