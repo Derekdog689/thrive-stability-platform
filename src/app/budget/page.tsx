@@ -51,6 +51,20 @@ function formatCategoryType(value: string) {
     .join(" ");
 }
 
+function getSpentPercentage(
+  spentValue: number | string,
+  plannedValue: number | string,
+) {
+  const spent = toNumber(spentValue);
+  const planned = toNumber(plannedValue);
+
+  if (planned <= 0) {
+    return 0;
+  }
+
+  return Math.min((spent / planned) * 100, 100);
+}
+
 export default function BudgetPage() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [selectedProgramId, setSelectedProgramId] = useState("");
@@ -361,6 +375,45 @@ export default function BudgetPage() {
                             {formatMoney(category.remaining_amount)}
                           </span>
                         </div>
+
+                        <div className="pt-2">
+  <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
+    <span>Budget used</span>
+    <span>
+      {Math.round(
+        getSpentPercentage(
+          category.spent_amount,
+          category.planned_amount,
+        ),
+      )}
+      %
+    </span>
+  </div>
+
+  <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+    <div
+      className={`h-full rounded-full ${
+        toNumber(category.spent_amount) >
+        toNumber(category.planned_amount)
+          ? "bg-rose-500"
+          : "bg-emerald-600"
+      }`}
+      style={{
+        width: `${getSpentPercentage(
+          category.spent_amount,
+          category.planned_amount,
+        )}%`,
+      }}
+    />
+  </div>
+
+  {toNumber(category.spent_amount) >
+    toNumber(category.planned_amount) && (
+    <p className="mt-2 text-xs font-bold text-rose-700">
+      Spending exceeds the planned amount.
+    </p>
+  )}
+</div>
                       </div>
                     </article>
                   ))}
