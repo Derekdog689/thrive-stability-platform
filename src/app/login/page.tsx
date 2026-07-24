@@ -141,9 +141,7 @@ export default function LoginPage() {
               <p>
                 <span className="font-black">Email:</span> {currentUser.email}
               </p>
-              <p>
-                <span className="font-black">User ID:</span> {currentUser.id}
-              </p>
+              
             </div>
           ) : null}
         </div>

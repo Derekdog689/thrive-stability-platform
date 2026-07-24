@@ -297,7 +297,6 @@ export default function ProgramContextPanel() {
               Status: {selectedProgram.status}
             </p>
             <p className="mt-2 break-all text-xs text-emerald-800">
-              ID: {selectedProgram.id}
             </p>
           </div>
         ) : (
