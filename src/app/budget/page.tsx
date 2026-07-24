@@ -6,6 +6,7 @@ import AuthGate from "../AuthGate";
 import ProgramContextPanel from "../ProgramContextPanel";
 import WorkspaceContextPanel from "../WorkspaceContextPanel";
 import { supabase } from "@/lib/supabaseClient";
+import ThriveSidebar from "../ThriveSidebar";
 
 const SELECTED_WORKSPACE_STORAGE_KEY = "thrive:selectedWorkspaceId";
 const SELECTED_PROGRAM_STORAGE_KEY = "thrive:selectedProgramId";
@@ -189,7 +190,10 @@ export default function BudgetPage() {
   return (
     <AuthGate>
       <main className="min-h-screen bg-[#eef4ef] px-4 py-5 text-slate-950 sm:px-6">
-        <section className="mx-auto max-w-7xl space-y-6">
+  <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[260px_1fr]">
+    <ThriveSidebar />
+
+    <section className="space-y-6">
           <header className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
             <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
               <div>
@@ -379,6 +383,7 @@ export default function BudgetPage() {
             support planning. It does not provide legal, fiduciary, clinical,
             bankruptcy, credit-repair, investment, or crisis-service authority.
           </footer>
+        </section>
         </section>
       </main>
     </AuthGate>

@@ -1,7 +1,9 @@
 import AuthStatusPanel from "./AuthStatusPanel";
 import AuthGate from "./AuthGate";
 import WorkspaceContextPanel from "./WorkspaceContextPanel";
+
 import ProgramContextPanel from "./ProgramContextPanel";
+
 import BudgetCategoriesDashboardCard from "./BudgetCategoriesDashboardCard";
 import ThriveSidebar from "./ThriveSidebar";
 
@@ -93,7 +95,7 @@ export default function Home() {
 
             <WorkspaceContextPanel />
             <ProgramContextPanel />
-           
+          
             <section className="grid gap-4 md:grid-cols-4">
               <div className="rounded-3xl bg-emerald-700 p-5 text-white shadow-sm">
                 <p className="text-sm font-bold text-emerald-100">
