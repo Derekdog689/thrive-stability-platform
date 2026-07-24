@@ -663,3 +663,27 @@ Security boundary:
 
 - This checkpoint changed presentation only.
 - No authentication, Supabase, RLS, schema, financial-data, beneficiary-data, or trust-data behavior changed.
+
+## Checkpoint 033: Read-Only Budget Progress Bars Complete
+
+Stable truth:
+
+- Each active budget category on `/budget` now displays a visual progress bar.
+- Progress is calculated from `spent_amount / planned_amount`.
+- Progress display is capped at 100%.
+- Housing displays 100% used.
+- Food displays approximately 31% used.
+- Flexible Spending displays 70% used.
+- Emergency Reserve displays 0% used.
+- Category cards remain read-only.
+- Mobile layout remains functional.
+- `npm run build` passed.
+- Browser smoke testing confirmed the progress bars rendered correctly.
+- Commit:
+  - `06a66aa Add budget category progress bars`
+
+Security boundary:
+
+- This checkpoint changed presentation and client-side calculations only.
+- No authentication, Supabase, RLS, schema, or database changes were made.
+- No real trust, bank, beneficiary, clinical, recovery, or private case data was introduced.
