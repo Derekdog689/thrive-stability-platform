@@ -485,7 +485,7 @@ Next required step:
 
 - Create a real `/budget` route shell before changing the sidebar Budget item from `Soon` to an active link.
 
-Checkpoint 025: Read-Only Budget Route Shell Complete
+## Checkpoint 025: Read-Only Budget Route Shell Complete
 
 Success means:
 
@@ -497,3 +497,150 @@ Totals calculate correctly.
 No edit controls exist.
 No real trust or bank information is introduced.
 The dashboard Budget item changes from Soon to an active /budget link only after browser proof.
+
+
+## Checkpoint 026: Development Identifiers Hidden
+
+Stable truth:
+
+- Raw workspace UUID display was removed from `WorkspaceContextPanel`.
+- Raw program UUID display was removed from `ProgramContextPanel`.
+- The selected workspace UUID footer was removed from `ProgramContextPanel`.
+- Workspace selection continued to function.
+- Program selection continued to function.
+- Budget category records continued to load through authenticated Supabase RLS.
+- `npm run build` passed.
+- Browser smoke testing confirmed the dashboard and `/budget` remained functional.
+- Commit:
+  - `a0a85cf Hide development identifiers from context panels`
+
+Security boundary:
+
+- Internal database identifiers remain available to application logic but are no longer displayed in the normal user-facing interface.
+- No Supabase schema, policy, authentication, or RLS changes were made.
+- THRIVE remained limited to mock/test financial records.
+
+## Checkpoint 027: Mobile Dashboard Navigation Improved
+
+Stable truth:
+
+- The dashboard navigation was redesigned for smaller screens.
+- THRIVE branding remains visible in a compact header.
+- Navigation displays horizontally on mobile.
+- The existing sidebar layout remains available on larger screens.
+- Dashboard and Budget remain directly accessible.
+- Future modules remain visibly marked as `Soon`.
+- The duplicate mobile Budget button was subsequently removed.
+- `npm run build` passed.
+- Browser smoke testing confirmed mobile navigation and route access.
+- Commits:
+  - `0d29582 Improve mobile dashboard navigation`
+  - `0832274 extra budget nav link removed`
+
+Security boundary:
+
+- Navigation changes were presentation-only.
+- No authentication, Supabase, RLS, financial, beneficiary, clinical, recovery, or trust data behavior changed.
+
+## Checkpoint 028: Route-Aware THRIVE Navigation Complete
+
+Stable truth:
+
+- `src/app/ThriveNavigation.tsx` was created.
+- Navigation now uses the current pathname to determine the active route.
+- Dashboard is highlighted only on `/`.
+- Budget is highlighted on `/budget` and nested budget routes.
+- Future modules remain disabled and labeled `Soon`.
+- `aria-current="page"` is applied to the active route.
+- `npm run build` passed.
+- Browser smoke testing confirmed correct active-route behavior.
+- Commit:
+  - `918eeb7 Add route-aware THRIVE navigation`
+
+Security boundary:
+
+- Route-aware styling does not grant access or authorization.
+- Supabase RLS remains the data-access control layer.
+- No database or policy changes were made.
+
+## Checkpoint 029: Shared THRIVE Sidebar Created
+
+Stable truth:
+
+- `src/app/ThriveSidebar.tsx` was created.
+- The component contains:
+  - THRIVE branding
+  - Shared route-aware navigation
+  - Legal and operational guardrail language
+- The dashboard was updated to use the shared sidebar component.
+- The previous duplicated sidebar markup was removed.
+- `npm run build` passed.
+- Browser smoke testing confirmed the dashboard layout remained functional.
+- Commit:
+  - `e75598b Share THRIVE sidebar and remove scope debug panels`
+
+Security boundary:
+
+- The shared sidebar is an interface component only.
+- It does not establish authorization or replace Supabase RLS.
+- No financial or beneficiary data behavior changed.
+
+## Checkpoint 030: Development Scope Panels Removed
+
+Stable truth:
+
+- `DashboardWorkspaceScope` was removed from the user-facing dashboard.
+- `DashboardProgramScope` was removed from the user-facing dashboard.
+- Workspace and program selection panels were retained.
+- Workspace and program selection continued to function.
+- Budget category records continued to load for the selected context.
+- Raw development scope identifiers no longer appear in dashboard cards.
+- `npm run build` passed.
+- Browser smoke testing confirmed the dashboard remained functional.
+
+Security boundary:
+
+- Removing development panels did not remove workspace or program scoping.
+- Application queries remain scoped by selected workspace and selected program.
+- Supabase RLS remains active.
+
+## Checkpoint 031: Shared Sidebar Added to Budget Route
+
+Stable truth:
+
+- `/budget` now uses `ThriveSidebar`.
+- Dashboard and Budget now share a consistent application shell.
+- Budget is highlighted when the user is on `/budget`.
+- Dashboard remains accessible through the shared navigation.
+- Workspace and program selectors remain functional.
+- Budget totals and category records continue loading through authenticated RLS.
+- The redundant `Return to dashboard` affordance was removed.
+- The unused `Link` import was removed from the budget page.
+- `npm run build` passed.
+- Browser smoke testing confirmed both `/` and `/budget` remained functional.
+- Commits:
+  - `c9f70fb Use shared THRIVE sidebar across dashboard and budget`
+  - `fff125a remove redunadant dashbaord affordnace link on budget page`
+  - `m4d20f1 Remove unused budget page Link import`
+
+Security boundary:
+
+- Shared navigation does not expand user permissions.
+- No real bank, trust, beneficiary, clinical, recovery, or private case data was introduced.
+- No database schema or RLS policy changes were made.
+
+## Checkpoint 032: Budget Mobile Header Cleanup
+
+Status:
+
+- Planned.
+- Not yet completed.
+
+Planned scope:
+
+- Tighten mobile spacing in the `/budget` header.
+- Preserve the shared THRIVE sidebar and navigation.
+- Preserve the mock/test data notice.
+- Preserve workspace and program selection.
+- Preserve authenticated Supabase RLS behavior.
+- Make no database changes.
