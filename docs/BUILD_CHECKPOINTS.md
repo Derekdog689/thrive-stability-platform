@@ -687,3 +687,30 @@ Security boundary:
 - This checkpoint changed presentation and client-side calculations only.
 - No authentication, Supabase, RLS, schema, or database changes were made.
 - No real trust, bank, beneficiary, clinical, recovery, or private case data was introduced.
+
+## Checkpoint 034: Budget Status Labels Complete
+
+Stable truth:
+
+- Each active budget category on `/budget` now displays a plain-language status label.
+- Status labels are derived from the existing planned and spent amounts.
+- Current status rules are:
+  - Below 75% used: `On track`
+  - 75% through 99% used: `Needs attention`
+  - Exactly 100% used: `Fully used`
+  - Above 100% used: `Over budget`
+  - Planned amount of zero or less: `No plan set`
+- Housing displays `Fully used`.
+- Food displays `On track`.
+- Flexible Spending displays `On track`.
+- Emergency Reserve displays `On track`.
+- Category cards remain read-only.
+- Progress bars remain functional.
+- `npm run build` passed.
+- Browser smoke testing confirmed the labels rendered correctly.
+
+Security boundary:
+
+- Status labels are client-side presentation derived from existing mock/test budget records.
+- Labels are informational and do not constitute financial, fiduciary, clinical, legal, or investment advice.
+- No authentication, Supabase, RLS, schema, or database changes were made.
