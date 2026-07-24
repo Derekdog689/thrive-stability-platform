@@ -6,6 +6,7 @@ import DashboardWorkspaceScope from "./DashboardWorkspaceScope";
 import ProgramContextPanel from "./ProgramContextPanel";
 import DashboardProgramScope from "./DashboardProgramScope";
 import BudgetCategoriesDashboardCard from "./BudgetCategoriesDashboardCard";
+import ThriveNavigation from "./ThriveNavigation";
 
 const checkInMetrics = [
   { label: "Stress", value: 6, note: "Moderate pressure" },
@@ -19,15 +20,6 @@ const recentActivity = [
   { merchant: "ATM withdrawal", category: "Cash", amount: "$60.00", flag: "Cash access flag" },
   { merchant: "Transit pass", category: "Transportation", amount: "$22.50", flag: "Essential" },
   { merchant: "Late-night convenience store", category: "Flexible", amount: "$18.94", flag: "High-risk time" },
-];
-
-const navItems = [
-  { label: "Dashboard", href: "/", status: "active" },
-  { label: "Budget", href: "/budget", status: "active" },
-  { label: "Check-in", href: null, status: "coming soon" },
-  { label: "Patterns", href: null, status: "coming soon" },
-  { label: "Trust Mode", href: null, status: "coming soon" },
-  { label: "Reports", href: null, status: "coming soon" },
 ];
 
 const supabaseConfigured =
@@ -57,39 +49,9 @@ export default function Home() {
 
    </div>
 
-  <nav className="mt-5 lg:mt-0">
-    <div className="flex gap-2 overflow-x-auto pb-2 text-sm font-semibold lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
-      {navItems.map((item) =>
-        item.href ? (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`shrink-0 rounded-2xl px-4 py-3 lg:block ${
-              item.href === "/"
-                ? "bg-emerald-100 text-emerald-900"
-                : "bg-slate-50 text-slate-700 hover:bg-slate-100 lg:bg-transparent"
-            }`}
-          >
-            {item.label}
-          </Link>
-        ) : (
-          <div
-            key={item.label}
-            className="shrink-0 rounded-2xl bg-slate-50 px-4 py-3 text-slate-500 lg:bg-transparent"
-            aria-disabled="true"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span>{item.label}</span>
-
-              <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
-                Soon
-              </span>
-            </div>
-          </div>
-        ),
-      )}
-    </div>
-  </nav>
+  <div className="mt-5 lg:mt-0">
+  <ThriveNavigation />
+</div>
 
   <div className="mt-5 rounded-2xl bg-slate-950 p-4 text-white lg:mt-8">
     <p className="text-xs font-bold uppercase text-emerald-300">
