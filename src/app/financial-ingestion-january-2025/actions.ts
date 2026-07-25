@@ -277,127 +277,7 @@ export async function importJanuary2025Candidate(input: {
     };
   }
 
-  const { data: existingBatch, error: existingBatchError } =
-    await supabase
-      .from("financial_import_batches")
-      .select("id, import_status, source_file_sha256")
-      .eq("workspace_id", WORKSPACE_ID)
-      .eq("program_id", PROGRAM_ID)
-      .eq("source_file_sha256", EXPECTED_SOURCE_SHA256)
-      .maybeSingle();
-
-  if (existingBatchError) {
-    return {
-      ok: false,
-      status: "import_failed",
-      message:
-        `Existing-batch verification failed: ${existingBatchError.message}`,
-    };
-  }
-
-  if (existingBatch) {
-    return {
-      ok: false,
-      status: "already_imported",
-      message:
-        `The reconciled January file already has a batch with status ` +
-        `${existingBatch.import_status}. No additional records were created.`,
-      batchId: existingBatch.id,
-    };
-  }
-
-  const { data: existingSource, error: sourceLookupError } =
-    await supabase
-      .from("financial_sources")
-      .select("id")
-      .eq("workspace_id", WORKSPACE_ID)
-      .eq("program_id", PROGRAM_ID)
-      .eq("source_type", "bank_account")
-      .eq("account_mask", "2847")
-      .maybeSingle();
-
-  if (sourceLookupError) {
-    return {
-      ok: false,
-      status: "import_failed",
-      message:
-        `Financial-source verification failed: ${sourceLookupError.message}`,
-    };
-  }
-
-  let sourceId = existingSource?.id;
-
-  if (!sourceId) {
-    const { data: createdSource, error: sourceCreateError } =
-      await supabase
-        .from("financial_sources")
-        .insert({
-          workspace_id: WORKSPACE_ID,
-          program_id: PROGRAM_ID,
-          source_name: "Truist Account Ending 2847",
-          institution_name: "Truist",
-          source_type: "bank_account",
-          account_mask: "2847",
-          source_mode: "historical",
-          status: "active",
-          created_by: user.id,
-        })
-        .select("id")
-        .single();
-
-    if (sourceCreateError || !createdSource) {
-      return {
-        ok: false,
-        status: "import_failed",
-        message:
-          `Financial-source creation failed: ` +
-          `${sourceCreateError?.message ?? "No source returned."}`,
-      };
-    }
-
-    sourceId = createdSource.id;
-  }
-
-  const { data: createdBatch, error: batchCreateError } =
-    await supabase
-      .from("financial_import_batches")
-      .insert({
-        workspace_id: WORKSPACE_ID,
-        program_id: PROGRAM_ID,
-        financial_source_id: sourceId,
-        statement_period_start:
-          preview.metadata.statement_period_start,
-        statement_period_end: preview.metadata.statement_period_end,
-        source_filename: preview.metadata.source_filename,
-        source_file_sha256: EXPECTED_SOURCE_SHA256,
-        source_row_count: EXPECTED_ROW_COUNT,
-        import_status: "uploaded",
-        data_boundary: "historical",
-        source_lifecycle: "posted",
-        uploaded_by: user.id,
-      })
-      .select("id")
-      .single();
-
-  if (batchCreateError || !createdBatch) {
-    return {
-      ok: false,
-      status: "import_failed",
-      message:
-        `January batch creation failed: ` +
-        `${batchCreateError?.message ?? "No batch returned."}`,
-      sourceId,
-    };
-  }
-
-  const batchId = createdBatch.id;
-
-  const stagedRows = preview.records.map((record) => ({
-    workspace_id: WORKSPACE_ID,
-    program_id: PROGRAM_ID,
-    financial_source_id: sourceId,
-    import_batch_id: batchId,
-
+  const rpcRows = preview.records.map((record) => ({
     source_row_number: record.source_row_number,
     source_row_identity: record.source_row_identity,
     source_content_fingerprint:
@@ -424,71 +304,59 @@ export async function importJanuary2025Candidate(input: {
     subcategory_name: record.subcategory_name,
     amount: record.amount,
     daily_posted_balance: record.daily_posted_balance,
-
-    transaction_lifecycle: "posted",
-    parse_status: "parsed",
-    parse_error: null,
-    created_by: user.id,
   }));
 
-  const { error: stagedInsertError } = await supabase
-    .from("staged_financial_transactions")
-    .insert(stagedRows);
+  const { data: rpcResult, error: rpcError } = await supabase.rpc(
+    "import_january_2025_financial_batch",
+    {
+      p_workspace_id: WORKSPACE_ID,
+      p_program_id: PROGRAM_ID,
+      p_source_filename: preview.metadata.source_filename,
+      p_source_file_sha256: EXPECTED_SOURCE_SHA256,
+      p_statement_period_start:
+        preview.metadata.statement_period_start,
+      p_statement_period_end:
+        preview.metadata.statement_period_end,
+      p_rows: rpcRows,
+    },
+  );
 
-  if (stagedInsertError) {
+  if (rpcError) {
+    const duplicateImport =
+      rpcError.message.includes(
+        "already has an import batch",
+      );
+
     return {
       ok: false,
-      status: "import_failed",
-      message:
-        `The January batch was created, but staged-row insertion failed: ` +
-        `${stagedInsertError.message}. The batch remains open for controlled review.`,
-      sourceId,
-      batchId,
+      status: duplicateImport
+        ? "already_imported"
+        : "import_failed",
+      message: duplicateImport
+        ? "The reconciled January file already has an import batch. " +
+          "No additional records were created."
+        : "The atomic January import failed. The database transaction was rolled back. " +
+          `Database response: ${rpcError.message}`,
     };
   }
 
-  const { count: insertedCount, error: countError } = await supabase
-    .from("staged_financial_transactions")
-    .select("id", {
-      count: "exact",
-      head: true,
-    })
-    .eq("import_batch_id", batchId);
+  const result = Array.isArray(rpcResult)
+    ? rpcResult[0]
+    : rpcResult;
 
   if (
-    countError ||
-    insertedCount !== EXPECTED_ROW_COUNT
+    !result ||
+    result.import_status !== "ready_for_review" ||
+    result.inserted_row_count !== EXPECTED_ROW_COUNT ||
+    !result.financial_source_id ||
+    !result.import_batch_id
   ) {
     return {
       ok: false,
       status: "import_failed",
       message:
-        `Post-import count verification failed. Expected 85 rows and observed ` +
-        `${insertedCount ?? "an unknown count"}. The batch was not advanced.`,
-      sourceId,
-      batchId,
-      insertedRows: insertedCount ?? undefined,
-    };
-  }
-
-  const { error: readyError } = await supabase
-    .from("financial_import_batches")
-    .update({
-      import_status: "ready_for_review",
-    })
-    .eq("id", batchId)
-    .eq("import_status", "uploaded");
-
-  if (readyError) {
-    return {
-      ok: false,
-      status: "import_failed",
-      message:
-        `All 85 staged rows were inserted, but the batch could not be advanced ` +
-        `to ready_for_review: ${readyError.message}`,
-      sourceId,
-      batchId,
-      insertedRows: EXPECTED_ROW_COUNT,
+        "The atomic import returned an unexpected result. " +
+        "The January batch was not confirmed by the application.",
     };
   }
 
@@ -496,11 +364,11 @@ export async function importJanuary2025Candidate(input: {
     ok: true,
     status: "ready_for_review",
     message:
-      "January 2025 was imported as observational source evidence. " +
+      "January 2025 was imported atomically as observational source evidence. " +
       "The batch contains 85 staged rows and is ready for human review. " +
       "The batch was not approved, and no trust conclusions were created.",
-    sourceId,
-    batchId,
-    insertedRows: EXPECTED_ROW_COUNT,
+    sourceId: result.financial_source_id,
+    batchId: result.import_batch_id,
+    insertedRows: result.inserted_row_count,
   };
 }
