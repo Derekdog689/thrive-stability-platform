@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import ImportConfirmationClient from "./ImportConfirmationClient";
+
 export const dynamic = "force-static";
 
 const WORKSPACE = {
@@ -221,6 +223,10 @@ export default function January2025FinancialIngestionPage() {
             ))}
           </div>
         </section>
+
+        <ImportConfirmationClient
+          validationPassed={validation.passed}
+        />
 
         <section className="rounded-3xl bg-slate-950 p-6 text-white">
           <h2 className="text-xl font-black">
