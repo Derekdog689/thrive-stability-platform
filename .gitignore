@@ -43,3 +43,10 @@ next-env.d.ts
 
 # THRIVE private financial source files
 docs/source_samples/**/*.csv
+
+# THRIVE private generated financial ingestion previews
+private_artifacts/financial_ingestion/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
