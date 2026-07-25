@@ -24,7 +24,60 @@ The system must reflect reality before it adds automation.
 
 No fake certainty. No false legal authority. No clinical conclusions. No financial guarantees.
 
-### 2. Essentials First
+### 2. One Person at a Time
+
+THRIVE is designed around the supported individual, not around the convenience of an organization, trust, facility, family member, or data system.
+
+A reusable platform may support many individuals, but each person retains an independent record, context, consent structure, support plan, and personal growth path.
+
+The platform exists to support one person at a time.
+
+### 3. Explain Before Flagging
+
+THRIVE should explain observable facts before suggesting concern, review, or support.
+
+For example:
+
+- Cash received: $200.00
+- ATM operator surcharge: $3.75
+- Non-network bank fee: $3.00
+- Total removed from the account: $206.75
+- Total cost of accessing $200.00: $6.75
+
+The preferred response is educational:
+
+> You received $200.00 in cash, but $206.75 left the account because two separate fees were charged. A lower-cost cash option may avoid some or all of these fees.
+
+The system must not convert financial ignorance, limited skills, disability, recovery challenges, or missing context into moral judgment.
+
+### 4. Separate Facts, Patterns, Explanations, and Conclusions
+
+THRIVE must distinguish among:
+
+- **Facts:** What the records directly show.
+- **Patterns:** Repeated or correlated observations.
+- **Explanations:** Context supplied by the individual or an authorized support person.
+- **Conclusions:** Human determinations made by someone with appropriate authority.
+
+A correlation between wellness input and financial activity does not establish cause, diagnosis, intent, relapse, misconduct, or incapacity.
+
+### 5. Personal Growth Is the Outcome
+
+The platform should help the individual improve over time through:
+
+- financial understanding;
+- stronger routines;
+- fewer avoidable fees;
+- improved responsibility completion;
+- earlier requests for assistance;
+- better recognition of personal patterns;
+- increased confidence;
+- greater practical independence;
+- healthier and more stable decision-making.
+
+Progress should be measured against the person’s own goals and prior functioning, not against an artificial universal standard.
+
+### 6. Essentials First
 
 The platform prioritizes:
 
@@ -34,12 +87,12 @@ The platform prioritizes:
 - Phone
 - Transportation
 - Medical or recovery-related essentials
-- Required beneficiary distributions
-- Trustee documentation
+- Required beneficiary distributions, when applicable
+- Necessary documentation and responsibilities
 
 Flexible spending is secondary to protected needs.
 
-### 3. Support Without Shame
+### 7. Support Without Shame
 
 The platform must avoid language that humiliates, diagnoses, moralizes, or labels the user.
 
@@ -50,9 +103,9 @@ Preferred language:
 - “Review”
 - “Support touchpoint”
 - “Spending pressure”
-- “Cash access flag”
+- “Cash access pattern”
 - “Needs documentation”
-- “Requires review”
+- “Would you like help reviewing this?”
 
 Avoid language such as:
 
@@ -61,28 +114,40 @@ Avoid language such as:
 - “Addict spending”
 - “Relapse proof”
 - “Irresponsible”
-- “Noncompliant” unless used in a formal compliance context with evidence
+- “Noncompliant” unless used in a formal compliance context supported by evidence
 
-### 4. Human Authority Remains Human
+### 8. Human Authority Remains Human
 
-THRIVE may organize, calculate, summarize, and flag information.
+THRIVE may organize, calculate, summarize, explain, and identify possible patterns.
 
 THRIVE must not replace:
 
-- Trustee judgment
-- Legal counsel
-- Clinical judgment
-- Financial advisory services
-- Crisis services
-- User consent
+- the individual’s agency;
+- lawful support authority;
+- trustee judgment;
+- legal counsel;
+- clinical judgment;
+- financial advisory services;
+- crisis services;
+- informed consent.
 
-### 5. DSS Role Clarity
+### 9. DSS Role Clarity
 
-For trust-related use, DSS Enterprises may support documentation, administrative organization, reporting, planning, and analysis.
+DSS Enterprises may support documentation, administrative organization, reporting, planning, education, account assistance, and analysis when authorized.
 
 DSS Enterprises is not the trustee unless separately and legally appointed.
 
-The trustee remains the fiduciary decision-maker.
+For trust-related matters, the trustee remains the fiduciary decision-maker.
+
+For personal-support matters, DSS acts only within the authority, consent, and support relationship applicable to the individual.
+
+### 10. Independent Systems Remain Independent
+
+A person’s financial support spine, a trust ledger, a housing system, a treatment platform, and any other external system remain separate domains.
+
+Information may cross between systems only through lawful authority, documented consent, defined purpose, minimum necessary disclosure, and an auditable exchange.
+
+No external system automatically controls, rewrites, approves, or classifies another system’s records.
 
 ## Legal and Ethical Boundaries
 
@@ -102,13 +167,15 @@ THRIVE must not present itself as:
 
 THRIVE may present itself as:
 
-- Budget education
-- Financial organization
-- Protected spending support
-- Trust administration support documentation
-- Consent-based support reporting
+- Financial capability education
+- Personal financial organization
+- Daily responsibility support
+- Protected spending planning
 - Recovery-informed financial awareness
+- Wellness reflection
+- Consent-based support reporting
 - Administrative planning support
+- Trust administration support documentation, when applicable
 
 ## Data Protection Principles
 
@@ -293,3 +360,87 @@ Next:
 - Add GOVERNANCE.md
 - Commit clean checkpoint
 - Begin Supabase schema inventory
+## Person-Centered Domain Boundaries
+
+### Personal Support Spine
+
+Each supported individual has an independent personal support spine.
+
+It may include:
+
+- personal financial observations;
+- bills and responsibilities;
+- financial education;
+- wellness reflections;
+- behavioral input;
+- goals;
+- reminders;
+- receipts and supporting evidence;
+- personal explanations;
+- authorized support actions;
+- pattern observations.
+
+The personal spine belongs to the person’s support context. It must not be treated as property of a trust, housing program, support organization, or external decision-maker.
+
+### External Systems
+
+An external system, including a trust ledger, housing system, treatment platform, or benefits system, remains independent from the individual’s personal spine.
+
+External systems may exchange limited information with THRIVE only through:
+
+- lawful authority;
+- documented consent;
+- a defined support relationship;
+- a specific operational purpose;
+- minimum necessary disclosure;
+- an auditable exchange record.
+
+Neither system automatically controls, rewrites, approves, or classifies records belonging to the other.
+
+### Controlled Collaboration
+
+For Johnny, THRIVE may receive verified information that helps him understand his responsibilities, such as:
+
+- a trust distribution was sent;
+- an essential expense was paid directly;
+- an upcoming responsibility remains unpaid;
+- a document or explanation may be needed for a specific request.
+
+Johnny’s personal financial activity remains independent from the Trust Engine.
+
+The Trust Engine records trust truth.
+
+THRIVE records Johnny’s personal support truth.
+
+A controlled bridge may compare relevant facts, but it must not merge ownership, authority, or decision-making.
+
+## Recovery-Informed Behavioral Analytics
+
+THRIVE may combine financial observations with voluntary wellness and behavioral input to identify possible patterns that may help the individual.
+
+Permitted observations may include:
+
+- repeated financial fees;
+- increased spending pressure;
+- missed responsibilities;
+- changes in routine;
+- correlations between stress and financial activity;
+- positive changes associated with support, planning, or stable routines.
+
+Analytics must remain:
+
+- observational;
+- explainable;
+- person-centered;
+- non-diagnostic;
+- non-punitive;
+- consent-aware;
+- reviewable by a human.
+
+THRIVE must not claim that financial activity proves relapse, impairment, dishonesty, irresponsibility, or any clinical condition.
+
+## Human-Centered Product Statement
+
+THRIVE helps one person at a time understand their money, manage daily responsibilities, recognize personal patterns, and ask for support before problems become crises.
+
+The system exists to support growth, understanding, stability, dignity, and practical independence.
