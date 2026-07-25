@@ -142,30 +142,34 @@ synthetic profile rows: 0
 
 No profile rows were created to support this fixture installation.
 
-Boundary Verification
+## Boundary Verification
 
 The installation did not create or authorize:
 
-Johnny records;
-Trust Engine records;
-explanation records;
-clinical records;
-financial records;
-legal records;
-recovery records;
-service-role application access;
-temporary route use;
-authenticated RLS testing.
-Validation Conclusion
+- Johnny records;
+- Trust Engine records;
+- explanation records;
+- clinical records;
+- financial records;
+- legal records;
+- recovery records;
+- service-role application access;
+- temporary route use;
+- authenticated RLS testing.
 
-The permanent controlled supported-person RLS fixture installation matches the approved artifact and verification checklist.
+## Validation Conclusion
 
-The installed database state is limited to the approved synthetic workspace, memberships, program, supported people, and participation records.
+The permanent controlled supported-person RLS fixture installation matches the
+approved artifact and verification checklist.
 
-Next Gate
+The installed database state is limited to the approved synthetic workspace,
+memberships, program, supported people, and participation records.
+
+## Next Gate
 
 Review and commit this validation report.
 
 Authenticated RLS testing remains a separate approval gate.
 
-Do not open /supported-person-test and do not begin authenticated RLS testing until separately approved.
+Do not open `/supported-person-test` and do not begin authenticated RLS testing
+until separately approved.
