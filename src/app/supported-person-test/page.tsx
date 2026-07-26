@@ -146,17 +146,102 @@ export default function SupportedPersonTestPage() {
         return;
       }
 
-      const workspaceId =
+      const storedWorkspaceId =
         window.localStorage.getItem(SELECTED_WORKSPACE_STORAGE_KEY) ?? "";
-      const programId =
+      const storedProgramId =
         window.localStorage.getItem(SELECTED_PROGRAM_STORAGE_KEY) ?? "";
 
       setEmail(sessionData.session.user.email ?? "");
       setUserId(sessionData.session.user.id);
-      setSelectedWorkspaceId(workspaceId);
-      setSelectedProgramId(programId);
 
-      await loadVisibleRecords(workspaceId, programId);
+      let validatedWorkspaceId = "";
+      let validatedProgramId = "";
+      let staleContextCleared = false;
+
+      if (storedWorkspaceId) {
+        const { data: visibleWorkspaces, error: workspaceError } =
+          await supabase
+            .from("workspaces")
+            .select("id, name, workspace_type, status")
+            .eq("id", storedWorkspaceId);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (workspaceError) {
+          setPageState("error");
+          setMessage(
+            `Workspace-context validation failed: ${workspaceError.message}`,
+          );
+          return;
+        }
+
+        const storedWorkspaceIsVisible =
+          (visibleWorkspaces ?? []).some(
+            (workspace) => workspace.id === storedWorkspaceId,
+          );
+
+        if (storedWorkspaceIsVisible) {
+          validatedWorkspaceId = storedWorkspaceId;
+        } else {
+          window.localStorage.removeItem(SELECTED_WORKSPACE_STORAGE_KEY);
+          window.localStorage.removeItem(SELECTED_PROGRAM_STORAGE_KEY);
+          staleContextCleared = true;
+        }
+      }
+
+      if (validatedWorkspaceId && storedProgramId) {
+        const { data: visiblePrograms, error: programError } =
+          await supabase
+            .from("programs")
+            .select("id, workspace_id, program_name, program_type, status")
+            .eq("workspace_id", validatedWorkspaceId)
+            .eq("id", storedProgramId);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (programError) {
+          setPageState("error");
+          setMessage(
+            `Program-context validation failed: ${programError.message}`,
+          );
+          return;
+        }
+
+        const storedProgramIsVisible =
+          (visiblePrograms ?? []).some(
+            (program) =>
+              program.id === storedProgramId &&
+              program.workspace_id === validatedWorkspaceId,
+          );
+
+        if (storedProgramIsVisible) {
+          validatedProgramId = storedProgramId;
+        } else {
+          window.localStorage.removeItem(SELECTED_PROGRAM_STORAGE_KEY);
+          staleContextCleared = true;
+        }
+      } else if (!validatedWorkspaceId && storedProgramId) {
+        window.localStorage.removeItem(SELECTED_PROGRAM_STORAGE_KEY);
+        staleContextCleared = true;
+      }
+
+      setSelectedWorkspaceId(validatedWorkspaceId);
+      setSelectedProgramId(validatedProgramId);
+
+      await loadVisibleRecords(
+        validatedWorkspaceId,
+        validatedProgramId,
+      );
+
+      if (isMounted && staleContextCleared) {
+        setMessage(
+          "Authenticated RLS queries completed. Stale browser context was cleared.",
+        );
+      }
     }
 
     void initializePage();
