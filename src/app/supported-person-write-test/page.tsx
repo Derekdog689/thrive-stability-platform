@@ -1,0 +1,702 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
+const TEST_WORKSPACE_ID = "71000000-0000-4000-8000-000000000001";
+const TEST_PROGRAM_ID = "71000000-0000-4000-8000-000000000002";
+const TEST_PERSON_A_ID = "71000000-0000-4000-8000-000000000003";
+const TEST_PERSON_B_ID = "71000000-0000-4000-8000-000000000004";
+const TEST_PARTICIPATION_A_ID = "71000000-0000-4000-8000-000000000005";
+const WRITE_TEST_PERSON_ID = "71000000-0000-4000-8000-000000000007";
+const WRITE_TEST_PARTICIPATION_ID =
+  "71000000-0000-4000-8000-000000000008";
+
+const TEST_ADMIN_ID = "3c0300e6-c4e9-4a84-b668-4a7e39593162";
+const TEST_PERSON_A_AUTH_ID = "9b283c6e-c2f8-4f87-9f90-fa081ee249bd";
+const TEST_PERSON_B_AUTH_ID = "28cecd10-43ed-4ae5-8668-31cfa515412c";
+const TEST_SUPPORT_ID = "7f0a7540-7a6d-4a1a-a29f-7a26c9571db9";
+const TEST_VIEWER_ID = "d3782ad5-8e99-4779-8928-0143bd567486";
+const TEST_OUTSIDER_ID = "d89a6549-ac1a-431c-aff1-1ba7313175ab";
+
+type Actor =
+  | "administrator"
+  | "person-a"
+  | "person-b"
+  | "support"
+  | "viewer"
+  | "outsider"
+  | "unknown";
+
+type TestAction = {
+  id: string;
+  title: string;
+  expected: "allowed" | "denied";
+  description: string;
+  allowedActors: Actor[];
+  payload: Record<string, unknown>;
+};
+
+type TestResult = {
+  actionId: string;
+  expected: "allowed" | "denied";
+  observed: "allowed" | "denied" | "error";
+  message: string;
+  data: unknown;
+};
+
+function classifyActor(userId: string): Actor {
+  switch (userId) {
+    case TEST_ADMIN_ID:
+      return "administrator";
+    case TEST_PERSON_A_AUTH_ID:
+      return "person-a";
+    case TEST_PERSON_B_AUTH_ID:
+      return "person-b";
+    case TEST_SUPPORT_ID:
+      return "support";
+    case TEST_VIEWER_ID:
+      return "viewer";
+    case TEST_OUTSIDER_ID:
+      return "outsider";
+    default:
+      return "unknown";
+  }
+}
+
+function actorLabel(actor: Actor): string {
+  switch (actor) {
+    case "administrator":
+      return "Controlled administrator";
+    case "person-a":
+      return "Controlled supported person A";
+    case "person-b":
+      return "Controlled supported person B";
+    case "support":
+      return "Controlled support member";
+    case "viewer":
+      return "Controlled viewer member";
+    case "outsider":
+      return "Controlled authenticated outsider";
+    default:
+      return "Unrecognized identity";
+  }
+}
+
+export default function SupportedPersonWriteTestPage() {
+  const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [selectedActionId, setSelectedActionId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<TestResult | null>(null);
+
+  const actor = useMemo(() => classifyActor(userId), [userId]);
+
+  const actions = useMemo<TestAction[]>(
+    () => [
+      {
+        id: "W1",
+        title: "Administrator creates synthetic supported person C",
+        expected: "allowed",
+        description:
+          "Creates one reserved synthetic supported-person record. It does not use Johnny or any real person.",
+        allowedActors: ["administrator"],
+        payload: {
+          id: WRITE_TEST_PERSON_ID,
+          workspace_id: TEST_WORKSPACE_ID,
+          auth_user_id: null,
+          display_name: "SUPPORTED PERSON WRITE TEST C",
+          preferred_name: "Write Test C",
+          status: "active",
+          external_reference: "RLS-WRITE-TEST-PERSON-C",
+          created_by: TEST_ADMIN_ID,
+        },
+      },
+      {
+        id: "W2",
+        title: "Administrator updates permitted metadata",
+        expected: "allowed",
+        description:
+          "Updates only permitted metadata on synthetic supported person C.",
+        allowedActors: ["administrator"],
+        payload: {
+          target_id: WRITE_TEST_PERSON_ID,
+          changes: {
+            display_name: "SUPPORTED PERSON WRITE TEST C UPDATED",
+            preferred_name: "Write Test C Updated",
+            external_reference: "RLS-WRITE-TEST-PERSON-C-UPDATED",
+          },
+        },
+      },
+      {
+        id: "W3",
+        title: "Administrator creates synthetic participation",
+        expected: "allowed",
+        description:
+          "Creates the reserved participation record for synthetic supported person C.",
+        allowedActors: ["administrator"],
+        payload: {
+          id: WRITE_TEST_PARTICIPATION_ID,
+          workspace_id: TEST_WORKSPACE_ID,
+          program_id: TEST_PROGRAM_ID,
+          supported_person_id: WRITE_TEST_PERSON_ID,
+          participant_role: "supported_person",
+          status: "active",
+          created_by: TEST_ADMIN_ID,
+        },
+      },
+      {
+        id: "W4",
+        title: "Administrator sets synthetic participation inactive",
+        expected: "allowed",
+        description:
+          "Changes only the status of the synthetic W3 participation from active to inactive.",
+        allowedActors: ["administrator"],
+        payload: {
+          target_id: WRITE_TEST_PARTICIPATION_ID,
+          changes: { status: "inactive" },
+        },
+      },
+      {
+        id: "W5",
+        title: "Supported person A attempts supported-person insert",
+        expected: "denied",
+        description:
+          "Attempts a fixed synthetic insert that RLS must deny.",
+        allowedActors: ["person-a"],
+        payload: {
+          id: WRITE_TEST_PERSON_ID,
+          workspace_id: TEST_WORKSPACE_ID,
+          auth_user_id: null,
+          display_name: "SUPPORTED PERSON WRITE TEST C",
+          preferred_name: "Write Test C",
+          status: "active",
+          external_reference: "RLS-WRITE-TEST-PERSON-C",
+          created_by: TEST_PERSON_A_AUTH_ID,
+        },
+      },
+      {
+        id: "W6",
+        title: "Supported person A attempts self-update",
+        expected: "denied",
+        description:
+          "Attempts to alter the preferred name on supported-person record A.",
+        allowedActors: ["person-a"],
+        payload: {
+          target_id: TEST_PERSON_A_ID,
+          changes: { preferred_name: "Unauthorized Person A Update" },
+        },
+      },
+      {
+        id: "W7",
+        title: "Supported person A attempts participation insert",
+        expected: "denied",
+        description:
+          "Attempts a fixed participation insert that RLS must deny.",
+        allowedActors: ["person-a"],
+        payload: {
+          id: WRITE_TEST_PARTICIPATION_ID,
+          workspace_id: TEST_WORKSPACE_ID,
+          program_id: TEST_PROGRAM_ID,
+          supported_person_id: TEST_PERSON_A_ID,
+          participant_role: "supported_person",
+          status: "active",
+          created_by: TEST_PERSON_A_AUTH_ID,
+        },
+      },
+      {
+        id: "W8",
+        title: "Supported person A attempts participation update",
+        expected: "denied",
+        description:
+          "Attempts to change the status of participation A.",
+        allowedActors: ["person-a"],
+        payload: {
+          target_id: TEST_PARTICIPATION_A_ID,
+          changes: { status: "inactive" },
+        },
+      },
+      {
+        id: "W9",
+        title: "Support member attempts supported-person update",
+        expected: "denied",
+        description:
+          "Attempts to change metadata on supported-person A.",
+        allowedActors: ["support"],
+        payload: {
+          target_id: TEST_PERSON_A_ID,
+          changes: { preferred_name: "Unauthorized Support Update" },
+        },
+      },
+      {
+        id: "W10",
+        title: "Support member attempts participation update",
+        expected: "denied",
+        description:
+          "Attempts to change participation A status.",
+        allowedActors: ["support"],
+        payload: {
+          target_id: TEST_PARTICIPATION_A_ID,
+          changes: { status: "inactive" },
+        },
+      },
+      {
+        id: "W11",
+        title: "Viewer attempts supported-person update",
+        expected: "denied",
+        description:
+          "Attempts to change metadata on supported-person A.",
+        allowedActors: ["viewer"],
+        payload: {
+          target_id: TEST_PERSON_A_ID,
+          changes: { preferred_name: "Unauthorized Viewer Update" },
+        },
+      },
+      {
+        id: "W12",
+        title: "Viewer attempts participation update",
+        expected: "denied",
+        description:
+          "Attempts to change participation A status.",
+        allowedActors: ["viewer"],
+        payload: {
+          target_id: TEST_PARTICIPATION_A_ID,
+          changes: { status: "inactive" },
+        },
+      },
+      {
+        id: "W13",
+        title: "Outsider attempts supported-person insert",
+        expected: "denied",
+        description:
+          "Uses fixed synthetic identifiers only. RLS must deny the request.",
+        allowedActors: ["outsider"],
+        payload: {
+          id: WRITE_TEST_PERSON_ID,
+          workspace_id: TEST_WORKSPACE_ID,
+          auth_user_id: null,
+          display_name: "SUPPORTED PERSON WRITE TEST C",
+          preferred_name: "Write Test C",
+          status: "active",
+          external_reference: "RLS-WRITE-TEST-PERSON-C",
+          created_by: TEST_OUTSIDER_ID,
+        },
+      },
+      {
+        id: "W14",
+        title: "Outsider attempts participation insert",
+        expected: "denied",
+        description:
+          "Uses fixed synthetic identifiers only. RLS must deny the request.",
+        allowedActors: ["outsider"],
+        payload: {
+          id: WRITE_TEST_PARTICIPATION_ID,
+          workspace_id: TEST_WORKSPACE_ID,
+          program_id: TEST_PROGRAM_ID,
+          supported_person_id: TEST_PERSON_A_ID,
+          participant_role: "supported_person",
+          status: "active",
+          created_by: TEST_OUTSIDER_ID,
+        },
+      },
+      {
+        id: "W15",
+        title: "Administrator attempts supported-person workspace change",
+        expected: "denied",
+        description:
+          "Attempts to change immutable workspace scope on synthetic person C.",
+        allowedActors: ["administrator"],
+        payload: {
+          target_id: WRITE_TEST_PERSON_ID,
+          changes: {
+            workspace_id: "72000000-0000-4000-8000-000000000001",
+          },
+        },
+      },
+      {
+        id: "W16",
+        title: "Administrator attempts creation-lineage change",
+        expected: "denied",
+        description:
+          "Attempts to change immutable created_by on synthetic person C.",
+        allowedActors: ["administrator"],
+        payload: {
+          target_id: WRITE_TEST_PERSON_ID,
+          changes: { created_by: TEST_PERSON_A_AUTH_ID },
+        },
+      },
+      {
+        id: "W17",
+        title: "Administrator attempts participation scope change",
+        expected: "denied",
+        description:
+          "Attempts to change immutable supported-person scope on the synthetic participation.",
+        allowedActors: ["administrator"],
+        payload: {
+          target_id: WRITE_TEST_PARTICIPATION_ID,
+          changes: { supported_person_id: TEST_PERSON_B_ID },
+        },
+      },
+    ],
+    [],
+  );
+
+  const visibleActions = useMemo(
+    () => actions.filter((action) => action.allowedActors.includes(actor)),
+    [actions, actor],
+  );
+
+  const selectedAction =
+    visibleActions.find((action) => action.id === selectedActionId) ?? null;
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSession() {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (error || !data.session?.user) {
+        setEmail("");
+        setUserId("");
+        setSessionChecked(true);
+        return;
+      }
+
+      setEmail(data.session.user.email ?? "");
+      setUserId(data.session.user.id);
+      setSessionChecked(true);
+    }
+
+    void loadSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function executeAction(action: TestAction) {
+    if (confirmation !== action.id) {
+      setResult({
+        actionId: action.id,
+        expected: action.expected,
+        observed: "error",
+        message: `Type ${action.id} exactly before submitting.`,
+        data: null,
+      });
+      return;
+    }
+
+    if (!action.allowedActors.includes(actor)) {
+      setResult({
+        actionId: action.id,
+        expected: action.expected,
+        observed: "error",
+        message: "This action is not available to the authenticated test actor.",
+        data: null,
+      });
+      return;
+    }
+
+    setBusy(true);
+    setResult(null);
+
+    try {
+      let response:
+        | { data: unknown; error: { message: string } | null }
+        | undefined;
+
+      switch (action.id) {
+        case "W1":
+        case "W5":
+        case "W13":
+          response = await supabase
+            .from("supported_people")
+            .insert(action.payload)
+            .select();
+          break;
+
+        case "W2":
+        case "W6":
+        case "W9":
+        case "W11":
+        case "W15":
+        case "W16": {
+          const payload = action.payload as {
+            target_id: string;
+            changes: Record<string, unknown>;
+          };
+
+          response = await supabase
+            .from("supported_people")
+            .update(payload.changes)
+            .eq("id", payload.target_id)
+            .select();
+          break;
+        }
+
+        case "W3":
+        case "W7":
+        case "W14":
+          response = await supabase
+            .from("program_participants")
+            .insert(action.payload)
+            .select();
+          break;
+
+        case "W4":
+        case "W8":
+        case "W10":
+        case "W12":
+        case "W17": {
+          const payload = action.payload as {
+            target_id: string;
+            changes: Record<string, unknown>;
+          };
+
+          response = await supabase
+            .from("program_participants")
+            .update(payload.changes)
+            .eq("id", payload.target_id)
+            .select();
+          break;
+        }
+
+        default:
+          throw new Error("Unsupported fixed test action.");
+      }
+
+      if (!response) {
+        throw new Error("No response was returned.");
+      }
+
+      if (response.error) {
+        setResult({
+          actionId: action.id,
+          expected: action.expected,
+          observed: "denied",
+          message: response.error.message,
+          data: null,
+        });
+      } else {
+        setResult({
+          actionId: action.id,
+          expected: action.expected,
+          observed: "allowed",
+          message: "The authenticated request completed without an API error.",
+          data: response.data,
+        });
+      }
+    } catch (error) {
+      setResult({
+        actionId: action.id,
+        expected: action.expected,
+        observed: "error",
+        message:
+          error instanceof Error ? error.message : "Unknown execution error.",
+        data: null,
+      });
+    } finally {
+      setBusy(false);
+      setConfirmation("");
+    }
+  }
+
+  if (!sessionChecked) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-8 text-slate-950">
+        <section className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm">
+          Checking authenticated session.
+        </section>
+      </main>
+    );
+  }
+
+  if (!userId) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-8 text-slate-950">
+        <section className="mx-auto max-w-5xl rounded-3xl border border-amber-200 bg-amber-50 p-8">
+          <h1 className="text-3xl font-black">Sign-in required</h1>
+          <p className="mt-4">
+            Sign in with one controlled synthetic test identity before using
+            this temporary route.
+          </p>
+          <a
+            href="/login"
+            className="mt-6 inline-flex rounded-2xl bg-emerald-700 px-5 py-3 font-bold text-white"
+          >
+            Go to login
+          </a>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-50 p-6 text-slate-950">
+      <section className="mx-auto max-w-6xl space-y-6">
+        <header className="rounded-3xl bg-white p-8 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+            DSS Enterprises
+          </p>
+          <h1 className="mt-2 text-4xl font-black">
+            Supported-Person Write Test
+          </h1>
+          <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-600">
+            Temporary controlled harness for individually approved synthetic
+            RLS write tests. Nothing runs automatically.
+          </p>
+        </header>
+
+        <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6">
+          <p className="font-black">Authenticated test actor</p>
+          <p className="mt-3 break-all text-sm">Email: {email}</p>
+          <p className="mt-1 break-all text-sm">User ID: {userId}</p>
+          <p className="mt-1 text-sm">Classification: {actorLabel(actor)}</p>
+        </section>
+
+        {actor === "unknown" ? (
+          <section className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-950">
+            This identity is not one of the six approved controlled synthetic
+            accounts. No test actions are available.
+          </section>
+        ) : null}
+
+        <section className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <p className="text-xs font-bold uppercase text-slate-500">
+              Fixed workspace
+            </p>
+            <p className="mt-3 break-all font-semibold">{TEST_WORKSPACE_ID}</p>
+          </div>
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <p className="text-xs font-bold uppercase text-slate-500">
+              Fixed program
+            </p>
+            <p className="mt-3 break-all font-semibold">{TEST_PROGRAM_ID}</p>
+          </div>
+        </section>
+
+        <section className="rounded-3xl bg-white p-6 shadow-sm">
+          <label className="text-sm font-black" htmlFor="test-action">
+            Available fixed action
+          </label>
+          <select
+            id="test-action"
+            value={selectedActionId}
+            onChange={(event) => {
+              setSelectedActionId(event.target.value);
+              setConfirmation("");
+              setResult(null);
+            }}
+            className="mt-3 w-full rounded-2xl border border-slate-200 p-3"
+          >
+            <option value="">Select one test</option>
+            {visibleActions.map((action) => (
+              <option key={action.id} value={action.id}>
+                {action.id}: {action.title}
+              </option>
+            ))}
+          </select>
+        </section>
+
+        {selectedAction ? (
+          <section className="space-y-5 rounded-3xl bg-white p-6 shadow-sm">
+            <div>
+              <p className="text-xs font-black uppercase text-emerald-700">
+                {selectedAction.id}
+              </p>
+              <h2 className="mt-2 text-2xl font-black">
+                {selectedAction.title}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {selectedAction.description}
+              </p>
+              <p className="mt-3 text-sm font-bold">
+                Expected result: {selectedAction.expected}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-black">Exact payload preview</p>
+              <pre className="mt-3 overflow-x-auto rounded-2xl bg-slate-950 p-5 text-xs text-emerald-200">
+                {JSON.stringify(selectedAction.payload, null, 2)}
+              </pre>
+            </div>
+
+            <div>
+              <label className="text-sm font-black" htmlFor="confirmation">
+                Type {selectedAction.id} to enable this single request
+              </label>
+              <input
+                id="confirmation"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                className="mt-3 w-full rounded-2xl border border-slate-200 p-3"
+                autoComplete="off"
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={busy || confirmation !== selectedAction.id}
+              onClick={() => void executeAction(selectedAction)}
+              className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {busy ? "Submitting isolated request..." : `Run ${selectedAction.id}`}
+            </button>
+          </section>
+        ) : null}
+
+        {result ? (
+          <section className="rounded-3xl bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-black">Observed response</h2>
+            <dl className="mt-4 grid gap-3 text-sm">
+              <div>
+                <dt className="font-black">Action</dt>
+                <dd>{result.actionId}</dd>
+              </div>
+              <div>
+                <dt className="font-black">Expected</dt>
+                <dd>{result.expected}</dd>
+              </div>
+              <div>
+                <dt className="font-black">Observed</dt>
+                <dd>{result.observed}</dd>
+              </div>
+              <div>
+                <dt className="font-black">Message</dt>
+                <dd className="break-words">{result.message}</dd>
+              </div>
+            </dl>
+
+            <pre className="mt-5 overflow-x-auto rounded-2xl bg-slate-950 p-5 text-xs text-emerald-200">
+              {JSON.stringify(result.data, null, 2)}
+            </pre>
+          </section>
+        ) : null}
+
+        <section className="rounded-3xl bg-slate-950 p-6 text-white">
+          <p className="font-black text-emerald-300">
+            Temporary write-test boundary
+          </p>
+          <p className="mt-3 text-sm leading-6">
+            Synthetic fixtures only. No generic editing, deletes, automatic
+            retries, service-role access, Johnny records, Trust Engine data,
+            real financial observations, clinical information, recovery
+            information, legal information, or private case data.
+          </p>
+          <p className="mt-3 text-sm leading-6">
+            W18 and W19 remain deferred. Loading this route performs no database
+            write.
+          </p>
+        </section>
+      </section>
+    </main>
+  );
+}
