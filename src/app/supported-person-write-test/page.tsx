@@ -484,11 +484,19 @@ export default function SupportedPersonWriteTestPage() {
           data: null,
         });
       } else {
+        const returnedRows = Array.isArray(response.data)
+          ? response.data
+          : null;
+        const affectedZeroRows =
+          returnedRows !== null && returnedRows.length === 0;
+
         setResult({
           actionId: action.id,
           expected: action.expected,
-          observed: "allowed",
-          message: "The authenticated request completed without an API error.",
+          observed: affectedZeroRows ? "denied" : "allowed",
+          message: affectedZeroRows
+            ? "The authenticated request affected zero visible rows. RLS or authorization prevented the requested change."
+            : "The authenticated request completed and returned the affected row.",
           data: response.data,
         });
       }
