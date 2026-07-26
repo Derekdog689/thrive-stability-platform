@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabaseClient";
 
 const TEST_WORKSPACE_ID = "71000000-0000-4000-8000-000000000001";
 const ONBOARDING_PERSON_ID = "71000000-0000-4000-8000-000000000009";
+const ONBOARDING_PARTICIPATION_ID =
+  "71000000-0000-4000-8000-000000000010";
 const TEST_PROGRAM_ID = "71000000-0000-4000-8000-000000000002";
 const TEST_PERSON_A_ID = "71000000-0000-4000-8000-000000000003";
 const TEST_PERSON_B_ID = "71000000-0000-4000-8000-000000000004";
@@ -98,20 +100,19 @@ export default function SupportedPersonOnboardingTestPage() {
   const actions = useMemo<TestAction[]>(
     () => [
       {
-        id: "CREATE-D",
-        title: "Create synthetic supported person D",
+        id: "CREATE-D-PARTICIPATION",
+        title: "Create synthetic program participation for supported person D",
         expected: "allowed",
         description:
-          "Creates one reserved synthetic supported-person identity only. No participation or authentication user is created.",
+          "Creates one reserved synthetic program-participation row linking supported person D to the fixed synthetic program. It does not create an authentication user or modify the supported-person identity.",
         allowedActors: ["administrator"],
         payload: {
-          id: ONBOARDING_PERSON_ID,
+          id: ONBOARDING_PARTICIPATION_ID,
           workspace_id: TEST_WORKSPACE_ID,
-          auth_user_id: null,
-          display_name: "SUPPORTED PERSON ONBOARDING TEST D",
-          preferred_name: "Onboarding Test D",
+          program_id: TEST_PROGRAM_ID,
+          supported_person_id: ONBOARDING_PERSON_ID,
+          participant_role: "supported_person",
           status: "active",
-          external_reference: "RLS-ONBOARDING-TEST-PERSON-D",
           created_by: TEST_ADMIN_ID,
         },
       },
@@ -188,63 +189,15 @@ export default function SupportedPersonOnboardingTestPage() {
         | undefined;
 
       switch (action.id) {
-        case "CREATE-D":
-        case "W5":
-        case "W13":
-          response = await supabase
-            .from("supported_people")
-            .insert(action.payload)
-            .select();
-          break;
-
-        case "W2":
-        case "W6":
-        case "W9":
-        case "W11":
-        case "W15":
-        case "W16": {
-          const payload = action.payload as {
-            target_id: string;
-            changes: Record<string, unknown>;
-          };
-
-          response = await supabase
-            .from("supported_people")
-            .update(payload.changes)
-            .eq("id", payload.target_id)
-            .select();
-          break;
-        }
-
-        case "W3":
-        case "W7":
-        case "W14":
+        case "CREATE-D-PARTICIPATION":
           response = await supabase
             .from("program_participants")
             .insert(action.payload)
             .select();
           break;
-
-        case "W4":
-        case "W8":
-        case "W10":
-        case "W12":
-        case "W17": {
-          const payload = action.payload as {
-            target_id: string;
-            changes: Record<string, unknown>;
-          };
-
-          response = await supabase
-            .from("program_participants")
-            .update(payload.changes)
-            .eq("id", payload.target_id)
-            .select();
-          break;
-        }
 
         default:
-          throw new Error("Unsupported fixed test action.");
+          throw new Error("Unsupported fixed onboarding action.");
       }
 
       if (!response) {
