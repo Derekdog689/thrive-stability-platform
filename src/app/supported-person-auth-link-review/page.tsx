@@ -483,15 +483,19 @@ export default function SupportedPersonAuthLinkReviewPage() {
                 </div>
                 <div>
                   <dt className="font-black">
-                    Current authentication link remains null
+                    Authentication link established
                   </dt>
                   <dd>
-                    {person && person.auth_user_id === null ? "yes" : "no"}
+                    {person?.auth_user_id === VERIFIED_AUTH_USER_ID
+                      ? "yes"
+                      : "no"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="font-black">Database write performed</dt>
-                  <dd>no</dd>
+                  <dt className="font-black">
+                    Database write performed during this session
+                  </dt>
+                  <dd>{linkResult?.observed === "allowed" ? "yes" : "no"}</dd>
                 </div>
               </dl>
             </section>
