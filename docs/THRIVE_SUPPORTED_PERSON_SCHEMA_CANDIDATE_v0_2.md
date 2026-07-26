@@ -228,7 +228,7 @@ No hard delete is proposed.
 Candidate supported-person status set:
 
 - `active`
-- `inactive`
+- `paused`
 - `archived`
 
 Candidate participation status set:
@@ -236,7 +236,6 @@ Candidate participation status set:
 - `active`
 - `inactive`
 - `completed`
-- `paused`
 
 Final allowed values must be reconciled against the live database before any migration candidate is written.
 
