@@ -5,11 +5,12 @@ import { supabase } from "@/lib/supabaseClient";
 
 const PERSON_D_AUTH_ID = "d48b7268-9aa6-4498-a923-2851fd5232c9";
 const PERSON_A_AUTH_ID = "9b283c6e-c2f8-4f87-9f90-fa081ee249bd";
+const OUTSIDER_AUTH_ID = "d89a6549-ac1a-431c-aff1-1ba7313175ab";
 
 const PROGRAMS = [
   {
     key: "linked_program",
-    label: "Person D linked program",
+    label: "Shared controlled synthetic program",
     id: "71000000-0000-4000-8000-000000000002",
     expected: "visible",
   },
@@ -45,7 +46,8 @@ export default function SupportedPersonProgramNegativeTestsPage() {
 
   const isPersonD = userId === PERSON_D_AUTH_ID;
   const isPersonA = userId === PERSON_A_AUTH_ID;
-  const isApprovedActor = isPersonD || isPersonA;
+  const isOutsider = userId === OUTSIDER_AUTH_ID;
+  const isApprovedActor = isPersonD || isPersonA || isOutsider;
 
   useEffect(() => {
     let mounted = true;
@@ -68,7 +70,11 @@ export default function SupportedPersonProgramNegativeTestsPage() {
       setUserId(user.id);
       setChecked(true);
 
-      if (user.id !== PERSON_D_AUTH_ID && user.id !== PERSON_A_AUTH_ID) {
+      if (
+        user.id !== PERSON_D_AUTH_ID &&
+        user.id !== PERSON_A_AUTH_ID &&
+        user.id !== OUTSIDER_AUTH_ID
+      ) {
         setLoading(false);
         return;
       }
@@ -162,13 +168,15 @@ export default function SupportedPersonProgramNegativeTestsPage() {
               ? "Controlled synthetic supported person D"
               : isPersonA
                 ? "Controlled synthetic supported person A"
-                : "Not authorized for this test page"}
+                : isOutsider
+                  ? "Controlled synthetic outsider"
+                  : "Not authorized for this test page"}
           </p>
         </section>
 
         {!isApprovedActor ? (
           <section className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-950">
-            This page is restricted to controlled synthetic supported persons A and D.
+            This page is restricted to controlled synthetic persons A, D, and the outsider.
             No program query results are displayed.
           </section>
         ) : null}
@@ -176,9 +184,11 @@ export default function SupportedPersonProgramNegativeTestsPage() {
         {isApprovedActor
           ? results.map((result) => {
               const visible = result.data !== null;
-              const expectedForActor = isPersonD
-                ? result.expected
-                : "hidden";
+              const expectedForActor = isOutsider
+                ? "hidden"
+                : result.key === "linked_program"
+                  ? "visible"
+                  : "hidden";
 
               const passed =
                 result.error === null &&
