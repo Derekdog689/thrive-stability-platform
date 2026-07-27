@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 const PERSON_D_AUTH_ID = "d48b7268-9aa6-4498-a923-2851fd5232c9";
+const PERSON_A_AUTH_ID = "9b283c6e-c2f8-4f87-9f90-fa081ee249bd";
 
 const PROGRAMS = [
   {
@@ -43,6 +44,8 @@ export default function SupportedPersonProgramNegativeTestsPage() {
   const [results, setResults] = useState<ProgramResult[]>([]);
 
   const isPersonD = userId === PERSON_D_AUTH_ID;
+  const isPersonA = userId === PERSON_A_AUTH_ID;
+  const isApprovedActor = isPersonD || isPersonA;
 
   useEffect(() => {
     let mounted = true;
@@ -65,7 +68,7 @@ export default function SupportedPersonProgramNegativeTestsPage() {
       setUserId(user.id);
       setChecked(true);
 
-      if (user.id !== PERSON_D_AUTH_ID) {
+      if (user.id !== PERSON_D_AUTH_ID && user.id !== PERSON_A_AUTH_ID) {
         setLoading(false);
         return;
       }
@@ -157,24 +160,30 @@ export default function SupportedPersonProgramNegativeTestsPage() {
             Classification:{" "}
             {isPersonD
               ? "Controlled synthetic supported person D"
-              : "Not authorized for this test page"}
+              : isPersonA
+                ? "Controlled synthetic supported person A"
+                : "Not authorized for this test page"}
           </p>
         </section>
 
-        {!isPersonD ? (
+        {!isApprovedActor ? (
           <section className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-950">
-            This page is currently restricted to synthetic supported person D.
+            This page is restricted to controlled synthetic supported persons A and D.
             No program query results are displayed.
           </section>
         ) : null}
 
-        {isPersonD
+        {isApprovedActor
           ? results.map((result) => {
               const visible = result.data !== null;
+              const expectedForActor = isPersonD
+                ? result.expected
+                : "hidden";
+
               const passed =
                 result.error === null &&
-                ((result.expected === "visible" && visible) ||
-                  (result.expected === "hidden" && !visible));
+                ((expectedForActor === "visible" && visible) ||
+                  (expectedForActor === "hidden" && !visible));
 
               return (
                 <section
@@ -202,7 +211,7 @@ export default function SupportedPersonProgramNegativeTestsPage() {
                   <dl className="mt-5 grid gap-3 text-sm md:grid-cols-3">
                     <div>
                       <dt className="font-black">Expected</dt>
-                      <dd>{result.expected}</dd>
+                      <dd>{expectedForActor}</dd>
                     </div>
                     <div>
                       <dt className="font-black">Observed</dt>
