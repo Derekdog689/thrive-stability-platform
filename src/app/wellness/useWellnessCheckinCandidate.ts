@@ -53,6 +53,25 @@ export type WellnessDraft = {
   participantNote: string;
 };
 
+export type WellnessWriteResult =
+  | {
+      ok: true;
+      mode: "insert" | "update";
+      row: WellnessCheckinRow;
+    }
+  | {
+      ok: false;
+      code:
+        | "write_disabled"
+        | "missing_identity"
+        | "missing_overall_day"
+        | "already_exists"
+        | "not_allowed"
+        | "connection_error"
+        | "unknown";
+      message: string;
+    };
+
 export type WellnessInsertCandidate = {
   workspace_id: string;
   program_id: string;
@@ -232,6 +251,197 @@ export function useWellnessCheckinCandidate() {
     };
   }
 
+  function mapWriteError(error: {
+    code?: string | null;
+    message?: string | null;
+  }): WellnessWriteResult {
+    if (error.code === "23505") {
+      return {
+        ok: false,
+        code: "already_exists",
+        message: "A check-in is already saved for today.",
+      };
+    }
+
+    const message = error.message ?? "";
+
+    if (
+      message.includes("authenticated participant") ||
+      message.includes("row-level security") ||
+      message.includes("not authorized")
+    ) {
+      return {
+        ok: false,
+        code: "not_allowed",
+        message: "This check-in could not be saved with the current access.",
+      };
+    }
+
+    if (message.toLowerCase().includes("network")) {
+      return {
+        ok: false,
+        code: "connection_error",
+        message: "The Wellness connection is unavailable right now.",
+      };
+    }
+
+    return {
+      ok: false,
+      code: "unknown",
+      message: "The check-in could not be saved. Please try again.",
+    };
+  }
+
+  async function refreshTodayCheckin() {
+    if (!participant || !participation) {
+      setTodayCheckin(null);
+      return null;
+    }
+
+    const result = await supabase
+      .from("participant_wellness_checkins")
+      .select(
+        "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
+      )
+      .eq("supported_person_id", participant.id)
+      .eq("program_id", participation.program_id)
+      .eq("workspace_id", participant.workspace_id)
+      .eq("checkin_date", today)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (result.error) {
+      setErrorMessage(result.error.message);
+      return null;
+    }
+
+    const row = (result.data as WellnessCheckinRow | null) ?? null;
+    setTodayCheckin(row);
+    return row;
+  }
+
+  async function executeInsertCandidate(
+    draft: WellnessDraft,
+  ): Promise<WellnessWriteResult> {
+    const WRITE_EXECUTION_ENABLED = false;
+
+    if (!WRITE_EXECUTION_ENABLED) {
+      return {
+        ok: false,
+        code: "write_disabled",
+        message: "Saving is still disabled while this workflow is under review.",
+      };
+    }
+
+    const payload = buildInsertCandidate(draft);
+
+    if (!participant || !participation || !authenticatedUserId) {
+      return {
+        ok: false,
+        code: "missing_identity",
+        message: "Your participant and program connection is not ready.",
+      };
+    }
+
+    if (!draft.overallDay || !payload) {
+      return {
+        ok: false,
+        code: "missing_overall_day",
+        message: "Choose how today is going before saving.",
+      };
+    }
+
+    const result = await supabase
+      .from("participant_wellness_checkins")
+      .insert(payload)
+      .select(
+        "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
+      )
+      .single();
+
+    if (result.error) {
+      if (result.error.code === "23505") {
+        await refreshTodayCheckin();
+      }
+
+      return mapWriteError(result.error);
+    }
+
+    const row = result.data as WellnessCheckinRow;
+    setTodayCheckin(row);
+
+    return {
+      ok: true,
+      mode: "insert",
+      row,
+    };
+  }
+
+  async function executeSameDayUpdate(
+    draft: WellnessDraft,
+  ): Promise<WellnessWriteResult> {
+    const WRITE_EXECUTION_ENABLED = false;
+
+    if (!WRITE_EXECUTION_ENABLED) {
+      return {
+        ok: false,
+        code: "write_disabled",
+        message: "Updating is still disabled while this workflow is under review.",
+      };
+    }
+
+    if (!todayCheckin) {
+      return {
+        ok: false,
+        code: "missing_identity",
+        message: "No saved check-in is available to update.",
+      };
+    }
+
+    if (!draft.overallDay) {
+      return {
+        ok: false,
+        code: "missing_overall_day",
+        message: "Choose how today is going before updating.",
+      };
+    }
+
+    const result = await supabase
+      .from("participant_wellness_checkins")
+      .update({
+        overall_day: draft.overallDay,
+        stress: draft.stress,
+        sleep: draft.sleep,
+        energy: draft.energy,
+        confidence: draft.confidence,
+        routine: draft.routine,
+        recovery_support: draft.recoverySupport,
+        support_needed: draft.supportNeeded,
+        chosen_next_step: draft.chosenNextStep,
+        participant_note: draft.participantNote.trim() || null,
+      })
+      .eq("id", todayCheckin.id)
+      .eq("checkin_date", today)
+      .eq("status", "active")
+      .select(
+        "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
+      )
+      .single();
+
+    if (result.error) {
+      return mapWriteError(result.error);
+    }
+
+    const row = result.data as WellnessCheckinRow;
+    setTodayCheckin(row);
+
+    return {
+      ok: true,
+      mode: "update",
+      row,
+    };
+  }
+
   return {
     participant,
     participation,
@@ -240,6 +450,9 @@ export function useWellnessCheckinCandidate() {
     loading,
     errorMessage,
     buildInsertCandidate,
+    refreshTodayCheckin,
+    executeInsertCandidate,
+    executeSameDayUpdate,
     writeEnabled: false as const,
   };
 }
