@@ -9,6 +9,33 @@ import {
   useParticipantFinancial,
 } from "./useParticipantFinancial";
 
+const dailyPathCards = [
+  {
+    href: "/wellness",
+    eyebrow: "Wellness",
+    title: "Check in with yourself",
+    description:
+      "Take a quiet moment to notice how today is going and what may help next.",
+    action: "Open Wellness",
+  },
+  {
+    href: "/goals",
+    eyebrow: "Goals",
+    title: "Choose one meaningful step",
+    description:
+      "Keep your attention on one small action connected to the life you are building.",
+    action: "View Goals",
+  },
+  {
+    href: "/support",
+    eyebrow: "Support",
+    title: "You do not have to carry everything alone",
+    description:
+      "Review the support space when you want help thinking through what comes next.",
+    action: "Open Support",
+  },
+];
+
 export default function TodayPage() {
   const {
     participantName,
@@ -20,6 +47,11 @@ export default function TodayPage() {
     loading,
     errorMessage,
   } = useParticipantFinancial();
+
+  const activeBudgetPeriod =
+    budgetPeriods.find((period) => period.status === "active") ??
+    budgetPeriods[0] ??
+    null;
 
   return (
     <AuthGate>
@@ -36,158 +68,172 @@ export default function TodayPage() {
                 Welcome, {participantName}.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                See what is connected, review recent activity, and choose your
-                next step.
+                Start with what matters today. Check in, review your plan, and
+                choose one useful next step.
               </p>
             </header>
 
             {loading && (
               <section className="rounded-3xl bg-white p-6 shadow-sm">
-                Loading your participant-safe summary.
+                Loading your THRIVE summary.
               </section>
             )}
 
             {errorMessage && (
               <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-950">
-                <p className="font-black">Your summary could not be loaded.</p>
+                <p className="font-black">Your Today summary could not be loaded.</p>
                 <p className="mt-2 text-sm">{errorMessage}</p>
               </section>
             )}
 
             {!loading && !errorMessage && (
               <>
-                <section className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-3xl bg-emerald-700 p-6 text-white shadow-sm">
-                    <p className="text-sm font-bold text-emerald-100">
-                      Connected sources
-                    </p>
-                    <p className="mt-3 text-4xl font-black">{sources.length}</p>
-                    <p className="mt-2 text-sm text-emerald-100">
-                      Accounts connected to THRIVE
-                    </p>
-                  </div>
-
-                  <div className="rounded-3xl bg-white p-6 shadow-sm">
-                    <p className="text-sm font-bold text-slate-500">
-                      Imported transactions
-                    </p>
-                    <p className="mt-3 text-4xl font-black">
-                      {transactions.length}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      Recent account activity
-                    </p>
-                  </div>
-
-                  <div className="rounded-3xl bg-white p-6 shadow-sm">
-                    <p className="text-sm font-bold text-slate-500">
-                      Recorded outflow
-                    </p>
-                    <p className="mt-3 text-4xl font-black">
-                      {formatMoney(totalOutflow)}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      Total money out during this period
-                    </p>
-                  </div>
+                <section className="grid gap-4 lg:grid-cols-3">
+                  {dailyPathCards.map((card) => (
+                    <Link
+                      key={card.href}
+                      href={card.href}
+                      className="group rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                        {card.eyebrow}
+                      </p>
+                      <h2 className="mt-2 text-2xl font-black">{card.title}</h2>
+                      <p className="mt-3 leading-7 text-slate-600">
+                        {card.description}
+                      </p>
+                      <p className="mt-5 font-black text-emerald-800 group-hover:text-emerald-950">
+                        {card.action}
+                      </p>
+                    </Link>
+                  ))}
                 </section>
 
-                <section className="grid gap-6 lg:grid-cols-2">
-                  <div className="rounded-3xl bg-white p-6 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      Financial coverage
-                    </p>
-                    <h2 className="mt-2 text-2xl font-black">
-                      {latestBatch ? "Latest statement period" : "No statement connected"}
-                    </h2>
-
-                    {latestBatch ? (
-                      <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-                        <div className="rounded-2xl bg-slate-50 p-4">
-                          <dt className="text-xs font-black uppercase text-slate-500">
-                            Period
-                          </dt>
-                          <dd className="mt-2 font-black">
-                            {formatDate(latestBatch.statement_period_start)} to{" "}
-                            {formatDate(latestBatch.statement_period_end)}
-                          </dd>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 p-4">
-                          <dt className="text-xs font-black uppercase text-slate-500">
-                            Import status
-                          </dt>
-                          <dd className="mt-2 font-black">
-                            {latestBatch.import_status.replaceAll("_", " ")}
-                          </dd>
-                        </div>
-                      </dl>
-                    ) : (
-                      <p className="mt-4 leading-7 text-slate-600">
-                        Financial information is not connected to this account
-                        yet. Nothing is missing from your view because of an
-                        automatic flag or conclusion.
+                <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                        Your financial picture
                       </p>
-                    )}
+                      <h2 className="mt-2 text-2xl font-black">
+                        A quick look at your current information
+                      </h2>
+                      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+                        These numbers summarize connected records. They do not
+                        assign intent, responsibility, or a conclusion about
+                        your choices.
+                      </p>
+                    </div>
+
+                    <Link
+                      href="/budget"
+                      className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
+                    >
+                      Review Budget
+                    </Link>
                   </div>
 
-                  <div className="rounded-3xl bg-white p-6 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      Next steps
-                    </p>
-                    <h2 className="mt-2 text-2xl font-black">
-                      Choose what to review next
-                    </h2>
-                    <div className="mt-5 grid gap-3">
-                      <Link
-                        href="/budget"
-                        className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 font-black text-emerald-900 hover:bg-emerald-100"
-                      >
-                        Review Budget
-                      </Link>
-                      <Link
-                        href="/reports"
-                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
-                      >
-                        Open Reports
-                      </Link>
-                      <Link
-                        href="/my-program"
-                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
-                      >
-                        View My Program
-                      </Link>
-                      <Link
-                        href="/wellness"
-                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
-                      >
-                        Open Wellness
-                      </Link>
-                      <Link
-                        href="/goals"
-                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
-                      >
-                        View Goals
-                      </Link>
-                      <Link
-                        href="/support"
-                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
-                      >
-                        Ask for Support
-                      </Link>
+                  <div className="mt-6 grid gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl bg-emerald-50 p-5">
+                      <p className="text-sm font-bold text-emerald-800">
+                        Connected sources
+                      </p>
+                      <p className="mt-2 text-3xl font-black">{sources.length}</p>
+                      <p className="mt-2 text-sm text-emerald-900">
+                        Accounts currently connected to THRIVE
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-5">
+                      <p className="text-sm font-bold text-slate-500">
+                        Recent transactions
+                      </p>
+                      <p className="mt-2 text-3xl font-black">
+                        {transactions.length}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-500">
+                        Imported activity available for review
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-5">
+                      <p className="text-sm font-bold text-slate-500">
+                        Recorded outflow
+                      </p>
+                      <p className="mt-2 text-3xl font-black">
+                        {formatMoney(totalOutflow)}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-500">
+                        Money out in the connected period
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-100 p-5">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Budget period
+                      </p>
+                      <p className="mt-2 font-black">
+                        {activeBudgetPeriod
+                          ? `${formatDate(activeBudgetPeriod.period_start)} to ${formatDate(
+                              activeBudgetPeriod.period_end,
+                            )}`
+                          : "No current budget period is available yet"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-100 p-5">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Latest statement
+                      </p>
+                      <p className="mt-2 font-black">
+                        {latestBatch
+                          ? `${formatDate(latestBatch.statement_period_start)} to ${formatDate(
+                              latestBatch.statement_period_end,
+                            )}`
+                          : "No statement period is connected yet"}
+                      </p>
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-3xl bg-slate-950 p-6 text-white">
-                  <p className="font-black text-emerald-300">
-                    Read-only participant boundary
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-slate-200">
-                    Budget periods currently available: {budgetPeriods.length}.
-                    This first pass does not create explanations, change
-                    categories, request Trust actions, or modify financial
-                    evidence.
-                  </p>
+                <section className="grid gap-4 md:grid-cols-3">
+                  <Link
+                    href="/my-program"
+                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:bg-slate-50"
+                  >
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      My Program
+                    </p>
+                    <h2 className="mt-2 text-xl font-black">
+                      Review what THRIVE currently supports
+                    </h2>
+                  </Link>
+
+                  <Link
+                    href="/reports"
+                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:bg-slate-50"
+                  >
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Reports
+                    </p>
+                    <h2 className="mt-2 text-xl font-black">
+                      See connected summaries
+                    </h2>
+                  </Link>
+
+                  <Link
+                    href="/budget"
+                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:bg-slate-50"
+                  >
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Budget
+                    </p>
+                    <h2 className="mt-2 text-xl font-black">
+                      Review your current plan
+                    </h2>
+                  </Link>
                 </section>
               </>
             )}
