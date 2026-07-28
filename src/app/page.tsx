@@ -1,272 +1,179 @@
-import AuthStatusPanel from "./AuthStatusPanel";
+"use client";
+
+import Link from "next/link";
 import AuthGate from "./AuthGate";
-import WorkspaceContextPanel from "./WorkspaceContextPanel";
-
-import ProgramContextPanel from "./ProgramContextPanel";
-
-import BudgetCategoriesDashboardCard from "./BudgetCategoriesDashboardCard";
 import ThriveSidebar from "./ThriveSidebar";
+import {
+  formatDate,
+  formatMoney,
+  useParticipantFinancial,
+} from "./useParticipantFinancial";
 
-const checkInMetrics = [
-  { label: "Stress", value: 6, note: "Moderate pressure" },
-  { label: "Spending urge", value: 5, note: "Watch cash access" },
-  { label: "Sleep quality", value: 7, note: "Protect routine" },
-  { label: "Recovery support", value: 8, note: "Connected today" },
-];
+export default function TodayPage() {
+  const {
+    participantName,
+    sources,
+    transactions,
+    budgetPeriods,
+    latestBatch,
+    totalOutflow,
+    loading,
+    errorMessage,
+  } = useParticipantFinancial();
 
-const recentActivity = [
-  {
-    merchant: "Grocery market",
-    category: "Food",
-    amount: "$43.18",
-    flag: "Within plan",
-  },
-  {
-    merchant: "ATM withdrawal",
-    category: "Cash",
-    amount: "$60.00",
-    flag: "Cash access flag",
-  },
-  {
-    merchant: "Transit pass",
-    category: "Transportation",
-    amount: "$22.50",
-    flag: "Essential",
-  },
-  {
-    merchant: "Late-night convenience store",
-    category: "Flexible",
-    amount: "$18.94",
-    flag: "High-risk time",
-  },
-];
-
-const supabaseConfigured =
-  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
-  Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
-export default function Home() {
   return (
     <AuthGate>
-      <main className="min-h-screen bg-[#eef4ef] px-6 py-6 text-slate-950">
+      <main className="min-h-screen bg-[#eef4ef] px-4 py-5 text-slate-950 sm:px-6">
         <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[260px_1fr]">
           <ThriveSidebar />
 
           <section className="space-y-6">
-            <header className="rounded-3xl bg-gradient-to-br from-white to-emerald-50 p-7 shadow-sm">
-              <p className="text-sm font-bold uppercase text-emerald-700">
-                Wednesday, June 10
+            <header className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                Today
               </p>
-
-              <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-                <div>
-                  <h2 className="max-w-3xl text-4xl font-black tracking-tight">
-                    Protect essentials first. Keep support visible. Move with
-                    clarity.
-                  </h2>
-
-                  <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-                    THRIVE combines safe-to-spend budgeting, daily check-ins,
-                    spending pattern review, and consent-based support summaries
-                    for individuals and approved support teams.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-semibold text-emerald-800">
-                    Mock bank feed synced 18 min ago
-                  </div>
-
-                  <div
-                    className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
-                      supabaseConfigured
-                        ? "border-emerald-100 bg-emerald-50 text-emerald-800"
-                        : "border-amber-100 bg-amber-50 text-amber-800"
-                    }`}
-                  >
-                    Supabase environment:{" "}
-                    {supabaseConfigured ? "Configured" : "Not configured"}
-                  </div>
-
-                  <AuthStatusPanel />
-                </div>
-              </div>
+              <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+                Welcome, {participantName}.
+              </h1>
+              <p className="mt-4 max-w-3xl leading-7 text-slate-600">
+                See what is connected, review recent financial evidence, and
+                choose the next useful step. THRIVE does not infer intent or
+                make clinical, legal, or fiduciary conclusions from spending.
+              </p>
             </header>
 
-            <WorkspaceContextPanel />
-            <ProgramContextPanel />
-          
-            <section className="grid gap-4 md:grid-cols-4">
-              <div className="rounded-3xl bg-emerald-700 p-5 text-white shadow-sm">
-                <p className="text-sm font-bold text-emerald-100">
-                  Available balance
-                </p>
-                <p className="mt-3 text-4xl font-black">$1,284.60</p>
-                <p className="mt-2 text-sm text-emerald-100">
-                  Checking plus protected savings
-                </p>
-              </div>
+            {loading && (
+              <section className="rounded-3xl bg-white p-6 shadow-sm">
+                Loading your participant-safe summary.
+              </section>
+            )}
 
-              <div className="rounded-3xl bg-white p-5 shadow-sm">
-                <p className="text-sm font-bold text-slate-500">
-                  Safe to spend today
-                </p>
-                <p className="mt-3 text-4xl font-black">$16.67</p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Reduced due to elevated pressure
-                </p>
-              </div>
+            {errorMessage && (
+              <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-950">
+                <p className="font-black">Your summary could not be loaded.</p>
+                <p className="mt-2 text-sm">{errorMessage}</p>
+              </section>
+            )}
 
-              <div className="rounded-3xl bg-white p-5 shadow-sm">
-                <p className="text-sm font-bold text-slate-500">
-                  Stability score
-                </p>
-                <p className="mt-3 text-4xl font-black">39</p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Add one support touchpoint today
-                </p>
-              </div>
-
-              <div className="rounded-3xl bg-amber-50 p-5 shadow-sm">
-                <p className="text-sm font-bold text-amber-700">
-                  Best next action
-                </p>
-                <p className="mt-3 text-2xl font-black">Pause cash access</p>
-                <p className="mt-2 text-sm text-amber-800">
-                  Name amount, purpose, and support contact first.
-                </p>
-              </div>
-            </section>
-
-            <section className="grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
-              <div className="rounded-3xl bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase text-emerald-700">
-                      Daily check-in
+            {!loading && !errorMessage && (
+              <>
+                <section className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-3xl bg-emerald-700 p-6 text-white shadow-sm">
+                    <p className="text-sm font-bold text-emerald-100">
+                      Connected sources
                     </p>
-                    <h3 className="text-2xl font-black">
-                      What should the app know today?
-                    </h3>
+                    <p className="mt-3 text-4xl font-black">{sources.length}</p>
+                    <p className="mt-2 text-sm text-emerald-100">
+                      Sources linked to your participant record
+                    </p>
                   </div>
 
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                    Payday week
-                  </span>
-                </div>
+                  <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-sm font-bold text-slate-500">
+                      Imported transactions
+                    </p>
+                    <p className="mt-3 text-4xl font-black">
+                      {transactions.length}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Participant-safe posted records
+                    </p>
+                  </div>
 
-                <div className="mt-6 space-y-4">
-                  {checkInMetrics.map((metric) => (
-                    <div key={metric.label}>
-                      <div className="mb-1 flex justify-between text-sm font-semibold">
-                        <span>{metric.label}</span>
-                        <span>{metric.value}/10</span>
-                      </div>
+                  <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-sm font-bold text-slate-500">
+                      Recorded outflow
+                    </p>
+                    <p className="mt-3 text-4xl font-black">
+                      {formatMoney(totalOutflow)}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Sum of imported debit amounts, not a judgment
+                    </p>
+                  </div>
+                </section>
 
-                      <div className="h-3 rounded-full bg-slate-100">
-                        <div
-                          className="h-3 rounded-full bg-emerald-600"
-                          style={{ width: `${metric.value * 10}%` }}
-                        />
-                      </div>
+                <section className="grid gap-6 lg:grid-cols-2">
+                  <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      Financial coverage
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black">
+                      {latestBatch ? "Latest statement period" : "No statement connected"}
+                    </h2>
 
-                      <p className="mt-1 text-xs text-slate-500">
-                        {metric.note}
+                    {latestBatch ? (
+                      <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+                        <div className="rounded-2xl bg-slate-50 p-4">
+                          <dt className="text-xs font-black uppercase text-slate-500">
+                            Period
+                          </dt>
+                          <dd className="mt-2 font-black">
+                            {formatDate(latestBatch.statement_period_start)} to{" "}
+                            {formatDate(latestBatch.statement_period_end)}
+                          </dd>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4">
+                          <dt className="text-xs font-black uppercase text-slate-500">
+                            Import status
+                          </dt>
+                          <dd className="mt-2 font-black">
+                            {latestBatch.import_status.replaceAll("_", " ")}
+                          </dd>
+                        </div>
+                      </dl>
+                    ) : (
+                      <p className="mt-4 leading-7 text-slate-600">
+                        Financial information is not connected to this account
+                        yet. Nothing is missing from your view because of an
+                        automatic flag or conclusion.
                       </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-3xl bg-white p-6 shadow-sm">
-                <p className="text-xs font-bold uppercase text-emerald-700">
-                  Aware support
-                </p>
-                <h3 className="text-2xl font-black">
-                  Money + wellness guidance
-                </h3>
-
-                <div className="mt-5 space-y-3">
-                  <div className="rounded-2xl border-l-4 border-rose-500 bg-rose-50 p-4">
-                    <p className="font-bold">
-                      Make essentials harder to spend
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                      Move rent, phone, and groceries out of everyday checking
-                      before evening. This is protection, not punishment.
-                    </p>
+                    )}
                   </div>
 
-                  <div className="rounded-2xl border-l-4 border-emerald-600 bg-emerald-50 p-4">
-                    <p className="font-bold">Add one support touchpoint</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                      A short text, peer check-in, or meeting reminder can lower
-                      pressure before the highest-spending part of the day.
+                  <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      Next steps
                     </p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="grid gap-6 lg:grid-cols-3">
-              <BudgetCategoriesDashboardCard />
-
-              <div className="rounded-3xl bg-white p-6 shadow-sm">
-                <p className="text-xs font-bold uppercase text-emerald-700">
-                  Recent activity
-                </p>
-                <h3 className="text-2xl font-black">
-                  Spending with context
-                </h3>
-
-                <div className="mt-5 space-y-3">
-                  {recentActivity.map((item) => (
-                    <div
-                      key={item.merchant}
-                      className="rounded-2xl border border-slate-100 p-4"
-                    >
-                      <div className="flex justify-between font-bold">
-                        <span>{item.merchant}</span>
-                        <span>{item.amount}</span>
-                      </div>
-
-                      <div className="mt-2 flex justify-between text-sm">
-                        <span className="text-slate-500">
-                          {item.category}
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
-                          {item.flag}
-                        </span>
-                      </div>
+                    <h2 className="mt-2 text-2xl font-black">
+                      Keep the picture clear
+                    </h2>
+                    <div className="mt-5 grid gap-3">
+                      <Link
+                        href="/budget"
+                        className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 font-black text-emerald-900 hover:bg-emerald-100"
+                      >
+                        Review Budget
+                      </Link>
+                      <Link
+                        href="/reports"
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
+                      >
+                        Open Reports
+                      </Link>
+                      <Link
+                        href="/my-program"
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
+                      >
+                        View My Program
+                      </Link>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                </section>
 
-              <div className="rounded-3xl bg-white p-6 shadow-sm">
-                <p className="text-xs font-bold uppercase text-emerald-700">
-                  Trust mode
-                </p>
-                <h3 className="text-2xl font-black">Johnny model case</h3>
-
-                <div className="mt-5 space-y-3 text-sm leading-6 text-slate-600">
-                  <p>
-                    Essentials can be marked for direct trust payment before
-                    weekly flexible disbursements are released.
+                <section className="rounded-3xl bg-slate-950 p-6 text-white">
+                  <p className="font-black text-emerald-300">
+                    Read-only participant boundary
                   </p>
-
-                  <p>
-                    Trustee-facing reports, beneficiary summaries, receipt
-                    logs, and DSS support notes will remain separate.
+                  <p className="mt-3 text-sm leading-6 text-slate-200">
+                    Budget periods currently available: {budgetPeriods.length}.
+                    This first pass does not create explanations, change
+                    categories, request Trust actions, or modify financial
+                    evidence.
                   </p>
-
-                  <p className="rounded-2xl bg-slate-100 p-4 font-semibold text-slate-800">
-                    DSS supports organization and reporting. The trustee remains
-                    the fiduciary decision-maker.
-                  </p>
-                </div>
-              </div>
-            </section>
+                </section>
+              </>
+            )}
           </section>
         </section>
       </main>

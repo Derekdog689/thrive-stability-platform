@@ -1,592 +1,214 @@
 "use client";
 
-
-import { useEffect, useMemo, useState } from "react";
 import AuthGate from "../AuthGate";
-import ProgramContextPanel from "../ProgramContextPanel";
-import WorkspaceContextPanel from "../WorkspaceContextPanel";
-import { supabase } from "@/lib/supabaseClient";
 import ThriveSidebar from "../ThriveSidebar";
-
-const SELECTED_WORKSPACE_STORAGE_KEY = "thrive:selectedWorkspaceId";
-const SELECTED_PROGRAM_STORAGE_KEY = "thrive:selectedProgramId";
-
-type BudgetCategory = {
-  id: string;
-  workspace_id: string;
-  program_id: string;
-  category_name: string;
-  category_type: string;
-  planned_amount: number | string;
-  spent_amount: number | string;
-  remaining_amount: number | string;
-  sort_order: number;
-  is_active: boolean;
-};
-
-type WorkspaceEventDetail = {
-  workspaceId?: string;
-};
-
-type ProgramEventDetail = {
-  programId?: string;
-};
-
-function toNumber(value: number | string) {
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) ? numericValue : 0;
-}
-
-function formatMoney(value: number | string) {
-  return toNumber(value).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
-
-function formatCategoryType(value: string) {
-  return value
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-function getSpentPercentage(
-  spentValue: number | string,
-  plannedValue: number | string,
-) {
-  const spent = toNumber(spentValue);
-  const planned = toNumber(plannedValue);
-
-  if (planned <= 0) {
-    return 0;
-  }
-
-  return Math.min((spent / planned) * 100, 100);
-}
-
-function getBudgetStatus(
-  spentValue: number | string,
-  plannedValue: number | string,
-) {
-  const spent = toNumber(spentValue);
-  const planned = toNumber(plannedValue);
-
-  if (planned <= 0) {
-    return {
-      label: "No plan set",
-      className: "bg-slate-100 text-slate-600",
-    };
-  }
-
-  const rawPercentage = (spent / planned) * 100;
-
-  if (rawPercentage > 100) {
-    return {
-      label: "Over budget",
-      className: "bg-rose-100 text-rose-700",
-    };
-  }
-
-  if (rawPercentage === 100) {
-    return {
-      label: "Fully used",
-      className: "bg-amber-100 text-amber-800",
-    };
-  }
-
-  if (rawPercentage >= 75) {
-    return {
-      label: "Needs attention",
-      className: "bg-amber-50 text-amber-700",
-    };
-  }
-
-  return {
-    label: "On track",
-    className: "bg-emerald-50 text-emerald-700",
-  };
-}
+import {
+  formatDate,
+  formatMoney,
+  toNumber,
+  useParticipantFinancial,
+} from "../useParticipantFinancial";
 
 export default function BudgetPage() {
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
-  const [selectedProgramId, setSelectedProgramId] = useState("");
-  const [categories, setCategories] = useState<BudgetCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(
-    "Select a workspace and program to load budget categories.",
+  const {
+    budgetPeriods,
+    budgetLines,
+    transactions,
+    latestBatch,
+    totalOutflow,
+    loading,
+    errorMessage,
+  } = useParticipantFinancial();
+
+  const activePeriod =
+    budgetPeriods.find((period) => period.status === "active") ??
+    budgetPeriods[0] ??
+    null;
+
+  const activeLines = activePeriod
+    ? budgetLines.filter((line) => line.budget_period_id === activePeriod.id)
+    : [];
+
+  const plannedTotal = activeLines.reduce(
+    (sum, line) => sum + toNumber(line.planned_amount),
+    0,
   );
-
-  useEffect(() => {
-    const savedWorkspaceId =
-      window.localStorage.getItem(SELECTED_WORKSPACE_STORAGE_KEY) ?? "";
-    const savedProgramId =
-      window.localStorage.getItem(SELECTED_PROGRAM_STORAGE_KEY) ?? "";
-
-    setSelectedWorkspaceId(savedWorkspaceId);
-    setSelectedProgramId(savedProgramId);
-
-    function handleSelectedWorkspaceChanged(event: Event) {
-      const customEvent = event as CustomEvent<WorkspaceEventDetail>;
-      setSelectedWorkspaceId(customEvent.detail.workspaceId ?? "");
-    }
-
-    function handleSelectedProgramChanged(event: Event) {
-      const customEvent = event as CustomEvent<ProgramEventDetail>;
-      setSelectedProgramId(customEvent.detail.programId ?? "");
-    }
-
-    window.addEventListener(
-      "thrive:selectedWorkspaceChanged",
-      handleSelectedWorkspaceChanged,
-    );
-
-    window.addEventListener(
-      "thrive:selectedProgramChanged",
-      handleSelectedProgramChanged,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "thrive:selectedWorkspaceChanged",
-        handleSelectedWorkspaceChanged,
-      );
-
-      window.removeEventListener(
-        "thrive:selectedProgramChanged",
-        handleSelectedProgramChanged,
-      );
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadBudgetCategories() {
-      if (!selectedWorkspaceId || !selectedProgramId) {
-        setCategories([]);
-        setStatusMessage(
-          "Select a workspace and program to load budget categories.",
-        );
-        return;
-      }
-
-      setIsLoading(true);
-      setStatusMessage("Loading budget categories through authenticated RLS.");
-
-      const { data, error } = await supabase
-        .from("budget_categories")
-        .select(
-          "id, workspace_id, program_id, category_name, category_type, planned_amount, spent_amount, remaining_amount, sort_order, is_active",
-        )
-        .eq("workspace_id", selectedWorkspaceId)
-        .eq("program_id", selectedProgramId)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
-        setCategories([]);
-        setStatusMessage(`Budget category load error: ${error.message}`);
-        setIsLoading(false);
-        return;
-      }
-
-      setCategories(data ?? []);
-      setStatusMessage("Live mock/test budget categories loaded through RLS.");
-      setIsLoading(false);
-    }
-
-    void loadBudgetCategories();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedWorkspaceId, selectedProgramId]);
-
-  const totals = useMemo(() => {
-    return categories.reduce(
-      (summary, category) => {
-        const planned = toNumber(category.planned_amount);
-        const spent = toNumber(category.spent_amount);
-        const remaining = toNumber(category.remaining_amount);
-        const type = category.category_type.toLowerCase();
-
-        summary.planned += planned;
-        summary.spent += spent;
-        summary.remaining += remaining;
-
-        if (type === "protected") {
-          summary.protected += remaining;
-        }
-
-        if (type === "flexible") {
-          summary.flexible += remaining;
-        }
-
-        if (type === "reserve") {
-          summary.reserve += remaining;
-        }
-
-        return summary;
-      },
-      {
-        planned: 0,
-        spent: 0,
-        remaining: 0,
-        protected: 0,
-        flexible: 0,
-        reserve: 0,
-      },
-    );
-  }, [categories]);
-
-  const statusSummary = useMemo(() => {
-  return categories.reduce(
-    (summary, category) => {
-      const status = getBudgetStatus(
-        category.spent_amount,
-        category.planned_amount,
-      ).label;
-
-      if (status === "On track") {
-        summary.onTrack += 1;
-      }
-
-      if (status === "Needs attention") {
-        summary.needsAttention += 1;
-      }
-
-      if (status === "Fully used") {
-        summary.fullyUsed += 1;
-      }
-
-      if (status === "Over budget") {
-        summary.overBudget += 1;
-      }
-
-      if (status === "No plan set") {
-        summary.noPlan += 1;
-      }
-
-      return summary;
-    },
-    {
-      onTrack: 0,
-      needsAttention: 0,
-      fullyUsed: 0,
-      overBudget: 0,
-      noPlan: 0,
-    },
+  const actualTotal = activeLines.reduce(
+    (sum, line) => sum + toNumber(line.actual_amount),
+    0,
   );
-}, [categories]);
+  const remainingTotal = activeLines.reduce(
+    (sum, line) => sum + toNumber(line.remaining_amount),
+    0,
+  );
 
   return (
     <AuthGate>
       <main className="min-h-screen bg-[#eef4ef] px-4 py-5 text-slate-950 sm:px-6">
-  <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[260px_1fr]">
-    <ThriveSidebar />
+        <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[260px_1fr]">
+          <ThriveSidebar />
 
-    <section className="space-y-6">
-          <header className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-6">
-            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                  THRIVE budget
-                </p>
-
-                <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-4xl">
-                  Protect essentials. See what remains.
-                </h1>
-
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:mt-3 sm:text-base">
-                  This read-only workspace displays live mock/test budget
-                  categories visible through authenticated Supabase Row Level
-                  Security for the selected workspace and program.
-                </p>
-              </div>
-
-             
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 sm:mt-5 sm:p-4">
-              <p className="text-sm font-bold text-amber-900">
-                Development data notice
+          <section className="space-y-6">
+            <header className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                Budget
               </p>
-              <p className="mt-1 text-sm leading-6 text-amber-800">
-                Current amounts are mock/test records only. No real bank,
-                beneficiary, trust, clinical, recovery, or private case data is
-                authorized in this route.
+              <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+                Protect essentials. See what remains.
+              </h1>
+              <p className="mt-4 max-w-3xl leading-7 text-slate-600">
+                This page separates the participant budget plan from imported
+                bank evidence. Imported activity does not automatically explain
+                purpose, responsibility, or intent.
               </p>
-            </div>
-          </header>
+            </header>
 
-          <WorkspaceContextPanel />
-          <ProgramContextPanel />
+            {loading && (
+              <section className="rounded-3xl bg-white p-6 shadow-sm">
+                Loading your Budget.
+              </section>
+            )}
 
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-3xl bg-emerald-700 p-5 text-white shadow-sm">
-              <p className="text-sm font-bold text-emerald-100">
-                Planned total
-              </p>
-              <p className="mt-3 text-3xl font-black">
-                {formatMoney(totals.planned)}
-              </p>
-            </div>
+            {errorMessage && (
+              <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-950">
+                <p className="font-black">Budget information could not be loaded.</p>
+                <p className="mt-2 text-sm">{errorMessage}</p>
+              </section>
+            )}
 
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-slate-500">Spent total</p>
-              <p className="mt-3 text-3xl font-black">
-                {formatMoney(totals.spent)}
-              </p>
-            </div>
+            {!loading && !errorMessage && (
+              <>
+                <section className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-3xl bg-emerald-700 p-6 text-white shadow-sm">
+                    <p className="text-sm font-bold text-emerald-100">Planned</p>
+                    <p className="mt-3 text-4xl font-black">
+                      {formatMoney(plannedTotal)}
+                    </p>
+                  </div>
+                  <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-sm font-bold text-slate-500">Recorded actual</p>
+                    <p className="mt-3 text-4xl font-black">
+                      {formatMoney(actualTotal)}
+                    </p>
+                  </div>
+                  <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-sm font-bold text-slate-500">Remaining</p>
+                    <p className="mt-3 text-4xl font-black">
+                      {formatMoney(remainingTotal)}
+                    </p>
+                  </div>
+                </section>
 
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-slate-500">
-                Remaining total
-              </p>
-              <p className="mt-3 text-3xl font-black">
-                {formatMoney(totals.remaining)}
-              </p>
-            </div>
+                <section className="rounded-3xl bg-white p-6 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                        Current period
+                      </p>
+                      <h2 className="mt-2 text-2xl font-black">
+                        {activePeriod
+                          ? `${formatDate(activePeriod.period_start)} to ${formatDate(
+                              activePeriod.period_end,
+                            )}`
+                          : "No participant budget period yet"}
+                      </h2>
+                    </div>
+                    {activePeriod && (
+                      <span className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-900">
+                        {activePeriod.status}
+                      </span>
+                    )}
+                  </div>
 
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-slate-500">
-                Protected remaining
-              </p>
-              <p className="mt-3 text-3xl font-black">
-                {formatMoney(totals.protected)}
-              </p>
-            </div>
+                  {activeLines.length > 0 ? (
+                    <div className="mt-6 grid gap-4">
+                      {activeLines.map((line) => (
+                        <div
+                          key={line.id}
+                          className="rounded-2xl border border-slate-100 p-5"
+                        >
+                          <div className="flex flex-wrap justify-between gap-3">
+                            <div>
+                              <p className="font-black">{line.category_name}</p>
+                              <p className="mt-1 text-sm capitalize text-slate-500">
+                                {line.category_type.replaceAll("_", " ")}
+                              </p>
+                            </div>
+                            <p className="font-black">
+                              {formatMoney(line.remaining_amount)} remaining
+                            </p>
+                          </div>
+                          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                            <p>Planned: {formatMoney(line.planned_amount)}</p>
+                            <p>Actual: {formatMoney(line.actual_amount)}</p>
+                            <p>Remaining: {formatMoney(line.remaining_amount)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-6 rounded-2xl bg-slate-50 p-5">
+                      <p className="font-black">
+                        Your participant Budget plan has not been created yet.
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        Imported transaction evidence can still be reviewed
+                        below. It is not being treated as a Budget plan.
+                      </p>
+                    </div>
+                  )}
+                </section>
 
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-slate-500">
-                Flexible remaining
-              </p>
-              <p className="mt-3 text-3xl font-black">
-                {formatMoney(totals.flexible)}
-              </p>
-            </div>
+                <section className="rounded-3xl bg-white p-6 shadow-sm">
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                    Imported evidence
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black">
+                    {transactions.length} posted transactions
+                  </h2>
+                  <p className="mt-3 text-slate-600">
+                    Recorded outflow: {formatMoney(totalOutflow)}
+                    {latestBatch
+                      ? ` for the latest available period ending ${formatDate(
+                          latestBatch.statement_period_end,
+                        )}.`
+                      : "."}
+                  </p>
 
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-slate-500">
-                Reserve remaining
-              </p>
-              <p className="mt-3 text-3xl font-black">
-                {formatMoney(totals.reserve)}
-              </p>
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
-  <div>
-    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-      Budget status
-    </p>
-
-    <h2 className="mt-2 text-2xl font-black">
-      What needs attention
-    </h2>
-
-    <p className="mt-2 text-sm leading-6 text-slate-600">
-      A read-only summary of the current category status for the selected
-      workspace and program.
-    </p>
-  </div>
-
-  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-    <div className="rounded-2xl bg-emerald-50 p-4">
-      <p className="text-sm font-bold text-emerald-800">On track</p>
-      <p className="mt-2 text-3xl font-black text-emerald-950">
-        {statusSummary.onTrack}
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-amber-50 p-4">
-      <p className="text-sm font-bold text-amber-800">Needs attention</p>
-      <p className="mt-2 text-3xl font-black text-amber-950">
-        {statusSummary.needsAttention}
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-amber-100 p-4">
-      <p className="text-sm font-bold text-amber-900">Fully used</p>
-      <p className="mt-2 text-3xl font-black text-amber-950">
-        {statusSummary.fullyUsed}
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-rose-50 p-4">
-      <p className="text-sm font-bold text-rose-800">Over budget</p>
-      <p className="mt-2 text-3xl font-black text-rose-950">
-        {statusSummary.overBudget}
-      </p>
-    </div>
-
-    <div className="rounded-2xl bg-slate-100 p-4">
-      <p className="text-sm font-bold text-slate-700">No plan set</p>
-      <p className="mt-2 text-3xl font-black text-slate-950">
-        {statusSummary.noPlan}
-      </p>
-    </div>
-  </div>
-</section>
-
-          <section className="rounded-3xl bg-white p-6 shadow-sm">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                  Category detail
-                </p>
-
-                <h2 className="mt-2 text-2xl font-black">
-                  Budget categories
-                </h2>
-              </div>
-
-              <p className="text-sm font-semibold text-slate-500">
-                {categories.length} active categor
-                {categories.length === 1 ? "y" : "ies"}
-              </p>
-            </div>
-
-            <div className="mt-6">
-              {isLoading ? (
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 text-sm font-semibold text-slate-600">
-                  Loading budget categories...
-                </div>
-              ) : categories.length === 0 ? (
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 text-sm font-semibold text-slate-600">
-                  {statusMessage}
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {categories.map((category) => (
-                    <article
-                      key={category.id}
-                      className="rounded-3xl border border-slate-100 p-5"
-                    >
-                      <div className="flex items-start justify-between gap-4">
+                  <div className="mt-5 space-y-3">
+                    {transactions.slice(0, 8).map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 p-4"
+                      >
                         <div>
-                          <h3 className="text-xl font-black">
-                            {category.category_name}
-                          </h3>
-
-                          <p className="mt-1 text-sm font-semibold text-slate-500">
-                            {formatCategoryType(category.category_type)}
+                          <p className="font-black">
+                            {transaction.merchant_name ?? "Merchant not provided"}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {formatDate(transaction.posted_date)}
+                            {transaction.category_name
+                              ? ` · ${transaction.category_name}`
+                              : ""}
                           </p>
                         </div>
-
-                       <div className="flex flex-col items-end gap-2">
-  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-    Active
-  </span>
-
-  <span
-    className={`rounded-full px-3 py-1 text-xs font-bold ${
-      getBudgetStatus(
-        category.spent_amount,
-        category.planned_amount,
-      ).className
-    }`}
-  >
-    {
-      getBudgetStatus(
-        category.spent_amount,
-        category.planned_amount,
-      ).label
-    }
-  </span>
-</div>
+                        <p className="font-black">
+                          {formatMoney(transaction.amount)}
+                        </p>
                       </div>
+                    ))}
 
-                      <div className="mt-5 space-y-3">
-                        <div className="flex justify-between gap-4 text-sm">
-                          <span className="font-semibold text-slate-500">
-                            Planned
-                          </span>
-                          <span className="font-black text-slate-900">
-                            {formatMoney(category.planned_amount)}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between gap-4 text-sm">
-                          <span className="font-semibold text-slate-500">
-                            Spent
-                          </span>
-                          <span className="font-black text-slate-900">
-                            {formatMoney(category.spent_amount)}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between gap-4 border-t border-slate-100 pt-3 text-sm">
-                          <span className="font-semibold text-slate-500">
-                            Remaining
-                          </span>
-                          <span className="font-black text-emerald-700">
-                            {formatMoney(category.remaining_amount)}
-                          </span>
-                        </div>
-
-                        <div className="pt-2">
-  <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
-    <span>Budget used</span>
-    <span>
-      {Math.round(
-        getSpentPercentage(
-          category.spent_amount,
-          category.planned_amount,
-        ),
-      )}
-      %
-    </span>
-  </div>
-
-  <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-    <div
-      className={`h-full rounded-full ${
-        toNumber(category.spent_amount) >
-        toNumber(category.planned_amount)
-          ? "bg-rose-500"
-          : "bg-emerald-600"
-      }`}
-      style={{
-        width: `${getSpentPercentage(
-          category.spent_amount,
-          category.planned_amount,
-        )}%`,
-      }}
-    />
-  </div>
-
-  {toNumber(category.spent_amount) >
-    toNumber(category.planned_amount) && (
-    <p className="mt-2 text-xs font-bold text-rose-700">
-      Spending exceeds the planned amount.
-    </p>
-  )}
-</div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <p className="mt-5 text-xs font-semibold text-slate-400">
-              {statusMessage}
-            </p>
+                    {transactions.length === 0 && (
+                      <p className="rounded-2xl bg-slate-50 p-5 text-slate-600">
+                        No participant-owned transaction records are connected
+                        to this account.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
           </section>
-
-          <footer className="rounded-3xl bg-slate-950 p-5 text-sm leading-6 text-slate-200">
-            THRIVE supports budgeting, organization, visibility, and approved
-            support planning. It does not provide legal, fiduciary, clinical,
-            bankruptcy, credit-repair, investment, or crisis-service authority.
-          </footer>
-        </section>
         </section>
       </main>
     </AuthGate>

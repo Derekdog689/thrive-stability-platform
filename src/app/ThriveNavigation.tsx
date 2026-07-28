@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { label: "Dashboard", href: "/" },
+  { label: "Today", href: "/" },
   { label: "My Program", href: "/my-program" },
   { label: "Budget", href: "/budget" },
-  { label: "Check-in", href: null },
-  { label: "Patterns", href: null },
-  { label: "Trust Mode", href: null },
-  { label: "Reports", href: null },
+  { label: "Wellness", href: null },
+  { label: "Goals", href: null },
+  { label: "Support", href: null },
+  { label: "Reports", href: "/reports" },
 ];
 
 export default function ThriveNavigation() {
@@ -29,7 +29,6 @@ export default function ThriveNavigation() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <span>{item.label}</span>
-
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
                     Soon
                   </span>
