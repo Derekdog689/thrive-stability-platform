@@ -39,6 +39,7 @@ export default function WellnessCheckinCandidate() {
     executeInsertCandidate,
     executeSameDayUpdate,
     writeEnabled,
+    clientPathTestEnabled,
   } = useWellnessCheckinCandidate();
 
   const savedDraft = useMemo<WellnessDraft>(() => {
@@ -210,8 +211,24 @@ export default function WellnessCheckinCandidate() {
           onUpdateCandidate={handleUpdateCandidate}
           hasSavedCheckin={false}
           actionMessage={actionMessage}
+          writeEnabled={writeEnabled}
         />
       )}
+
+      {clientPathTestEnabled ? (
+        <section className="rounded-3xl border border-violet-200 bg-violet-50 p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-violet-700">
+            Synthetic test mode
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-violet-950">
+            Person D client-path test
+          </h2>
+          <p className="mt-3 leading-7 text-violet-900">
+            Writes are available only when this sign-in matches the controlled
+            Person D synthetic identity. Other identities remain read-only.
+          </p>
+        </section>
+      ) : null}
 
       <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-wide text-amber-700">

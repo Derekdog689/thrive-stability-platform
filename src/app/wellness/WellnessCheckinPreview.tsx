@@ -15,6 +15,7 @@ type WellnessCheckinPreviewProps = {
   onUpdateCandidate: () => Promise<WellnessWriteResult>;
   hasSavedCheckin: boolean;
   actionMessage: string;
+  writeEnabled: boolean;
 };
 
 type ChoiceGroupProps = {
@@ -164,6 +165,7 @@ export default function WellnessCheckinPreview({
   onUpdateCandidate,
   hasSavedCheckin,
   actionMessage,
+  writeEnabled,
 }: WellnessCheckinPreviewProps) {
   const reflections = useMemo<Record<string, string>>(
     () => ({
@@ -329,17 +331,25 @@ export default function WellnessCheckinPreview({
         </p>
         <button
           type="button"
-          disabled
+          disabled={!writeEnabled}
           onClick={() => {
             void (hasSavedCheckin
               ? onUpdateCandidate()
               : onSaveCandidate());
           }}
-          className="mt-5 w-full cursor-not-allowed rounded-2xl bg-slate-300 px-5 py-4 font-black text-slate-600 sm:w-auto"
+          className={`mt-5 w-full rounded-2xl px-5 py-4 font-black sm:w-auto ${
+            writeEnabled
+              ? "bg-emerald-700 text-white hover:bg-emerald-800"
+              : "cursor-not-allowed bg-slate-300 text-slate-600"
+          }`}
         >
-          {hasSavedCheckin
-            ? "Update check-in unavailable in review"
-            : "Save check-in unavailable in review"}
+          {writeEnabled
+            ? hasSavedCheckin
+              ? "Update synthetic check-in"
+              : "Save synthetic check-in"
+            : hasSavedCheckin
+              ? "Update check-in unavailable in review"
+              : "Save check-in unavailable in review"}
         </button>
         {actionMessage ? (
           <p className="mt-3 text-sm font-bold text-amber-900">

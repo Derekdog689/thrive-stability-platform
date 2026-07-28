@@ -53,6 +53,15 @@ export type WellnessDraft = {
   participantNote: string;
 };
 
+const PERSON_D_AUTH_USER_ID =
+  "d48b7268-9aa6-4498-a923-2851fd5232c9";
+
+const PERSON_D_SUPPORTED_PERSON_ID =
+  "71000000-0000-4000-8000-000000000009";
+
+const CLIENT_PATH_TEST_ENABLED =
+  process.env.NEXT_PUBLIC_THRIVE_WELLNESS_PERSON_D_TEST === "true";
+
 export type WellnessWriteResult =
   | {
       ok: true;
@@ -323,7 +332,10 @@ export function useWellnessCheckinCandidate() {
   async function executeInsertCandidate(
     draft: WellnessDraft,
   ): Promise<WellnessWriteResult> {
-    const WRITE_EXECUTION_ENABLED = false;
+    const WRITE_EXECUTION_ENABLED =
+      CLIENT_PATH_TEST_ENABLED &&
+      authenticatedUserId === PERSON_D_AUTH_USER_ID &&
+      participant?.id === PERSON_D_SUPPORTED_PERSON_ID;
 
     if (!WRITE_EXECUTION_ENABLED) {
       return {
@@ -380,7 +392,10 @@ export function useWellnessCheckinCandidate() {
   async function executeSameDayUpdate(
     draft: WellnessDraft,
   ): Promise<WellnessWriteResult> {
-    const WRITE_EXECUTION_ENABLED = false;
+    const WRITE_EXECUTION_ENABLED =
+      CLIENT_PATH_TEST_ENABLED &&
+      authenticatedUserId === PERSON_D_AUTH_USER_ID &&
+      participant?.id === PERSON_D_SUPPORTED_PERSON_ID;
 
     if (!WRITE_EXECUTION_ENABLED) {
       return {
@@ -453,6 +468,10 @@ export function useWellnessCheckinCandidate() {
     refreshTodayCheckin,
     executeInsertCandidate,
     executeSameDayUpdate,
-    writeEnabled: false as const,
+    writeEnabled:
+      CLIENT_PATH_TEST_ENABLED &&
+      authenticatedUserId === PERSON_D_AUTH_USER_ID &&
+      participant?.id === PERSON_D_SUPPORTED_PERSON_ID,
+    clientPathTestEnabled: CLIENT_PATH_TEST_ENABLED,
   };
 }
