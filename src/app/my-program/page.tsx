@@ -31,8 +31,13 @@ type ProgramRow = {
   description: string | null;
 };
 
+function formatLabel(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
+
 export default function MyProgramPage() {
-  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [person, setPerson] = useState<SupportedPersonRow | null>(null);
   const [participation, setParticipation] =
@@ -58,8 +63,6 @@ export default function MyProgramPage() {
         );
         return;
       }
-
-      setEmail(user.email ?? "");
 
       const personResponse = await supabase
         .from("supported_people")
@@ -159,10 +162,10 @@ export default function MyProgramPage() {
                 My Program
               </p>
               <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
-                Your active THRIVE program.
+                Your THRIVE plan.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                See the program connected to your active participation.
+                See the program supporting your current THRIVE experience.
               </p>
             </header>
 
@@ -180,44 +183,37 @@ export default function MyProgramPage() {
             )}
 
             {!loading && !errorMessage && (!person || !participation || !program) && (
-              <>
-                <section className="rounded-3xl bg-white p-6 shadow-sm">
-                  <p className="font-black">
-                    No active participant-linked program is available.
-                  </p>
-                  <p className="mt-2 break-all text-sm text-slate-600">
-                    Signed in as {email}
-                  </p>
-                </section>
-
-                <section className="rounded-3xl bg-slate-950 p-6 text-white">
-                  <p className="font-black text-emerald-300">
-                    Participant-safe boundary
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-slate-200">
-                    This page does not create programs, change participation,
-                    expose other participants, display financial records, or
-                    provide Trust Engine controls.
-                  </p>
-                </section>
-              </>
+              <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                  Program status
+                </p>
+                <h2 className="mt-2 text-2xl font-black">
+                  No active THRIVE program is available yet
+                </h2>
+                <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+                  When a program is connected to your account, its purpose and
+                  current status will appear here.
+                </p>
+              </section>
             )}
 
             {!loading && !errorMessage && person && participation && program && (
               <>
                 <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-sm">
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
-                    Welcome
+                    Your program
                   </p>
-                  <p className="mt-2 text-2xl font-black">{participantName}</p>
-                  <p className="mt-2 text-sm text-slate-700">{email}</p>
+                  <h2 className="mt-2 text-2xl font-black">{participantName}</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">
+                    This is the program currently available to you in THRIVE.
+                  </p>
                 </section>
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                        Active program
+                        What this program supports
                       </p>
                       <h2 className="mt-2 text-3xl font-black">
                         {program.program_name}
@@ -225,64 +221,71 @@ export default function MyProgramPage() {
                     </div>
 
                     <span className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-900">
-                      {program.status}
+                      {formatLabel(program.status)}
                     </span>
                   </div>
 
                   <p className="mt-6 max-w-3xl leading-7 text-slate-700">
                     {program.description ??
-                      "A participant-safe program description is not available yet."}
+                      "A plain-language description of this program is not available yet."}
                   </p>
 
-                  <dl className="mt-8 grid gap-4 md:grid-cols-2">
+                  <div className="mt-8 grid gap-4 md:grid-cols-3">
                     <div className="rounded-2xl bg-slate-50 p-5">
-                      <dt className="text-xs font-black uppercase tracking-wide text-slate-500">
-                        Program type
-                      </dt>
-                      <dd className="mt-2 text-lg font-black capitalize">
-                        {program.program_type.replaceAll("_", " ")}
-                      </dd>
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Program focus
+                      </p>
+                      <p className="mt-2 text-lg font-black">
+                        {formatLabel(program.program_type)}
+                      </p>
                     </div>
 
                     <div className="rounded-2xl bg-slate-50 p-5">
-                      <dt className="text-xs font-black uppercase tracking-wide text-slate-500">
-                        Program status
-                      </dt>
-                      <dd className="mt-2 text-lg font-black capitalize">
-                        {program.status}
-                      </dd>
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Your participation
+                      </p>
+                      <p className="mt-2 text-lg font-black">
+                        {formatLabel(participation.participant_role)}
+                      </p>
                     </div>
 
                     <div className="rounded-2xl bg-slate-50 p-5">
-                      <dt className="text-xs font-black uppercase tracking-wide text-slate-500">
-                        Your role
-                      </dt>
-                      <dd className="mt-2 text-lg font-black capitalize">
-                        {participation.participant_role.replaceAll("_", " ")}
-                      </dd>
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Current status
+                      </p>
+                      <p className="mt-2 text-lg font-black">
+                        {formatLabel(participation.status)}
+                      </p>
                     </div>
-
-                    <div className="rounded-2xl bg-slate-50 p-5">
-                      <dt className="text-xs font-black uppercase tracking-wide text-slate-500">
-                        Participation status
-                      </dt>
-                      <dd className="mt-2 text-lg font-black capitalize">
-                        {participation.status}
-                      </dd>
-                    </div>
-                  </dl>
+                  </div>
                 </section>
 
-                <section className="rounded-3xl bg-slate-950 p-6 text-white">
-                  <p className="font-black text-emerald-300">
-                    Participant-safe boundary
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-slate-200">
-                    This page shows only your active program and participation
-                    summary. It does not display UUIDs, raw JSON,
-                    other-participant data, workspace administration,
-                    financial evidence, Trust controls, or write actions.
-                  </p>
+                <section className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      What you can review here
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black">
+                      Your current program summary
+                    </h2>
+                    <p className="mt-3 leading-7 text-slate-600">
+                      This page shows the program connected to you and the
+                      status of your participation.
+                    </p>
+                  </div>
+
+                  <div className="rounded-3xl bg-white p-6 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      What comes next
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black">
+                      Use THRIVE one step at a time
+                    </h2>
+                    <p className="mt-3 leading-7 text-slate-600">
+                      Visit Today, Budget, Wellness, Goals, or Support when you
+                      are ready to focus on a specific part of your plan.
+                    </p>
+                  </div>
                 </section>
               </>
             )}
