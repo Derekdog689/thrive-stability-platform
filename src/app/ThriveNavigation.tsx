@@ -7,7 +7,7 @@ const navItems = [
   { label: "Today", href: "/" },
   { label: "My Program", href: "/my-program" },
   { label: "Budget", href: "/budget" },
-  { label: "Wellness", href: null },
+  { label: "Wellness", href: "/wellness" },
   { label: "Goals", href: null },
   { label: "Support", href: null },
   { label: "Reports", href: "/reports" },
