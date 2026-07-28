@@ -262,7 +262,11 @@ export default function WellnessCheckinPreview() {
           Nothing will be saved yet
         </h2>
         <p className="mt-3 leading-7 text-amber-900">
-          Overall day selected: {overallDay ? "Yes" : "No"}. Optional items
+          Overall day: {overallDay
+              ? overallDay.replaceAll("_", " ").replace(/^./, (letter) =>
+                  letter.toUpperCase(),
+                )
+              : "Not selected"}. Optional items
           selected: {selectedCount}.
         </p>
         <button
