@@ -39,9 +39,8 @@ export default function WellnessPage() {
                 A small check-in for today.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                Take a moment to notice how things are going. This space is for
-                personal reflection and support planning. It does not provide a
-                diagnosis or make conclusions about you.
+                Take a moment to notice how things are going and what may help
+                today.
               </p>
             </header>
 
@@ -66,7 +65,7 @@ export default function WellnessPage() {
                 Areas you may reflect on
               </p>
               <h2 className="mt-2 text-2xl font-black">
-                Notice what matters without scoring it
+                Notice what matters today
               </h2>
               <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {reflectionAreas.map((area) => (
@@ -91,8 +90,7 @@ export default function WellnessPage() {
                 Choose something small and useful
               </h2>
               <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-                These are optional ideas for reflection, not instructions,
-                requirements, or conclusions.
+                These are optional ideas. Choose what feels useful.
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 {nextSteps.map((step) => (

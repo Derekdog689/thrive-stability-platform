@@ -54,9 +54,8 @@ export default function GoalsPage() {
                 Turn what matters into one manageable step.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                Goals should belong to the participant. This first shell shows
-                how future goals may be organized without creating, changing,
-                scoring, or assigning anything yet.
+                See how future goals may be organized around what matters to
+                you.
               </p>
             </header>
 
@@ -116,7 +115,7 @@ export default function GoalsPage() {
                 <div className="rounded-2xl bg-slate-50 p-5">
                   <dt className="font-black">Why does it matter to me?</dt>
                   <dd className="mt-2 text-sm leading-6 text-slate-600">
-                    The participant&apos;s own reason, not a system conclusion.
+                    Your own reason for choosing the goal.
                   </dd>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-5">
@@ -140,7 +139,7 @@ export default function GoalsPage() {
                   Progress states
                 </p>
                 <h2 className="mt-2 text-2xl font-black">
-                  Progress without punishment
+                  Choose a progress status
                 </h2>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {progressStates.map((state) => (

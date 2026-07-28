@@ -99,7 +99,7 @@ export default function ReportsPage() {
                 <section className="grid gap-6 lg:grid-cols-2">
                   <div className="rounded-3xl bg-white p-6 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      Source coverage
+                      Connected accounts
                     </p>
                     <h2 className="mt-2 text-2xl font-black">
                       Connected financial sources
@@ -132,7 +132,7 @@ export default function ReportsPage() {
                       Category summary
                     </p>
                     <h2 className="mt-2 text-2xl font-black">
-                      Recorded debit activity
+                      Money out by category
                     </h2>
                     <div className="mt-5 space-y-3">
                       {sortedCategories.map(([category, total]) => (
@@ -195,7 +195,7 @@ export default function ReportsPage() {
                 </section>
 
                 <section className="rounded-3xl bg-slate-950 p-6 text-white">
-                  <p className="font-black text-emerald-300">Source labels matter</p>
+                  <p className="font-black text-emerald-300">About this information</p>
                   <p className="mt-3 text-sm leading-6 text-slate-200">
                     Bank evidence, THRIVE calculations, participant
                     explanations, staff notes, and future Trust-reported facts

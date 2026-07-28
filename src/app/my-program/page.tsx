@@ -162,8 +162,7 @@ export default function MyProgramPage() {
                 Your active THRIVE program.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                A participant-safe summary of the program connected to your
-                active participation.
+                See the program connected to your active participation.
               </p>
             </header>
 

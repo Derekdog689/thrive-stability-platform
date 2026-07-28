@@ -36,9 +36,8 @@ export default function TodayPage() {
                 Welcome, {participantName}.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                See what is connected, review recent financial evidence, and
-                choose the next useful step. THRIVE does not infer intent or
-                make clinical, legal, or fiduciary conclusions from spending.
+                See what is connected, review recent activity, and choose your
+                next step.
               </p>
             </header>
 
@@ -64,7 +63,7 @@ export default function TodayPage() {
                     </p>
                     <p className="mt-3 text-4xl font-black">{sources.length}</p>
                     <p className="mt-2 text-sm text-emerald-100">
-                      Sources linked to your participant record
+                      Accounts connected to THRIVE
                     </p>
                   </div>
 
@@ -76,7 +75,7 @@ export default function TodayPage() {
                       {transactions.length}
                     </p>
                     <p className="mt-2 text-sm text-slate-500">
-                      Participant-safe posted records
+                      Recent account activity
                     </p>
                   </div>
 
@@ -88,7 +87,7 @@ export default function TodayPage() {
                       {formatMoney(totalOutflow)}
                     </p>
                     <p className="mt-2 text-sm text-slate-500">
-                      Sum of imported debit amounts, not a judgment
+                      Total money out during this period
                     </p>
                   </div>
                 </section>
@@ -136,7 +135,7 @@ export default function TodayPage() {
                       Next steps
                     </p>
                     <h2 className="mt-2 text-2xl font-black">
-                      Keep the picture clear
+                      Choose what to review next
                     </h2>
                     <div className="mt-5 grid gap-3">
                       <Link
@@ -156,6 +155,24 @@ export default function TodayPage() {
                         className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
                       >
                         View My Program
+                      </Link>
+                      <Link
+                        href="/wellness"
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
+                      >
+                        Open Wellness
+                      </Link>
+                      <Link
+                        href="/goals"
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
+                      >
+                        View Goals
+                      </Link>
+                      <Link
+                        href="/support"
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black text-slate-900 hover:bg-slate-100"
+                      >
+                        Ask for Support
                       </Link>
                     </div>
                   </div>

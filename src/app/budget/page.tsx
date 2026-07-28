@@ -57,9 +57,7 @@ export default function BudgetPage() {
                 Protect essentials. See what remains.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                This page separates the participant budget plan from imported
-                bank evidence. Imported activity does not automatically explain
-                purpose, responsibility, or intent.
+                Compare your plan with recent account activity.
               </p>
             </header>
 
@@ -86,7 +84,7 @@ export default function BudgetPage() {
                     </p>
                   </div>
                   <div className="rounded-3xl bg-white p-6 shadow-sm">
-                    <p className="text-sm font-bold text-slate-500">Recorded actual</p>
+                    <p className="text-sm font-bold text-slate-500">Money used</p>
                     <p className="mt-3 text-4xl font-black">
                       {formatMoney(actualTotal)}
                     </p>
@@ -152,8 +150,7 @@ export default function BudgetPage() {
                         Your participant Budget plan has not been created yet.
                       </p>
                       <p className="mt-2 text-sm leading-6 text-slate-600">
-                        Imported transaction evidence can still be reviewed
-                        below. It is not being treated as a Budget plan.
+                        Recent account activity can still be reviewed below.
                       </p>
                     </div>
                   )}
@@ -161,7 +158,7 @@ export default function BudgetPage() {
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm">
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                    Imported evidence
+                    Recent account activity
                   </p>
                   <h2 className="mt-2 text-2xl font-black">
                     {transactions.length} posted transactions

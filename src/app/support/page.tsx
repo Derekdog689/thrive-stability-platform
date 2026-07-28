@@ -36,9 +36,8 @@ export default function SupportPage() {
                 Know where to ask. Keep the request clear.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                Support should be easy to understand and easy to request. This
-                first shell shows future support pathways without sending,
-                storing, assigning, or escalating a request.
+                See the kinds of help that may be available and how a future
+                request may work.
               </p>
             </header>
 
@@ -109,7 +108,7 @@ export default function SupportPage() {
                 <div className="rounded-2xl bg-slate-50 p-5">
                   <dt className="font-black">What is the request status?</dt>
                   <dd className="mt-2 text-sm leading-6 text-slate-600">
-                    A visible operational state, not a hidden judgment.
+                    A clear status that shows what happens next.
                   </dd>
                 </div>
               </dl>
