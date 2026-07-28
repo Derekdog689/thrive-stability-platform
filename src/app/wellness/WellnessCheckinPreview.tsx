@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import type { WellnessDraft, WellnessWriteResult } from "./useWellnessCheckinCandidate";
+import type {
+  WellnessDraft,
+  WellnessWriteResult,
+} from "./useWellnessCheckinCandidate";
 
 type Choice = {
   label: string;
@@ -231,12 +234,12 @@ export default function WellnessCheckinPreview({
     <section className="space-y-6">
       <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
         <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-          Preview only
+          Your reflection
         </p>
         <h2 className="mt-2 text-2xl font-black">How is today going?</h2>
         <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-          Try the check-in flow below. Your choices stay on this screen and are
-          not saved.
+          Choose what feels useful. Saving is not available yet, so your choices
+          will remain on this screen.
         </p>
 
         <div className="mt-6">
@@ -254,7 +257,9 @@ export default function WellnessCheckinPreview({
         <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
           A little more detail
         </p>
-        <h2 className="mt-2 text-2xl font-black">Choose only what feels useful</h2>
+        <h2 className="mt-2 text-2xl font-black">
+          Choose only what feels useful
+        </h2>
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {reflectionGroups.map((group) => (
             <ChoiceGroup
@@ -270,7 +275,9 @@ export default function WellnessCheckinPreview({
             label="Would support help today?"
             value={supportNeeded}
             choices={supportChoices}
-            onChange={(value) => setDraftField("supportNeeded", value || null)}
+            onChange={(value) =>
+              setDraftField("supportNeeded", value || null)
+            }
           />
         </div>
       </section>
@@ -285,7 +292,9 @@ export default function WellnessCheckinPreview({
             label="What may help next?"
             value={nextStep}
             choices={nextStepChoices}
-            onChange={(value) => setDraftField("chosenNextStep", value || null)}
+            onChange={(value) =>
+              setDraftField("chosenNextStep", value || null)
+            }
           />
         </div>
       </section>
@@ -304,7 +313,9 @@ export default function WellnessCheckinPreview({
           id="wellness-note"
           value={note}
           maxLength={2000}
-          onChange={(event) => setDraftField("participantNote", event.target.value)}
+          onChange={(event) =>
+            setDraftField("participantNote", event.target.value)
+          }
           rows={5}
           className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
           placeholder="Optional note"
@@ -316,18 +327,19 @@ export default function WellnessCheckinPreview({
 
       <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm sm:p-8">
         <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-          Review state
+          Your selections
         </p>
         <h2 className="mt-2 text-2xl font-black text-amber-950">
-          Nothing will be saved yet
+          Saving is not available yet
         </h2>
         <p className="mt-3 leading-7 text-amber-900">
-          Overall day: {overallDay
-              ? overallDay.replaceAll("_", " ").replace(/^./, (letter) =>
-                  letter.toUpperCase(),
-                )
-              : "Not selected"}. Optional items
-          selected: {selectedCount}.
+          Overall day:{" "}
+          {overallDay
+            ? overallDay
+                .replaceAll("_", " ")
+                .replace(/^./, (letter) => letter.toUpperCase())
+            : "Not selected"}
+          . Optional items selected: {selectedCount}.
         </p>
         <button
           type="button"
@@ -345,11 +357,9 @@ export default function WellnessCheckinPreview({
         >
           {writeEnabled
             ? hasSavedCheckin
-              ? "Update synthetic check-in"
-              : "Save synthetic check-in"
-            : hasSavedCheckin
-              ? "Update check-in unavailable in review"
-              : "Save check-in unavailable in review"}
+              ? "Update test check-in"
+              : "Save test check-in"
+            : "Save check-in unavailable"}
         </button>
         {actionMessage ? (
           <p className="mt-3 text-sm font-bold text-amber-900">

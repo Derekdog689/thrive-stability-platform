@@ -33,24 +33,24 @@ export default function WellnessPage() {
                   Support
                 </p>
                 <h2 className="mt-2 text-2xl font-black">
-                  Choosing support does not send a request
+                  Choosing support does not automatically send a request
                 </h2>
                 <p className="mt-3 leading-7 text-slate-600">
-                  The preview lets us review the wording only. It does not
-                  contact staff or create a Support request.
+                  Your check-in can help you notice when support may be useful.
+                  Contacting staff remains a separate choice.
                 </p>
               </div>
 
               <div className="rounded-3xl bg-white p-6 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                  Wellness history
+                  Your Wellness record
                 </p>
                 <h2 className="mt-2 text-2xl font-black">
-                  Saved history is not connected yet
+                  Today&apos;s saved check-in can appear here
                 </h2>
                 <p className="mt-3 leading-7 text-slate-600">
-                  The installed database remains separate from this preview
-                  until the write workflow is reviewed and approved.
+                  THRIVE can read your active check-in for today. A broader
+                  Wellness history view is not available yet.
                 </p>
               </div>
             </section>
@@ -59,7 +59,8 @@ export default function WellnessPage() {
               <p className="font-black text-emerald-300">Your reflection</p>
               <p className="mt-3 text-sm leading-6 text-slate-200">
                 A check-in is your own reflection. It does not create a
-                diagnosis or an emergency decision.
+                diagnosis, emergency decision, relapse finding, or judgment
+                about your ability to manage your life.
               </p>
             </section>
           </section>
