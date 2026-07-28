@@ -1,10 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import type { WellnessDraft, WellnessWriteResult } from "./useWellnessCheckinCandidate";
 
 type Choice = {
   label: string;
   value: string;
+};
+
+type WellnessCheckinPreviewProps = {
+  draft: WellnessDraft;
+  onDraftChange: (nextDraft: WellnessDraft) => void;
+  onSaveCandidate: () => Promise<WellnessWriteResult>;
+  onUpdateCandidate: () => Promise<WellnessWriteResult>;
+  hasSavedCheckin: boolean;
+  actionMessage: string;
 };
 
 type ChoiceGroupProps = {
@@ -147,12 +157,37 @@ function ChoiceGroup({
   );
 }
 
-export default function WellnessCheckinPreview() {
-  const [overallDay, setOverallDay] = useState("");
-  const [reflections, setReflections] = useState<Record<string, string>>({});
-  const [supportNeeded, setSupportNeeded] = useState("");
-  const [nextStep, setNextStep] = useState("");
-  const [note, setNote] = useState("");
+export default function WellnessCheckinPreview({
+  draft,
+  onDraftChange,
+  onSaveCandidate,
+  onUpdateCandidate,
+  hasSavedCheckin,
+  actionMessage,
+}: WellnessCheckinPreviewProps) {
+  const reflections = useMemo<Record<string, string>>(
+    () => ({
+      stress: draft.stress ?? "",
+      sleep: draft.sleep ?? "",
+      energy: draft.energy ?? "",
+      confidence: draft.confidence ?? "",
+      routine: draft.routine ?? "",
+      recovery_support: draft.recoverySupport ?? "",
+    }),
+    [
+      draft.stress,
+      draft.sleep,
+      draft.energy,
+      draft.confidence,
+      draft.routine,
+      draft.recoverySupport,
+    ],
+  );
+
+  const overallDay = draft.overallDay ?? "";
+  const supportNeeded = draft.supportNeeded ?? "";
+  const nextStep = draft.chosenNextStep ?? "";
+  const note = draft.participantNote;
 
   const selectedCount = useMemo(
     () =>
@@ -163,8 +198,31 @@ export default function WellnessCheckinPreview() {
     [reflections, supportNeeded, nextStep, note],
   );
 
+  function setDraftField<K extends keyof WellnessDraft>(
+    field: K,
+    value: WellnessDraft[K],
+  ) {
+    onDraftChange({
+      ...draft,
+      [field]: value,
+    });
+  }
+
   function setReflection(key: string, value: string) {
-    setReflections((current) => ({ ...current, [key]: value }));
+    const fieldMap: Record<string, keyof WellnessDraft> = {
+      stress: "stress",
+      sleep: "sleep",
+      energy: "energy",
+      confidence: "confidence",
+      routine: "routine",
+      recovery_support: "recoverySupport",
+    };
+
+    const field = fieldMap[key];
+
+    if (!field) return;
+
+    setDraftField(field, value || null);
   }
 
   return (
@@ -184,7 +242,7 @@ export default function WellnessCheckinPreview() {
             label="Overall day"
             value={overallDay}
             choices={overallChoices}
-            onChange={setOverallDay}
+            onChange={(value) => setDraftField("overallDay", value || null)}
             optional={false}
           />
         </div>
@@ -210,7 +268,7 @@ export default function WellnessCheckinPreview() {
             label="Would support help today?"
             value={supportNeeded}
             choices={supportChoices}
-            onChange={setSupportNeeded}
+            onChange={(value) => setDraftField("supportNeeded", value || null)}
           />
         </div>
       </section>
@@ -225,7 +283,7 @@ export default function WellnessCheckinPreview() {
             label="What may help next?"
             value={nextStep}
             choices={nextStepChoices}
-            onChange={setNextStep}
+            onChange={(value) => setDraftField("chosenNextStep", value || null)}
           />
         </div>
       </section>
@@ -244,7 +302,7 @@ export default function WellnessCheckinPreview() {
           id="wellness-note"
           value={note}
           maxLength={2000}
-          onChange={(event) => setNote(event.target.value)}
+          onChange={(event) => setDraftField("participantNote", event.target.value)}
           rows={5}
           className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
           placeholder="Optional note"
@@ -272,10 +330,22 @@ export default function WellnessCheckinPreview() {
         <button
           type="button"
           disabled
+          onClick={() => {
+            void (hasSavedCheckin
+              ? onUpdateCandidate()
+              : onSaveCandidate());
+          }}
           className="mt-5 w-full cursor-not-allowed rounded-2xl bg-slate-300 px-5 py-4 font-black text-slate-600 sm:w-auto"
         >
-          Save check-in unavailable in preview
+          {hasSavedCheckin
+            ? "Update check-in unavailable in review"
+            : "Save check-in unavailable in review"}
         </button>
+        {actionMessage ? (
+          <p className="mt-3 text-sm font-bold text-amber-900">
+            {actionMessage}
+          </p>
+        ) : null}
       </section>
     </section>
   );

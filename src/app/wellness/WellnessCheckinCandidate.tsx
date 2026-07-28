@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import WellnessCheckinPreview from "./WellnessCheckinPreview";
-import { useWellnessCheckinCandidate } from "./useWellnessCheckinCandidate";
+import { type WellnessDraft, useWellnessCheckinCandidate } from "./useWellnessCheckinCandidate";
 
 function formatValue(value: string | null | undefined) {
   if (!value) return "Not selected";
@@ -11,7 +12,23 @@ function formatValue(value: string | null | undefined) {
     .replace(/^./, (letter) => letter.toUpperCase());
 }
 
+const emptyDraft: WellnessDraft = {
+  overallDay: null,
+  stress: null,
+  sleep: null,
+  energy: null,
+  confidence: null,
+  routine: null,
+  recoverySupport: null,
+  supportNeeded: null,
+  chosenNextStep: null,
+  participantNote: "",
+};
+
 export default function WellnessCheckinCandidate() {
+  const [draft, setDraft] = useState<WellnessDraft>(emptyDraft);
+  const [actionMessage, setActionMessage] = useState("");
+
   const {
     participant,
     participation,
@@ -19,8 +36,47 @@ export default function WellnessCheckinCandidate() {
     today,
     loading,
     errorMessage,
+    executeInsertCandidate,
+    executeSameDayUpdate,
     writeEnabled,
   } = useWellnessCheckinCandidate();
+
+  const savedDraft = useMemo<WellnessDraft>(() => {
+    if (!todayCheckin) return draft;
+
+    return {
+      overallDay: todayCheckin.overall_day,
+      stress: todayCheckin.stress,
+      sleep: todayCheckin.sleep,
+      energy: todayCheckin.energy,
+      confidence: todayCheckin.confidence,
+      routine: todayCheckin.routine,
+      recoverySupport: todayCheckin.recovery_support,
+      supportNeeded: todayCheckin.support_needed,
+      chosenNextStep: todayCheckin.chosen_next_step,
+      participantNote: todayCheckin.participant_note ?? "",
+    };
+  }, [draft, todayCheckin]);
+
+  async function handleSaveCandidate() {
+    const result = await executeInsertCandidate(draft);
+
+    if (!result.ok) {
+      setActionMessage(result.message);
+    }
+
+    return result;
+  }
+
+  async function handleUpdateCandidate() {
+    const result = await executeSameDayUpdate(savedDraft);
+
+    if (!result.ok) {
+      setActionMessage(result.message);
+    }
+
+    return result;
+  }
 
   return (
     <div className="space-y-6">
@@ -147,7 +203,14 @@ export default function WellnessCheckinCandidate() {
           </div>
         </section>
       ) : (
-        <WellnessCheckinPreview />
+        <WellnessCheckinPreview
+          draft={draft}
+          onDraftChange={setDraft}
+          onSaveCandidate={handleSaveCandidate}
+          onUpdateCandidate={handleUpdateCandidate}
+          hasSavedCheckin={false}
+          actionMessage={actionMessage}
+        />
       )}
 
       <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
