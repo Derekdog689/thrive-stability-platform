@@ -2,7 +2,7 @@
 
 import AuthGate from "../AuthGate";
 import ThriveSidebar from "../ThriveSidebar";
-import WellnessCheckinPreview from "./WellnessCheckinPreview";
+import WellnessCheckinCandidate from "./WellnessCheckinCandidate";
 
 export default function WellnessPage() {
   return (
@@ -25,7 +25,7 @@ export default function WellnessPage() {
               </p>
             </header>
 
-            <WellnessCheckinPreview />
+            <WellnessCheckinCandidate />
 
             <section className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-3xl bg-white p-6 shadow-sm">

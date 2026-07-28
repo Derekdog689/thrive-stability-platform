@@ -1,0 +1,168 @@
+"use client";
+
+import WellnessCheckinPreview from "./WellnessCheckinPreview";
+import { useWellnessCheckinCandidate } from "./useWellnessCheckinCandidate";
+
+function formatValue(value: string | null | undefined) {
+  if (!value) return "Not selected";
+
+  return value
+    .replaceAll("_", " ")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+export default function WellnessCheckinCandidate() {
+  const {
+    participant,
+    participation,
+    todayCheckin,
+    today,
+    loading,
+    errorMessage,
+    writeEnabled,
+  } = useWellnessCheckinCandidate();
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-sky-100 bg-sky-50 p-6 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-wide text-sky-700">
+          Connection review
+        </p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">
+          Wellness data connection
+        </h2>
+
+        {loading ? (
+          <p className="mt-3 leading-7 text-sky-950">
+            Checking your participant and program connection.
+          </p>
+        ) : errorMessage ? (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-white p-4">
+            <p className="font-black text-rose-900">
+              The Wellness connection could not be reviewed
+            </p>
+            <p className="mt-2 text-sm leading-6 text-rose-800">
+              {errorMessage}
+            </p>
+          </div>
+        ) : !participant ? (
+          <p className="mt-3 leading-7 text-sky-950">
+            No active participant record is connected to this sign-in.
+          </p>
+        ) : !participation ? (
+          <p className="mt-3 leading-7 text-sky-950">
+            No active program participation is available for this participant.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Participant
+              </p>
+              <p className="mt-2 font-black text-slate-950">
+                {participant.preferred_name ?? participant.display_name}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Today
+              </p>
+              <p className="mt-2 font-black text-slate-950">{today}</p>
+            </div>
+
+            <div className="rounded-2xl bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Save status
+              </p>
+              <p className="mt-2 font-black text-slate-950">
+                {writeEnabled ? "Available" : "Disabled for review"}
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {todayCheckin ? (
+        <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+            Today&apos;s saved check-in
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">
+            A check-in is already saved for today
+          </h2>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Overall day
+              </p>
+              <p className="mt-2 font-black text-slate-950">
+                {formatValue(todayCheckin.overall_day)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Energy
+              </p>
+              <p className="mt-2 font-black text-slate-950">
+                {formatValue(todayCheckin.energy)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Next step
+              </p>
+              <p className="mt-2 font-black text-slate-950">
+                {formatValue(todayCheckin.chosen_next_step)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Status
+              </p>
+              <p className="mt-2 font-black text-slate-950">
+                {formatValue(todayCheckin.status)}
+              </p>
+            </div>
+          </div>
+
+          {todayCheckin.participant_note ? (
+            <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Note
+              </p>
+              <p className="mt-2 leading-7 text-slate-700">
+                {todayCheckin.participant_note}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+            Editing is not available in this candidate. The saved-state display
+            is connected for review only.
+          </div>
+        </section>
+      ) : (
+        <WellnessCheckinPreview />
+      )}
+
+      <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+          Write candidate
+        </p>
+        <h2 className="mt-2 text-2xl font-black text-amber-950">
+          Save remains locked
+        </h2>
+        <p className="mt-3 leading-7 text-amber-900">
+          The connection can resolve the participant, active program, today&apos;s
+          record, and future insert payload. It does not call insert, update,
+          upsert, or a write RPC.
+        </p>
+      </section>
+    </div>
+  );
+}
