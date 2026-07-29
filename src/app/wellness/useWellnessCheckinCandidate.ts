@@ -100,11 +100,26 @@ export type WellnessInsertCandidate = {
   created_by: string;
 };
 
-function localDateKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+function businessDateKey() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+
+  const year = values.year;
+  const month = values.month;
+  const day = values.day;
+
+  if (!year || !month || !day) {
+    throw new Error("Unable to resolve the THRIVE business date.");
+  }
+
   return `${year}-${month}-${day}`;
 }
 
@@ -120,7 +135,7 @@ export function useWellnessCheckinCandidate() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const today = useMemo(() => localDateKey(), []);
+  const today = useMemo(() => businessDateKey(), []);
 
   useEffect(() => {
     let mounted = true;
