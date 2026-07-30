@@ -105,24 +105,24 @@ A displayed row is evidence of database behavior only. It does not establish int
 
 ### T01 — Baseline absence
 
-**Actor:** workspace admin or read-only catalog session  
-**Action:** confirm no preexisting synthetic Goals rows exist for the selected participants.  
+**Actor:** workspace admin or read-only catalog session
+**Action:** confirm no preexisting synthetic Goals rows exist for the selected participants.
 **Expected:** zero matching rows.
 
 Stop if unexplained Goals rows already exist.
 
 ### T02 — Participant A self-select before create
 
-**Actor:** Participant A  
-**Action:** select Goals in Participant A's active workspace/program scope.  
+**Actor:** Participant A
+**Action:** select Goals in Participant A's active workspace/program scope.
 **Expected:** no rows or only previously approved synthetic rows belonging to Participant A.
 
 Participant A must not see Participant D rows.
 
 ### T03 — Valid Participant A insert
 
-**Actor:** Participant A  
-**Action:** insert one participant-owned synthetic Goal using Participant A's own supported-person, program, and workspace scope.  
+**Actor:** Participant A
+**Action:** insert one participant-owned synthetic Goal using Participant A's own supported-person, program, and workspace scope.
 **Expected:** insert succeeds.
 
 Required persisted boundaries:
@@ -137,59 +137,59 @@ archived_at = null
 
 ### T04 — Wrong creator denial
 
-**Actor:** Participant A  
-**Action:** attempt an insert with `created_by` set to another auth user.  
+**Actor:** Participant A
+**Action:** attempt an insert with `created_by` set to another auth user.
 **Expected:** denied.
 
 No row created.
 
 ### T05 — Wrong supported-person denial
 
-**Actor:** Participant A  
-**Action:** attempt to insert a Goal owned by Participant D.  
+**Actor:** Participant A
+**Action:** attempt to insert a Goal owned by Participant D.
 **Expected:** denied.
 
 No row created.
 
 ### T06 — Wrong workspace/program denial
 
-**Actor:** Participant A  
-**Action:** attempt to use a mismatched workspace and program.  
+**Actor:** Participant A
+**Action:** attempt to use a mismatched workspace and program.
 **Expected:** denied.
 
 No row created.
 
 ### T07 — Staff-suggestion participant insert denial
 
-**Actor:** Participant A  
-**Action:** attempt insert with `ownership_source = staff_suggestion`.  
+**Actor:** Participant A
+**Action:** attempt insert with `ownership_source = staff_suggestion`.
 **Expected:** denied.
 
 No row created and no silent conversion to participant ownership.
 
 ### T08 — Participant D cross-person select denial
 
-**Actor:** Participant D  
-**Action:** attempt to read Participant A's Goal.  
+**Actor:** Participant D
+**Action:** attempt to read Participant A's Goal.
 **Expected:** zero visible rows.
 
 ### T09 — Outsider select denial
 
-**Actor:** Outsider  
-**Action:** attempt to read Participant A's Goal.  
+**Actor:** Outsider
+**Action:** attempt to read Participant A's Goal.
 **Expected:** zero visible rows.
 
 ### T10 — Participant A content update
 
-**Actor:** Participant A  
-**Action:** update title, why-it-matters, next step, goal area, or progress status on their own Goal.  
+**Actor:** Participant A
+**Action:** update title, why-it-matters, next step, goal area, or progress status on their own Goal.
 **Expected:** allowed.
 
 Identity and provenance fields remain unchanged.
 
 ### T11 — Immutable-field update denial
 
-**Actor:** Participant A  
+**Actor:** Participant A
 **Action:** attempt to change any of:
 
 - workspace ID;
@@ -205,8 +205,8 @@ Original row remains unchanged.
 
 ### T12 — Participant archive
 
-**Actor:** Participant A  
-**Action:** set `progress_status = archived`.  
+**Actor:** Participant A
+**Action:** set `progress_status = archived`.
 **Expected:** allowed.
 
 Expected row state:
@@ -219,25 +219,25 @@ updated_at = advanced
 
 ### T13 — Participant reactivation denial
 
-**Actor:** Participant A  
-**Action:** attempt to move archived Goal back to an active status.  
+**Actor:** Participant A
+**Action:** attempt to move archived Goal back to an active status.
 **Expected:** denied.
 
 The Goal remains archived.
 
 ### T14 — Workspace-admin read
 
-**Actor:** Workspace admin  
-**Action:** read Participant A's Goal in the admin's workspace.  
+**Actor:** Workspace admin
+**Action:** read Participant A's Goal in the admin's workspace.
 **Expected:** allowed.
 
 No access outside the admin's workspace.
 
 ### T15 — Workspace-admin reactivation
 
-**Actor:** Workspace admin  
-**Precondition:** Participant A remains actively participating in the program.  
-**Action:** move archived Goal back to an allowed active status.  
+**Actor:** Workspace admin
+**Precondition:** Participant A remains actively participating in the program.
+**Action:** move archived Goal back to an allowed active status.
 **Expected:** allowed.
 
 Expected:
@@ -249,25 +249,25 @@ updated_at = advanced
 
 ### T16 — Inactive-participation denial
 
-**Actor:** Participant A and workspace admin  
-**Precondition:** use a separately approved synthetic inactive-participation fixture.  
-**Action:** attempt participant read/write and admin lifecycle update.  
+**Actor:** Participant A and workspace admin
+**Precondition:** use a separately approved synthetic inactive-participation fixture.
+**Action:** attempt participant read/write and admin lifecycle update.
 **Expected:** denied where active participation is required.
 
 Historical read behavior, if separately supported by policy, must be documented exactly rather than assumed.
 
 ### T17 — DELETE denial
 
-**Actor:** Participant A, Participant D, outsider, and workspace admin  
-**Action:** attempt DELETE.  
+**Actor:** Participant A, Participant D, outsider, and workspace admin
+**Action:** attempt DELETE.
 **Expected:** denied for every authenticated role.
 
 No hard delete occurs.
 
 ### T18 — Cross-module non-action
 
-**Actor:** read-only verification  
-**Action:** compare relevant Wellness, Budget, Support, Reports, program participation, and Trust Engine-linked structures before and after Goals tests.  
+**Actor:** read-only verification
+**Action:** compare relevant Wellness, Budget, Support, Reports, program participation, and Trust Engine-linked structures before and after Goals tests.
 **Expected:** no automatic change caused by Goals operations.
 
 ## Stop conditions
