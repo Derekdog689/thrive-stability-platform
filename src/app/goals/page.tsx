@@ -67,9 +67,9 @@ export default function GoalsPage() {
                 No participant-owned goals recorded yet
               </h2>
               <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-                A future goal may include why it matters, one next step, a
-                target date when useful, progress, barriers, and the support
-                you want.
+                A goal may include why it matters, one manageable next step,
+an optional goal area, and a progress status you can update
+over time.
               </p>
               <div className="mt-5 inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-500">
                 Goal creation is not available yet
@@ -127,7 +127,7 @@ export default function GoalsPage() {
                 <div className="rounded-2xl bg-slate-50 p-5">
                   <dt className="font-black">What support would help?</dt>
                   <dd className="mt-2 text-sm leading-6 text-slate-600">
-                    An optional request that does not create outside authority.
+                   An optional way to organize the goal around what matters to you.
                   </dd>
                 </div>
               </dl>
