@@ -47,6 +47,7 @@ function GoalCard({
   working,
   onStatusChange,
   onArchive,
+  onUpdateDetails,
 }: {
   goal: ParticipantGoal;
   working: boolean;
@@ -55,7 +56,41 @@ function GoalCard({
     status: Exclude<GoalProgressStatus, "archived">,
   ) => Promise<void>;
   onArchive: (goal: ParticipantGoal) => Promise<void>;
+  onUpdateDetails: (
+    goal: ParticipantGoal,
+    draft: GoalDraft,
+  ) => Promise<{ ok: boolean; message: string }>;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState<GoalDraft>({
+    title: goal.title,
+    whyItMatters: goal.why_it_matters ?? "",
+    nextStep: goal.next_step,
+    goalArea: goal.goal_area ?? "",
+  });
+  const [editMessage, setEditMessage] = useState("");
+
+  function resetDraft() {
+    setEditDraft({
+      title: goal.title,
+      whyItMatters: goal.why_it_matters ?? "",
+      nextStep: goal.next_step,
+      goalArea: goal.goal_area ?? "",
+    });
+  }
+
+  async function saveEdits(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEditMessage("");
+
+    const result = await onUpdateDetails(goal, editDraft);
+    setEditMessage(result.message);
+
+    if (result.ok) {
+      setEditing(false);
+    }
+  }
+
   return (
     <article className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -70,19 +105,130 @@ function GoalCard({
         </span>
       </div>
 
-      {goal.why_it_matters ? (
-        <div className="mt-5">
-          <p className="text-sm font-black">Why this matters</p>
-          <p className="mt-2 leading-7 text-slate-600">{goal.why_it_matters}</p>
-        </div>
-      ) : null}
+      {editing && goal.progress_status !== "archived" ? (
+        <form
+          onSubmit={saveEdits}
+          className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5"
+        >
+          <p className="text-sm font-black text-emerald-900">Edit this goal</p>
 
-      <div className="mt-5 rounded-2xl bg-slate-50 p-5">
-        <p className="text-sm font-black">Next step</p>
-        <p className="mt-2 leading-7 text-slate-700">{goal.next_step}</p>
-      </div>
+          <div className="mt-4 grid gap-4">
+            <label className="text-sm font-black">
+              Goal
+              <input
+                value={editDraft.title}
+                onChange={(event) =>
+                  setEditDraft((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                maxLength={180}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
+              />
+            </label>
 
-      {goal.progress_status !== "archived" ? (
+            <label className="text-sm font-black">
+              Why does this matter to you?
+              <textarea
+                value={editDraft.whyItMatters}
+                onChange={(event) =>
+                  setEditDraft((current) => ({
+                    ...current,
+                    whyItMatters: event.target.value,
+                  }))
+                }
+                maxLength={500}
+                rows={3}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
+              />
+            </label>
+
+            <label className="text-sm font-black">
+              What is one next step?
+              <input
+                value={editDraft.nextStep}
+                onChange={(event) =>
+                  setEditDraft((current) => ({
+                    ...current,
+                    nextStep: event.target.value,
+                  }))
+                }
+                maxLength={240}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
+              />
+            </label>
+
+            <label className="text-sm font-black">
+              Goal area
+              <select
+                value={editDraft.goalArea}
+                onChange={(event) =>
+                  setEditDraft((current) => ({
+                    ...current,
+                    goalArea: event.target.value,
+                  }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
+              >
+                <option value="">No area selected</option>
+                {goalAreas.map((area) => (
+                  <option key={area} value={area}>
+                    {area}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={working}
+              className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-60"
+            >
+              {working ? "Saving..." : "Save changes"}
+            </button>
+
+            <button
+              type="button"
+              disabled={working}
+              onClick={() => {
+                resetDraft();
+                setEditMessage("");
+                setEditing(false);
+              }}
+              className="rounded-2xl border border-slate-300 bg-white px-5 py-3 font-black text-slate-700 disabled:opacity-60"
+            >
+              Cancel
+            </button>
+          </div>
+
+          {editMessage ? (
+            <p className="mt-4 text-sm font-semibold text-slate-700">
+              {editMessage}
+            </p>
+          ) : null}
+        </form>
+      ) : (
+        <>
+          {goal.why_it_matters ? (
+            <div className="mt-5">
+              <p className="text-sm font-black">Why this matters</p>
+              <p className="mt-2 leading-7 text-slate-600">
+                {goal.why_it_matters}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="mt-5 rounded-2xl bg-slate-50 p-5">
+            <p className="text-sm font-black">Next step</p>
+            <p className="mt-2 leading-7 text-slate-700">{goal.next_step}</p>
+          </div>
+        </>
+      )}
+
+      {goal.progress_status !== "archived" && !editing ? (
         <div className="mt-5 flex flex-wrap items-end gap-3">
           <label className="min-w-52 flex-1 text-sm font-black">
             Progress
@@ -111,18 +257,31 @@ function GoalCard({
           <button
             type="button"
             disabled={working}
+            onClick={() => {
+              resetDraft();
+              setEditMessage("");
+              setEditing(true);
+            }}
+            className="rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-3 font-black text-emerald-900 disabled:opacity-60"
+          >
+            Edit goal
+          </button>
+
+          <button
+            type="button"
+            disabled={working}
             onClick={() => void onArchive(goal)}
             className="rounded-2xl border border-slate-300 bg-white px-5 py-3 font-black text-slate-700 disabled:opacity-60"
           >
             Archive goal
           </button>
         </div>
-      ) : (
+      ) : goal.progress_status === "archived" ? (
         <p className="mt-5 text-sm leading-6 text-slate-500">
           Archived goals remain available as part of your history and cannot be
-          reopened from the participant page.
+          edited or reopened from the participant page.
         </p>
-      )}
+      ) : null}
     </article>
   );
 }
@@ -175,6 +334,33 @@ export default function GoalsPage() {
       progress_status: progressStatus,
     });
     setNotice(result.ok ? "Progress updated." : result.message);
+  }
+
+  async function handleUpdateDetails(
+    goal: ParticipantGoal,
+    editDraft: GoalDraft,
+  ) {
+    const title = editDraft.title.trim();
+    const nextStep = editDraft.nextStep.trim();
+
+    if (!title || !nextStep) {
+      return {
+        ok: false,
+        message: "Add a goal title and one next step before saving.",
+      };
+    }
+
+    const result = await updateGoal(goal.id, {
+      title,
+      why_it_matters: editDraft.whyItMatters.trim() || null,
+      next_step: nextStep,
+      goal_area: editDraft.goalArea.trim() || null,
+    });
+
+    return {
+      ok: result.ok,
+      message: result.ok ? "Goal details updated." : result.message,
+    };
   }
 
   async function handleArchive(goal: ParticipantGoal) {
@@ -370,6 +556,7 @@ export default function GoalsPage() {
                         working={working}
                         onStatusChange={handleStatusChange}
                         onArchive={handleArchive}
+                        onUpdateDetails={handleUpdateDetails}
                       />
                     ))
                   )}
@@ -398,6 +585,7 @@ export default function GoalsPage() {
                             working={working}
                             onStatusChange={handleStatusChange}
                             onArchive={handleArchive}
+                            onUpdateDetails={handleUpdateDetails}
                           />
                         ))
                       )}
