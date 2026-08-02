@@ -1,10 +1,10 @@
 # Renewing THRIVE Full-Spectrum Product Readiness Matrix
 
-**Status:** Living product control document  
-**Repository:** `thrive-stability-platform`  
-**Branch:** `main`  
-**Baseline checkpoint:** `20b8664`  
-**Framework:** Next.js 16.2.12  
+**Status:** Living product control document
+**Repository:** `thrive-stability-platform`
+**Branch:** `main`
+**Reconciled checkpoint:** `679df81`
+**Framework:** Next.js 16.2.12
 
 ## Purpose
 
@@ -30,15 +30,15 @@ state and the smallest approved next step for each module.
 | Participant identity | WORKING | `supported_people` installed with RLS | Signed-in participant resolves own identity | Admin-controlled identity writes | Person A, Person D, admin, and outsider tested | Treat identity spine as established infrastructure |
 | Workspace isolation | WORKING | Workspace membership and helper functions installed | Workspace scope enforced behind participant experience | Admin-controlled | Admin/member/outsider paths tested | No additional broad verification unless a defect appears |
 | Program participation | WORKING | `programs` and `program_participants` installed with RLS | My Program resolves linked active program | Admin-controlled participation writes | Person A and Person D isolation tested | Review participant usefulness, not schema existence |
-| Today | PARTIALLY CONNECTED | Uses existing participant context | Route exists and is participant-facing | No meaningful participant action confirmed | Route/build verified | Decide the smallest useful daily summary and next-action panel |
-| My Program | WORKING | Reads active program and participation | Participant-facing program summary connected | Read-only | Person D and Person A access tested | Review wording and remove any remaining diagnostic language |
-| Budget | PARTIALLY CONNECTED | Budget periods and lines installed; participant SELECT validated | Current budget period and summaries visible | Participant editing not yet established | Financial visibility tested | Define the smallest safe participant budget interaction |
+| Today | WORKING | Uses established participant context and approved route reads | Participant home prioritizes Wellness, Goals, and Support with contained financial context | Read-only | Desktop/mobile route review and 24/24 build passed | Preserve current participant-home scope unless a defect or approved action requires change |
+| My Program | WORKING | Reads active program and participation | Participant-facing program summary uses plain-language program context | Read-only | Person D/Person A isolation plus desktop/mobile review passed | Preserve the current read-only participant summary |
+| Budget | WORKING | Budget periods and lines installed; participant SELECT validated | Current plan, recorded activity, remaining amount, category progress, and neutral status language are visible | Read-only | Financial visibility plus desktop/mobile participant review passed | Keep read-only while a separately approved participant interaction is defined |
 | Banking / financial evidence | PARTIALLY CONNECTED | Sources, batches, staged transactions, reviews, and ownership model installed | Evidence is not yet a complete participant workflow | Imports/admin review controlled; participant explanation model exists | January ingestion and visibility tested | Build a plain-language participant transaction evidence view |
 | Transaction explanations | PARTIALLY CONNECTED | Explanation table and RLS installed | Full participant explanation workflow not confirmed | Participant draft write policy exists | Database-level behavior tested | Connect one transaction explanation form to the validated model |
-| Wellness | TEST-READY | Table, constraints, trigger, RLS, and same-day update installed | Read model and form connected | Person D client-path activation remains off | Authenticated database tests passed | Run one controlled Person D UI create/update/archive test |
-| Goals | SHELL ONLY | No confirmed persistent goals model | Participant route and reviewed shell exist | Disabled / absent | Route and build verified | Define a minimal participant-owned goal record and one useful action |
+| Wellness | WORKING | Table, constraints, business-date default, trigger, RLS, same-day update, and archive behavior installed | Participant reflection form and current active check-in read are connected | General participant saving remains off; controlled Person D path closed | Create, changed-value update, duplicate prevention, admin archive, deactivation, desktop/mobile review, and 24/24 build passed | Keep general activation frozen until a separate rollout decision |
+| Goals | WORKING | `participant_goals` v0.2 installed with constraints, trigger, RLS, and no DELETE policy | Guided participant creation, editing, progress, archive, and read-only history are connected | Participant-owned create and update paths validated | Participant A, Participant D, outsider, and admin RLS tests plus guided UI lifecycle validation passed | Preserve the current participant-owned Goal scope unless a defect or separately approved refinement appears |
 | Support | SHELL ONLY | No confirmed persistent support-request model | Participant route and reviewed shell exist | Disabled / absent | Route and build verified | Define what a support request creates without clinical escalation |
-| Reports | SHELL ONLY | Can eventually aggregate existing approved records | Participant route exists | No report-generation write needed yet | Route and build verified | Build one plain-language participant summary from existing read models |
+| Reports | WORKING | Aggregates approved participant financial read models | Statement periods, connected sources, transaction totals, category summaries, and source boundaries are visible | Read-only | Desktop/mobile participant review and connected synthetic financial data verified | Preserve the current read-only summary while separately reviewing future participant explanations |
 | PWA / mobile | WORKING | Manifest and application metadata installed | Shared navigation and mobile shell exist | Not applicable | Build and route generation passed | Test installation and navigation on an actual phone |
 | Trust Engine comparison | BLOCKED | Independent system; no synchronization approved | No merged participant workflow | No writes or synchronization | Not applicable | Keep frozen until separate authority and comparison design are approved |
 | Deployment | BLOCKED | No production host approved | Local and Codespaces development only | Not applicable | Local production build passes | Resolve dependency security disposition and complete product-readiness review |
@@ -48,7 +48,7 @@ state and the smallest approved next step for each module.
 - Next.js 16.2.12
 - React 19.2.4
 - Local development environment working
-- Production build generating 24 of 24 routes
+- Production build generating 25 of 25 routes
 - Supabase environment connected
 - GitHub remains the authoritative source repository
 - SSD clone is the primary daily development workspace
@@ -84,21 +84,15 @@ product passes.
 
 ## Recommended working order
 
-1. Wellness controlled Person D client-path test
-2. Budget participant interaction
-3. Banking evidence and participant explanations
-4. Today summary
-5. Goals
-6. Support
-7. Reports
-8. PWA phone test
-9. Deployment readiness
+1. Support participant-route reconciliation
+2. Banking evidence and participant explanations
+3. PWA phone test
+4. Deployment readiness
 
 ## Exact next gate
 
-Review the participant-facing routes locally and update this matrix only with
-observed evidence.
+Begin the Support participant-route review with read-only source, live-schema,
+and authority reconciliation.
 
-Begin with `/`, `/my-program`, `/budget`, and `/wellness`.
-
-Do not activate writes during the visual readiness review.
+Do not create a support-request table, enable participant writes, introduce
+clinical escalation, or imply emergency-response capability during inspection.
