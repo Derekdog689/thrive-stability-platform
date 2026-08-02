@@ -1097,3 +1097,76 @@ Exact next gate:
 - Review and approve the guided Goals candidate.
 - Commit the candidate as an isolated documentation checkpoint.
 - Do not implement until separate explicit approval.
+
+## Checkpoint 054: Guided Participant Goal Creation Added and Validated
+
+Commit: `262dfd3 Add guided participant Goal creation`
+
+Stable truth:
+
+- `/goals` now provides guided participant Goal creation.
+- Participants may choose from Goal areas and area-specific Goal starters.
+- Goal starters are optional suggestions and do not create records automatically.
+- Preset Goal wording is copied into editable participant fields.
+- Suggested next steps are available and remain editable.
+- The `Other` path supports a fully custom participant Goal.
+- The participant may write an optional reason explaining why the Goal matters.
+- A final review panel shows the participant's current Goal wording, reason, next step, and Goal area before save.
+- Goal title and next step are required and display field-level validation messages when blank.
+- No Goal is created until the participant selects `Save Goal`.
+- New Goals begin in the existing `not_started` database state.
+- A Goal in `not_started` presents a participant-facing `Start Goal` action.
+- Selecting `Start Goal` moves the Goal to the existing `in_progress` state.
+- After start, the participant-facing status reads `In progress`.
+- The progress selector continues to support `In progress`, `Paused`, and `Completed`.
+- When no active Goals exist, guided creation opens automatically.
+- When one or more active Goals exist, Current Goals appear first and guided creation remains collapsed.
+- `Add another Goal` appears beneath Current Goals and opens guided creation only when selected.
+- Saving or cancelling guided creation collapses the form again.
+- Returning to `/goals` with an active Goal does not force the participant into creation mode.
+- Existing Goal editing remains functional.
+- Existing progress updates and refresh persistence remain functional.
+- Archive confirmation appears before an active Goal is archived.
+- Cancelling archive leaves the Goal unchanged.
+- Archived Goals remain visible, read-only, not reopenable from the participant page, and not hard deleted.
+- Synthetic Participant D validation passed through the normal authenticated participant path.
+- `npm run build` passed.
+- TypeScript passed.
+- 25 of 25 application routes generated successfully.
+- `git diff --check` passed.
+
+Implementation files:
+
+```text
+src/app/goals/goalPresets.ts
+src/app/goals/page.tsx
+docs/THRIVE_GUIDED_GOALS_IMPLEMENTATION_VALIDATION_CLOSEOUT_v0_1.md
+```
+
+Security and ownership boundary:
+
+- Goal presets are application-code suggestions only.
+- Presets do not assign obligations, score compliance, infer intent, or create clinical conclusions.
+- The participant controls the final saved Goal wording.
+- Participant identity, workspace, program, supported person, ownership source, creator, and creation timestamp remain outside participant editing.
+- The existing Goals schema and lifecycle states remain unchanged.
+- No schema migration or SQL execution occurred.
+- No change was required in `src/app/goals/useParticipantGoals.ts`.
+- No service-role path was used.
+- No Johnny or production participant was used.
+- No Wellness-to-Goal automation was introduced.
+- No staff-assigned participant Goal workflow was introduced.
+- No Trust Engine synchronization occurred.
+- No hard delete, deployment, merge, or push occurred.
+
+Deferred refinement:
+
+- Voice-to-text remains a separate future accessibility candidate.
+- Any future voice flow must require participant-initiated capture, visible transcription, participant review and editing, and explicit confirmation before save.
+- No background listening or automatic interpretation is authorized.
+
+Exact next gate:
+
+- Review the next participant product layer and remaining readiness gaps.
+- Do not widen the Goals scope without a separately approved candidate.
+- Keep Johnny activation, production use, Trust Engine synchronization, deployment, merge, and push frozen.
