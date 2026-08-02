@@ -828,3 +828,272 @@ Security boundary:
 - This checkpoint changed application metadata and installation presentation only.
 - No service worker, offline cache, notifications, background synchronization, or device permissions were added.
 - No authentication, Supabase, RLS, schema, database, or authorization behavior changed.
+
+## Checkpoint 040: Today Refocused as Participant Home
+
+Commit: `2ab1c0e Refocus Today as participant home`
+
+Stable truth:
+
+- `/` now functions as the participant-facing Today home.
+- The page welcomes the authenticated participant by name.
+- Today presents clear paths into Wellness, Goals, Support, Budget, My Program, and Reports.
+- The financial summary uses observational language and does not assign intent, responsibility, or conclusions.
+- The participant shell remains authenticated and RLS-backed.
+- `npm run build` passed.
+
+Security boundary:
+
+- This checkpoint changed participant-facing navigation and presentation.
+- It did not change authentication, authorization, Supabase RLS, schema, or database ownership.
+- No Trust Engine synchronization, Johnny activation, or production participant use occurred.
+
+## Checkpoint 041: My Program Participant Experience Clarified
+
+Commit: `66ede5c Clarify My Program participant experience`
+
+Stable truth:
+
+- `/my-program` presents the participant's active THRIVE program in participant-readable language.
+- Program participation is resolved from the authenticated participant and active program-participant relationship.
+- Internal identifiers remain hidden from the normal participant experience.
+- The page explains what THRIVE currently supports without expanding authority.
+- `npm run build` passed.
+
+Security boundary:
+
+- This checkpoint changed participant interpretation and presentation only.
+- It did not change program membership, authorization, RLS, schema, or database records.
+- It did not merge THRIVE authority with the Trust Engine.
+
+## Checkpoint 042: Budget Participant Interpretation Improved
+
+Commit: `89e1e4b Improve Budget participant interpretation`
+
+Stable truth:
+
+- `/budget` uses participant-centered explanatory language.
+- Financial records are presented as connected information and observations.
+- Displayed transactions do not establish intent, irresponsibility, relapse, incapacity, trust misuse, or any legal, clinical, or fiduciary conclusion.
+- Existing authenticated and RLS-backed financial reads remain functional.
+- `npm run build` passed.
+
+Security boundary:
+
+- This checkpoint changed interpretation and presentation only.
+- It did not alter financial records, ingestion, RLS, schema, authorization, or ownership.
+- It did not create financial, legal, fiduciary, clinical, bankruptcy, credit-repair, or investment advice.
+
+## Checkpoint 043: Wellness Participant Experience Clarified
+
+Commit: `79f1abc Clarify Wellness participant experience`
+
+Stable truth:
+
+- `/wellness` uses participant-centered, non-clinical language.
+- Wellness reflection remains participant-owned.
+- The interface does not fabricate clinical findings, diagnoses, relapse conclusions, or historical check-ins.
+- Existing authenticated Wellness behavior remains intact.
+- `npm run build` passed.
+
+Security boundary:
+
+- This checkpoint changed participant-facing wording and interpretation only.
+- It did not change Wellness schema, RLS, authorization, or stored records.
+- It did not convert Wellness information into Goals or other obligations.
+
+## Checkpoint 044: Person D Wellness Create-Path Test Package Added
+
+Commit: `cf3cf58 Add Person D Wellness create-path test package`
+
+Stable truth:
+
+- A controlled synthetic test package was added for Participant D.
+- The package documents the participant create path without using a production identity.
+- The test scope remains synthetic and reviewable.
+- No Johnny record or production participant was introduced.
+
+Security boundary:
+
+- This checkpoint added test documentation and controlled test support only.
+- It did not authorize service-role use, production writes, deployment, or external sharing.
+- Synthetic evidence remains separate from production truth.
+
+## Checkpoint 045: Wellness Business-Date Correction Candidate Added
+
+Commit: `ef75ad1 Add Wellness business-date correction candidate`
+
+Stable truth:
+
+- A review-only correction candidate was documented for Wellness business-date handling.
+- The candidate preserves the distinction between event/business date and system timestamps.
+- No correction was silently applied to production records.
+
+Security boundary:
+
+- This checkpoint documented a candidate only.
+- It did not execute SQL, modify schema, rewrite history, or alter production data.
+- Existing Wellness authority and ownership remained unchanged.
+
+## Checkpoint 046: Participant Goals Schema and RLS Candidate Added
+
+Commit: `0ed4ae4 Add participant Goals schema and RLS candidate`
+
+Stable truth:
+
+- A review-only participant Goals schema and RLS candidate was documented.
+- The candidate defines participant-owned Goals, progress state, archive behavior, and scope fields.
+- Hard delete is excluded.
+- Ownership, creator, workspace, program, and supported-person scope are explicit.
+
+Security boundary:
+
+- This checkpoint documented a candidate only.
+- It did not install schema, execute SQL, create Johnny, or synchronize with the Trust Engine.
+- Goal ownership remained participant-centered.
+
+## Checkpoint 047: Goals Schema RLS Amendment Candidate v0.2 Added
+
+Commit: `7700b7d Add Goals schema RLS amendment candidate v0.2`
+
+Stable truth:
+
+- The Goals candidate was amended to v0.2.
+- The amendment refined constraints, RLS behavior, and participant-safe lifecycle rules.
+- Archived Goals remain preserved rather than hard deleted.
+- Participant ownership and locked scope remain explicit.
+
+Security boundary:
+
+- This checkpoint remained review-only.
+- It did not install or execute the candidate.
+- No production participant or service-role path was used.
+
+## Checkpoint 048: Authenticated Synthetic Goals Test Plan Added
+
+Commit: `9da9fe9 Add authenticated synthetic Goals test plan`
+
+Stable truth:
+
+- An authenticated synthetic Goals test plan was documented.
+- The plan covers participant, outsider, and administrator behavior.
+- The plan tests create, read, update, archive, and negative-access behavior through normal authenticated sessions.
+- Service-role execution is excluded from participant-path validation.
+
+Security boundary:
+
+- This checkpoint added test planning only.
+- It did not execute production writes or alter schema.
+- Synthetic identities remain distinct from Johnny and production participants.
+
+## Checkpoint 049: Goals Test Plan Whitespace Cleaned
+
+Commit: `a45412d Clean Goals test plan whitespace`
+
+Stable truth:
+
+- The authenticated Goals test plan received formatting cleanup.
+- No test meaning, schema behavior, authorization, or execution scope changed.
+
+Security boundary:
+
+- This checkpoint was documentation-only.
+- No data, schema, RLS, or application behavior changed.
+
+## Checkpoint 050: Goals Synthetic Scope and Execution Gates Documented
+
+Commit: `efec154 Document Goals synthetic scope and execution gates`
+
+Stable truth:
+
+- Synthetic identity scope and execution gates were documented before test execution.
+- The package distinguishes candidate, test, approval, install, verify, and closeout stages.
+- Production identities, Johnny, and service-role shortcuts remain excluded.
+- No push or deployment was authorized.
+
+Security boundary:
+
+- This checkpoint changed governance and test documentation only.
+- It did not alter schema, data, RLS, or application behavior.
+
+## Checkpoint 051: Authenticated Goals RLS Test Pass Closed
+
+Commit: `d6e205c Close authenticated Goals RLS test pass`
+
+Stable truth:
+
+- Goals schema v0.2 was installed after explicit approval.
+- Post-install verification confirmed the expected table shape, constraints, foreign keys, indexes, trigger, RLS, and policies.
+- Authenticated synthetic testing passed for Participant A, Participant D, outsider, and administrator roles.
+- Participant sessions used the normal anonymous-key browser client.
+- No DELETE policy exists.
+- Synthetic archived Goal history was preserved.
+
+Security boundary:
+
+- No service-role path was used for participant-path validation.
+- No Johnny or production participant was used.
+- No Trust Engine synchronization occurred.
+- No hard delete occurred.
+
+## Checkpoint 052: Participant Goals Lifecycle UI Added
+
+Commit: `323fd52 Add participant Goals lifecycle UI`
+
+Stable truth:
+
+- `/goals` supports participant Goal creation.
+- Participants can set a Goal title, optional reason, next step, and Goal area.
+- Participants can move Goals through not-started, in-progress, paused, and completed states.
+- Participants can archive Goals.
+- Archived Goals remain visible in history and cannot be reopened or deleted from the participant page.
+- Synthetic Participant D validation passed through the normal interface.
+- Refresh persistence and database state were verified.
+- `npm run build` passed with 25 of 25 routes generated.
+
+Security boundary:
+
+- Goals remain participant-owned.
+- Identity, workspace, program, ownership source, creator, and timestamps are not exposed for participant editing.
+- No Johnny, Trust Engine synchronization, service-role use, deployment, merge, or push occurred.
+
+## Checkpoint 053: Participant Goal Editing Added and Validated
+
+Commit: `d6eb5d5 Add participant Goal editing`
+
+Stable truth:
+
+- Active Goals now expose participant-visible editing.
+- Participants can edit title, why it matters, next step, and Goal area.
+- Title and next step remain required.
+- Edited values persist after refresh.
+- Progress state remains independently controlled.
+- Archived Goals remain read-only.
+- Synthetic Participant D edit, refresh, complete, archive, and history validation passed.
+- Database verification confirmed workspace, program, supported person, ownership source, creator, and creation timestamp remained unchanged.
+- `npm run build` passed with 25 of 25 routes generated.
+
+Security boundary:
+
+- No identity, ownership, authority, or scope field is participant-editable.
+- No hard delete or participant-side reactivation exists.
+- No Johnny, production participant, Trust Engine synchronization, service-role use, deployment, merge, or push occurred.
+
+## Pending Candidate: Guided Goals Preset and Creation Experience
+
+Local uncommitted candidate:
+
+`docs/THRIVE_GOALS_PRESET_AND_GUIDED_CREATION_CANDIDATE_v0_1.md`
+
+Current review state:
+
+- The candidate replaces blank-first Goal creation with guided areas, preset Goal starters, editable wording, suggested next steps, an `Other` path, final review, and accessibility requirements.
+- Presets remain suggestions and do not create records until the participant reviews and saves.
+- No schema migration is expected.
+- The candidate is not yet a committed checkpoint.
+
+Exact next gate:
+
+- Review and approve the guided Goals candidate.
+- Commit the candidate as an isolated documentation checkpoint.
+- Do not implement until separate explicit approval.
