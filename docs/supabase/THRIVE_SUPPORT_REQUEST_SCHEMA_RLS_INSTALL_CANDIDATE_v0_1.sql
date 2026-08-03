@@ -1,5 +1,5 @@
--- THRIVE Support Request Schema and RLS Executable Candidate v0.2
--- REVIEW ONLY. DO NOT EXECUTE WITHOUT A SEPARATE INSTALL APPROVAL.
+-- THRIVE Support Request Schema and RLS Install Candidate v0.1
+-- INSTALL CANDIDATE. DO NOT EXECUTE WITHOUT EXPLICIT INSTALL APPROVAL.
 --
 -- Frozen:
 -- - no production use
@@ -1320,4 +1320,4 @@ grant select, insert, update on public.support_request_entries to authenticated;
 grant select, insert, update on public.support_request_links to authenticated;
 grant select on public.support_request_status_events to authenticated;
 
-rollback;
+commit;

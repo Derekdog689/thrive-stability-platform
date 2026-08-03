@@ -73,3 +73,26 @@ Exact next gate
 Prepare a controlled installation package and an executable authenticated synthetic-test package.
 
 Do not install or execute either package without separate explicit approval.
+
+## Corrected v0.2 validation checkpoint
+
+After the initial rollback validation, the candidate was corrected to:
+
+- make completed and withdrawn requests terminal except for archival;
+- use database-generated lifecycle timestamps;
+- preserve terminal timestamps during archive;
+- retain participant historical access after program participation ends;
+- permit withdrawal of an unanswered submitted request after participation ends;
+- allow authorized reviewers to finish existing requests;
+- require active participation for new Support links;
+- avoid revalidating dynamic transaction ownership during link archive.
+
+The complete corrected v0.2 file was rerun with its final `rollback;`.
+
+Supabase accepted the full script without error.
+
+Post-run verification again confirmed that no Support tables, functions, or
+policies remained.
+
+The corrected candidate is therefore parse-valid and dependency-valid against
+the current live database.
