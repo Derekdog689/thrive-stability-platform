@@ -198,3 +198,17 @@ Produce:
 - confirmation that no service-role client was used;
 - cleanup through archive or inactive states only;
 - no hard deletes.
+
+## Rollback-validation checkpoint
+
+The v0.2 SQL candidate completed a full rollback-only parse and dependency
+validation against the live database.
+
+Post-run verification confirmed that no Support tables, functions, or policies
+remained.
+
+This validates SQL structure and dependencies only. It does not validate RLS,
+lifecycle behavior, actor isolation, or participant experience.
+
+Controlled installation and authenticated synthetic testing remain separately
+gated.
