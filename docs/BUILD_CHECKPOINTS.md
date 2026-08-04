@@ -1170,3 +1170,23 @@ Exact next gate:
 - Review the next participant product layer and remaining readiness gaps.
 - Do not widen the Goals scope without a separately approved candidate.
 - Keep Johnny activation, production use, Trust Engine synchronization, deployment, merge, and push frozen.
+
+## Checkpoint 055: Support Privilege Hardening Installed and Verified
+
+Date: 2026-08-04
+
+- Support request schema remains permanently installed.
+- The committed privilege-hardening candidate executed successfully.
+- Read-only verification confirmed the authenticated role has:
+  - `SELECT`, `INSERT`, and `UPDATE` on `support_requests`;
+  - `SELECT`, `INSERT`, and `UPDATE` on `support_request_entries`;
+  - `SELECT`, `INSERT`, and `UPDATE` on `support_request_links`;
+  - `SELECT` only on `support_request_status_events`.
+- Authenticated access no longer includes `DELETE`, `TRUNCATE`, `REFERENCES`,
+  or `TRIGGER` on the Support tables.
+- No rollback or authenticated synthetic test was executed.
+- No Johnny data, notifications, emergency workflow, Trust Engine
+  synchronization, deployment, or push was introduced.
+
+Exact next gate: obtain separate explicit approval before authenticated
+synthetic Support request RLS and lifecycle testing.
