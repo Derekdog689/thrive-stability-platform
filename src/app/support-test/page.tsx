@@ -297,6 +297,85 @@ export default function SupportTestHarnessPage() {
     return { payload, returned: data };
   }
 
+type FourthSliceStatus =
+  | "submitted"
+  | "in_progress"
+  | "waiting_for_participant";
+
+async function runGuardedFourthSliceTransition(
+  expectedStatus: FourthSliceStatus,
+  nextStatus: FourthSliceStatus
+) {
+  const id = requireRequestId();
+
+  const { data: baseline, error: baselineError } = await supabase
+    .from("support_requests")
+    .select(
+  "id, workspace_id, program_id, supported_person_id, status, routing_category, assigned_member_id, withdrawn_at, completed_at, archived_at, created_by, created_at, updated_at"
+)
+    .eq("id", id)
+    .single();
+
+  if (baselineError) throw baselineError;
+
+  if (baseline.status !== expectedStatus) {
+    throw new Error(
+      `Guarded lifecycle transition stopped. Expected ${expectedStatus}, but the request is currently ${baseline.status}.`
+    );
+  }
+
+  if (
+    baseline.routing_category !== null ||
+    baseline.assigned_member_id !== null ||
+    baseline.withdrawn_at !== null ||
+    baseline.completed_at !== null ||
+    baseline.archived_at !== null
+  ) {
+    throw new Error(
+      "Guarded lifecycle transition stopped because the request no longer matches the approved fourth-slice baseline."
+    );
+  }
+
+  const payload = {
+    status: nextStatus,
+  };
+
+  const { data: returned, error: updateError } = await supabase
+    .from("support_requests")
+    .update(payload)
+    .eq("id", id)
+    .eq("status", expectedStatus)
+    .select()
+    .single();
+
+  if (updateError) throw updateError;
+
+  return {
+    expectedStartingStatus: expectedStatus,
+    payload,
+    baseline,
+    returned,
+  };
+}
+
+async function moveSubmittedToInProgress() {
+  return runGuardedFourthSliceTransition("submitted", "in_progress");
+}
+
+async function moveInProgressToWaiting() {
+  return runGuardedFourthSliceTransition(
+    "in_progress",
+    "waiting_for_participant"
+  );
+}
+
+async function returnWaitingToInProgress() {
+  return runGuardedFourthSliceTransition(
+    "waiting_for_participant",
+    "in_progress"
+  );
+}
+
   async function readEntries() {
     const id = requireRequestId();
     const { data, error } = await supabase
@@ -684,6 +763,62 @@ async function proveLinkTargetUpdateFails() {
             <JsonBlock value={configuredActorSummary} />
           </div>
         </section>
+
+        <section className="rounded-3xl border border-indigo-200 bg-white p-6 shadow-sm">
+  <h2 className="text-xl font-black">
+    Fourth-slice guarded lifecycle controls
+  </h2>
+
+  <p className="mt-2 text-sm leading-6 text-slate-600">
+    These controls are limited to the approved reversible active-state path.
+    Each action verifies the exact starting status and approved baseline before
+    updating only the request status.
+  </p>
+
+  <div className="mt-5 flex flex-wrap gap-3">
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() =>
+        runAction(
+          "move submitted to in progress",
+          moveSubmittedToInProgress
+        )
+      }
+      className="rounded-xl bg-indigo-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Move submitted to in progress
+    </button>
+
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() =>
+        runAction(
+          "move in progress to waiting",
+          moveInProgressToWaiting
+        )
+      }
+      className="rounded-xl bg-amber-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Move in progress to waiting
+    </button>
+
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() =>
+        runAction(
+          "return waiting to in progress",
+          returnWaitingToInProgress
+        )
+      }
+      className="rounded-xl bg-emerald-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Return waiting to in progress
+    </button>
+  </div>
+</section>
 
         <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-black">Identity</h2>
