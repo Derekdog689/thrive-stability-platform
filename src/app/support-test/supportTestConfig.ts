@@ -100,4 +100,6 @@ export const supportTestActors: SupportTestActorConfig = {
   },
 };
 
-export const supportLinkedRecords: SupportLinkedRecordConfig = {};
+export const supportLinkedRecords: SupportLinkedRecordConfig = {
+  goalId: "506f98d8-3354-4cc7-8ddd-617614fb1bdc",
+};
