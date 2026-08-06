@@ -445,6 +445,34 @@ export default function SupportTestHarnessPage() {
     return { payload, returned: data };
   }
 
+async function proveLinkTargetUpdateFails() {
+  const id = requireLinkId();
+
+  const payload = {
+    goal_id: "00000000-0000-4000-8000-000000000001",
+  };
+
+  const { data, error } = await supabase
+    .from("support_request_links")
+    .update(payload)
+    .eq("id", id)
+    .select();
+
+  if (!error) {
+    throw new Error(
+      "Link target mutation denial proof was inconclusive because no database error was returned."
+    );
+  }
+
+  return {
+    payload,
+    expected: "Support link target mutation must fail.",
+    returnedData: data,
+    returnedError: error,
+    denialConfirmed: true,
+  };
+}
+
   async function archiveLink() {
     const id = requireLinkId();
     const payload = {
@@ -804,6 +832,19 @@ export default function SupportTestHarnessPage() {
           <div className="mt-5 flex flex-wrap gap-3">
             <button type="button" disabled={disabled} onClick={() => runAction("read links", readLinks)} className="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Read links</button>
             <button type="button" disabled={disabled} onClick={() => runAction("create link", createLink)} className="rounded-xl bg-cyan-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Create configured link</button>
+            <button
+  type="button"
+  disabled={disabled}
+  onClick={() =>
+    runAction(
+      "prove link target update fails",
+      proveLinkTargetUpdateFails
+    )
+  }
+  className="rounded-xl bg-rose-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+>
+  Prove link mutation fails
+</button>
             <button type="button" disabled={disabled} onClick={() => runAction("archive link", archiveLink)} className="rounded-xl bg-amber-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Archive link</button>
           </div>
         </section>
