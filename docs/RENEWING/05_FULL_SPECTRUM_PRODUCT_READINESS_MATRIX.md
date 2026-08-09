@@ -37,7 +37,7 @@ state and the smallest approved next step for each module.
 | Transaction explanations | PARTIALLY CONNECTED | Explanation table and RLS installed | Full participant explanation workflow not confirmed | Participant draft write policy exists | Database-level behavior tested | Connect one transaction explanation form to the validated model |
 | Wellness | WORKING | Table, constraints, business-date default, trigger, RLS, same-day update, and archive behavior installed | Participant reflection form and current active check-in read are connected | General participant saving remains off; controlled Person D path closed | Create, changed-value update, duplicate prevention, admin archive, deactivation, desktop/mobile review, and 24/24 build passed | Keep general activation frozen until a separate rollout decision |
 | Goals | WORKING | `participant_goals` v0.2 installed with constraints, trigger, RLS, and no DELETE policy | Guided participant creation, editing, progress, archive, and read-only history are connected | Participant-owned create and update paths validated | Participant A, Participant D, outsider, and admin RLS tests plus guided UI lifecycle validation passed | Preserve the current participant-owned Goal scope unless a defect or separately approved refinement appears |
-| Support | SHELL ONLY | No confirmed persistent support-request model | Participant route and reviewed shell exist | Disabled / absent | Route and build verified | Define what a support request creates without clinical escalation |
+| Support | WORKING | Persistent Support request, entry, link, status-event, routing, assignment, RLS, privilege-hardening, and lifecycle controls are installed | Participant and reviewer authenticated paths exist; guarded synthetic controls have validated request lifecycle, link archival, routing, and assignment | Participant and reviewer writes are scoped and guarded; no DELETE privilege; status-event table is read-only to authenticated users | Synthetic participant/reviewer validation passed through Support Path B fifth slice, including lifecycle, archived-link preservation, routing, assignment, and audit-event reconciliation | Preserve the current validated Support scope until the product control spine identifies a separately approved next refinement |
 | Reports | WORKING | Aggregates approved participant financial read models | Statement periods, connected sources, transaction totals, category summaries, and source boundaries are visible | Read-only | Desktop/mobile participant review and connected synthetic financial data verified | Preserve the current read-only summary while separately reviewing future participant explanations |
 | PWA / mobile | WORKING | Manifest and application metadata installed | Shared navigation and mobile shell exist | Not applicable | Build and route generation passed | Test installation and navigation on an actual phone |
 | Trust Engine comparison | BLOCKED | Independent system; no synchronization approved | No merged participant workflow | No writes or synchronization | Not applicable | Keep frozen until separate authority and comparison design are approved |
@@ -84,15 +84,13 @@ product passes.
 
 ## Recommended working order
 
-1. Support participant-route reconciliation
+1. Reconcile the remaining authoritative product-control documents against current repository truth
 2. Banking evidence and participant explanations
 3. PWA phone test
 4. Deployment readiness
 
 ## Exact next gate
 
-Begin the Support participant-route review with read-only source, live-schema,
-and authority reconciliation.
+Reconcile the current executive handoff against the verified repository state and the newly updated Support checkpoint history.
 
-Do not create a support-request table, enable participant writes, introduce
-clinical escalation, or imply emergency-response capability during inspection.
+Do not begin a sixth Support slice, broaden participant writes, modify schema or RLS, introduce clinical escalation, imply emergency-response capability, activate Johnny, synchronize with the Trust Engine, deploy, merge, or push during this reconciliation.
