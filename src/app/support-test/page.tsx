@@ -388,6 +388,129 @@ async function returnWaitingToInProgress() {
     return data;
   }
 
+  async function readFifthSliceBaseline() {
+  const id = requireRequestId();
+
+  const { data, error } = await supabase
+    .from("support_requests")
+    .select(
+      "id, workspace_id, program_id, supported_person_id, participant_category, participant_message, requested_support, contact_preference, status, routing_category, assigned_member_id, created_by, created_at, updated_at, withdrawn_at, completed_at, archived_at"
+    )
+    .eq("id", id)
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+function verifyFifthSliceLifecycleFields(
+  request: Awaited<ReturnType<typeof readFifthSliceBaseline>>
+) {
+  if (request.status !== "in_progress") {
+    throw new Error(
+      `Guarded fifth-slice action stopped. Expected in_progress, but the request is currently ${request.status}.`
+    );
+  }
+
+  if (
+    request.withdrawn_at !== null ||
+    request.completed_at !== null ||
+    request.archived_at !== null
+  ) {
+    throw new Error(
+      "Guarded fifth-slice action stopped because a lifecycle timestamp is populated."
+    );
+  }
+}
+
+async function setRoutingToGoalSupport() {
+  const id = requireRequestId();
+  const baseline = await readFifthSliceBaseline();
+
+  verifyFifthSliceLifecycleFields(baseline);
+
+  if (baseline.routing_category !== null) {
+    throw new Error(
+      `Guarded routing update stopped. Expected routing_category to be null, but it is currently ${baseline.routing_category}.`
+    );
+  }
+
+  if (baseline.assigned_member_id !== null) {
+    throw new Error(
+      "Guarded routing update stopped because the request is already assigned."
+    );
+  }
+
+  const payload = {
+    routing_category: "goal_support",
+  };
+
+  const { data: returned, error } = await supabase
+    .from("support_requests")
+    .update(payload)
+    .eq("id", id)
+    .eq("status", "in_progress")
+    .is("routing_category", null)
+    .is("assigned_member_id", null)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    expectedStartingRoutingCategory: null,
+    payload,
+    baseline,
+    returned,
+  };
+}
+
+async function assignVerifiedSupportMember() {
+  const id = requireRequestId();
+  const baseline = await readFifthSliceBaseline();
+  const verifiedMemberId =
+    supportTestActors.activeSupportMember.workspaceMemberId;
+
+  verifyFifthSliceLifecycleFields(baseline);
+
+  if (baseline.routing_category !== "goal_support") {
+    throw new Error(
+      `Guarded assignment stopped. Expected routing_category goal_support, but it is currently ${baseline.routing_category}.`
+    );
+  }
+
+  if (baseline.assigned_member_id !== null) {
+    throw new Error(
+      `Guarded assignment stopped. Expected assigned_member_id to be null, but it is currently ${baseline.assigned_member_id}.`
+    );
+  }
+
+  const payload = {
+    assigned_member_id: verifiedMemberId,
+  };
+
+  const { data: returned, error } = await supabase
+    .from("support_requests")
+    .update(payload)
+    .eq("id", id)
+    .eq("status", "in_progress")
+    .eq("routing_category", "goal_support")
+    .is("assigned_member_id", null)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    expectedStartingAssignedMemberId: null,
+    verifiedMemberId,
+    payload,
+    baseline,
+    returned,
+  };
+}
+
   async function createEntry() {
     const user = await requireUser();
     const id = requireRequestId();
@@ -816,6 +939,48 @@ async function proveLinkTargetUpdateFails() {
       className="rounded-xl bg-emerald-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
     >
       Return waiting to in progress
+    </button>
+  </div>
+</section>
+
+<section className="rounded-3xl border border-sky-200 bg-white p-6 shadow-sm">
+  <h2 className="text-xl font-black">
+    Fifth-slice guarded routing and assignment controls
+  </h2>
+
+  <p className="mt-2 text-sm leading-6 text-slate-600">
+    These controls are limited to one approved routing update and one approved
+    assignment update. Each action verifies the live request baseline before
+    updating only its approved field.
+  </p>
+
+  <div className="mt-5 flex flex-wrap gap-3">
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() =>
+        runAction(
+          "set routing to goal support",
+          setRoutingToGoalSupport
+        )
+      }
+      className="rounded-xl bg-sky-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Set routing to goal support
+    </button>
+
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() =>
+        runAction(
+          "assign verified Support member",
+          assignVerifiedSupportMember
+        )
+      }
+      className="rounded-xl bg-blue-800 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Assign verified Support member
     </button>
   </div>
 </section>
