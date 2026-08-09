@@ -1190,3 +1190,291 @@ Date: 2026-08-04
 
 Exact next gate: obtain separate explicit approval before authenticated
 synthetic Support request RLS and lifecycle testing.
+
+## Checkpoint 056: Support Path B Controlled Test Harness and Execution Plan Added
+
+Commits:
+
+- `6dadbe9 Add review-only Support Path B test controls`
+- `3ae6113 Add review-only Support Path B execution plan`
+
+Stable truth:
+
+- A browser-authenticated Support test harness was added for controlled synthetic validation.
+- The harness uses normal authenticated Supabase browser sessions.
+- Execution remains protected by an explicit review-only execution flag.
+- No service-role client is used for participant or reviewer-path proof.
+- Support testing remains synthetic and scoped to approved actors and records.
+- The execution plan separates inspection, candidate, execution, reconciliation, validation, and closeout stages.
+- No automatic batch execution or run-all behavior was introduced.
+
+Security boundary:
+
+- No Johnny identity or real supported-person data was used.
+- No Trust Engine synchronization occurred.
+- No emergency-response, clinical escalation, or notification workflow was introduced.
+- No hard-delete path was approved.
+- No deployment or push was authorized by this checkpoint.
+
+## Checkpoint 057: Support Path B First Slice Validated
+
+Commit:
+
+- `151e973 Document Support Path B first-slice validation`
+
+Stable truth:
+
+- The first controlled Support Path B slice was executed through the authenticated synthetic test path.
+- The approved Support request behavior was reconciled against the live database result.
+- Request scope and participant ownership boundaries were preserved.
+- Audit behavior was reviewed as part of the controlled validation.
+- The slice was closed through a dedicated validation record.
+
+Security boundary:
+
+- Execution remained synthetic.
+- No Johnny record was used.
+- No service-role shortcut was used.
+- No Trust Engine synchronization, hard delete, deployment, or production rollout occurred.
+
+## Checkpoint 058: Support Path B Second Slice Planned and Validated
+
+Commits:
+
+- `2814e6d Add review-only Support Path B second-slice plan`
+- `19a2593 Document Support Path B second-slice validation`
+
+Stable truth:
+
+- A separate review-only second-slice plan was documented before execution.
+- The second slice was executed only after its approved scope was established.
+- The resulting request behavior was reconciled against the expected live state.
+- The second slice was closed with a dedicated validation record.
+- Support work continued through narrow, reversible, synthetic proof rather than broad workflow activation.
+
+Security boundary:
+
+- No Johnny identity or real participant workflow was activated.
+- No schema expansion, service-role shortcut, hard delete, Trust Engine synchronization, deployment, or push occurred.
+
+## Checkpoint 059: Support Path B Third Slice Link Controls Validated
+
+Commits:
+
+- `477d306 Add review-only Support Path B third-slice plan`
+- `71031c9 Configure synthetic Support goal link target`
+- `1826d64 Add Support link immutability proof control`
+- `adcde2c Document Support Path B third-slice validation`
+
+Stable truth:
+
+- A synthetic Goal target was configured for controlled Support link testing.
+- Support request link behavior was exercised through the browser-authenticated synthetic path.
+- Link immutability protections were explicitly tested.
+- A controlled synthetic mistaken-link archive path was validated.
+- The archived link remained preserved rather than hard deleted.
+- The third slice was reconciled and closed through a dedicated validation record.
+
+Verified audit evidence included:
+
+- a `link_archived` event;
+- preservation of the underlying Support request;
+- preservation of request ownership and scope.
+
+Security boundary:
+
+- Link testing did not create cross-system authority.
+- A Support link did not make Support the owner of the linked Goal.
+- No participant Goal was silently modified.
+- No hard delete, Johnny activation, Trust Engine synchronization, service-role use, deployment, or push occurred.
+
+## Checkpoint 060: Support Path B Fourth Slice Lifecycle Controls Added
+
+Commits:
+
+- `149511d Add guarded Support lifecycle controls`
+- `3531b48 Document Support Path B fourth-slice lifecycle candidate`
+
+Stable truth:
+
+- Dedicated guarded lifecycle controls were added to the synthetic Support harness.
+- The approved reversible active-state path was limited to:
+  - `submitted -> in_progress`
+  - `in_progress -> waiting_for_participant`
+  - `waiting_for_participant -> in_progress`
+- Each guarded action verifies the expected starting state before mutation.
+- Each action updates only the request status.
+- Completion, archive, withdrawal, routing, and assignment remained outside this slice.
+
+Security boundary:
+
+- The lifecycle controls do not authorize unrestricted status changes.
+- Archived status remains terminal under the installed lifecycle protection.
+- Participant-authored scope and content remain immutable to reviewer lifecycle actions.
+- No Johnny activation, Trust Engine synchronization, service-role use, hard delete, deployment, or push occurred.
+
+## Checkpoint 061: Support Path B Fourth Slice Lifecycle Validated
+
+Commit:
+
+- `169449b Document Support Path B fourth-slice validation`
+
+Stable truth:
+
+- The controlled lifecycle path executed successfully:
+  - `submitted -> in_progress`
+  - `in_progress -> waiting_for_participant`
+  - `waiting_for_participant -> in_progress`
+- Three corresponding `status_changed` audit events were created.
+- The final surviving request returned to `in_progress`.
+- Routing remained `null`.
+- Assignment remained `null`.
+- Withdrawal, completion, and archive timestamps remained `null`.
+- No routing or assignment event was created during the lifecycle slice.
+- The harness was relocked after validation.
+
+Security boundary:
+
+- Only the approved reversible active-state path was exercised.
+- Completion, archival, withdrawal, routing, assignment, hard delete, schema changes, Johnny activation, Trust Engine synchronization, service-role use, deployment, and push remained frozen.
+
+## Checkpoint 062: Support Path B Fifth Slice Guarded Routing and Assignment Controls Added
+
+Commit:
+
+- `a254cad Add guarded Support routing and assignment controls`
+
+Stable truth:
+
+- Dedicated guarded fifth-slice controls were added for:
+  - routing from `null` to `goal_support`;
+  - assignment from `null` to one verified active Support workspace member.
+- The routing action requires the request to be:
+  - `in_progress`;
+  - unrouted;
+  - unassigned;
+  - not withdrawn;
+  - not completed;
+  - not archived.
+- The assignment action requires:
+  - `status = in_progress`;
+  - `routing_category = goal_support`;
+  - no existing assignment;
+  - the verified active Support workspace-member ID.
+- Each control updates only its approved field.
+
+Verified synthetic Support member:
+
+- Auth user ID: `7f0a7540-7a6d-4a1a-a29f-7a26c9571db9`
+- Workspace-member ID: `cca88550-bac5-49b2-92a6-d5d9e19dd8ea`
+- Role: `support`
+- Status: `active`
+
+Security boundary:
+
+- Reassignment, assignment clearing, routing clearing, and repeated routing changes were not authorized.
+- Lifecycle status changes were outside this slice.
+- No Johnny activation, Trust Engine synchronization, service-role use, hard delete, deployment, or push occurred.
+
+## Checkpoint 063: Support Path B Fifth Slice Routing and Assignment Candidate Documented
+
+Commit:
+
+- `2b20cf6 Document Support Path B fifth-slice routing and assignment candidate`
+
+Stable truth:
+
+- The fifth-slice routing and assignment execution candidate was documented before live execution.
+- The approved routing mutation was limited to:
+  - `routing_category: null -> goal_support`
+- The approved assignment mutation was limited to:
+  - `assigned_member_id: null -> cca88550-bac5-49b2-92a6-d5d9e19dd8ea`
+- Expected audit behavior was defined before execution:
+  - exactly one `routing_changed` event;
+  - exactly one `assignment_changed` event;
+  - no fifth-slice `status_changed` event.
+
+Security boundary:
+
+- The candidate did not authorize additional lifecycle transitions, completion, archival, withdrawal, reassignment, routing replacement, hard delete, schema changes, Johnny activation, Trust Engine synchronization, deployment, or push.
+
+## Checkpoint 064: Support Path B Fifth Slice Routing and Assignment Validated
+
+Commit:
+
+- `2cf6cba Document Support Path B fifth-slice validation`
+
+Stable truth:
+
+- Browser identity was verified as the active synthetic Support reviewer before execution.
+- The live Support request baseline was verified before mutation:
+  - `status = in_progress`
+  - `routing_category = null`
+  - `assigned_member_id = null`
+  - `withdrawn_at = null`
+  - `completed_at = null`
+  - `archived_at = null`
+- Routing was successfully changed:
+  - `null -> goal_support`
+- Exactly one corresponding `routing_changed` audit event was created:
+  - event ID `92cba886-a382-482d-b19b-fd6fcb3df78d`
+- Assignment was successfully changed:
+  - `null -> cca88550-bac5-49b2-92a6-d5d9e19dd8ea`
+- Exactly one corresponding `assignment_changed` audit event was created:
+  - event ID `f197aea3-7377-4342-bcdc-5f0d6665e288`
+- No new fifth-slice `status_changed` event was created.
+- Final surviving request state was verified as:
+  - `status = in_progress`
+  - `routing_category = goal_support`
+  - `assigned_member_id = cca88550-bac5-49b2-92a6-d5d9e19dd8ea`
+  - `withdrawn_at = null`
+  - `completed_at = null`
+  - `archived_at = null`
+- Request scope, participant-authored content, creator, and creation timestamp remained unchanged.
+- The Support test harness was relocked after execution.
+
+Security boundary:
+
+- No second routing change was attempted.
+- No routing clearing occurred.
+- No reassignment or assignment clearing occurred.
+- No completion, archival, withdrawal, or hard delete occurred.
+- No schema or RLS change occurred.
+- No Johnny activation occurred.
+- No Trust Engine synchronization occurred.
+- No service-role path was used.
+- No deployment or push occurred.
+
+## Current Support Product Checkpoint
+
+Support is no longer a shell-only module.
+
+Verified infrastructure now includes:
+
+- persistent Support request records;
+- request entries;
+- request links;
+- immutable status-event audit history;
+- installed RLS and privilege hardening;
+- participant and reviewer authenticated paths;
+- guarded lifecycle behavior;
+- archived-link preservation;
+- routing;
+- reviewer assignment;
+- audit events for lifecycle, routing, assignment, and link archival.
+
+The current validated synthetic request remains active at:
+
+```text
+status = in_progress
+routing_category = goal_support
+assigned_member_id = cca88550-bac5-49b2-92a6-d5d9e19dd8ea
+```
+
+This checkpoint does not authorize further Support expansion.
+
+Exact next gate:
+
+Reconcile the authoritative THRIVE product-readiness and executive handoff documents against the current repository state.
+Do not begin a sixth Support slice until the product control spine identifies the next smallest approved product gate.
+Keep Johnny activation, Trust Engine synchronization, schema expansion, service-role use, hard delete, deployment, merge, and push frozen.
