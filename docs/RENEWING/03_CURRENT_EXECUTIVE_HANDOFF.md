@@ -1,149 +1,299 @@
 # Renewing THRIVE Current Executive Handoff
 
-**Checkpoint date:** July 25, 2026  
+**Checkpoint date:** August 9, 2026
 **Repository:** `thrive-stability-platform`  
 **Branch:** `main`  
-**Remote status:** local branch is substantially ahead of `origin/main`; do not push without explicit approval.
+**Current local checkpoint:** `c160d53 Reconcile THRIVE product readiness after Support validation`
+**Remote status:** local branch remains ahead of `origin/main`; do not push without explicit approval.
 
 ## Project Purpose
 
-THRIVE helps one person at a time understand money, manage daily responsibilities, recognize personal patterns, and ask for support before problems become crises.
+THRIVE is a DSS Enterprises financial capability, personal stability, and recovery-informed support platform built around one supported person at a time.
+
+It exists to help a person understand money, manage daily responsibilities, recognize patterns, reflect on wellness, set participant-owned goals, and ask for support before problems become crises.
 
 The first modeled person is Johnny.
 
-Johnny's THRIVE personal support spine is independent from the Jutta Koster Living Trust and its Trust Engine.
+Johnny's THRIVE personal support spine remains independent from the Jutta Koster Living Trust and its Trust Engine.
+
+THRIVE may later compare separately authorized facts across systems, but it must not merge ownership, authority, approvals, or decision-making.
 
 ## Verified Current State
 
-### January 2025 personal financial ingestion
+### Participant identity and access spine
 
-The January 2025 bank export has been:
+The supported-person identity foundation is established.
 
-- reconciled;
-- hash-locked;
-- dry-run validated;
-- atomically imported;
-- verified at 85 staged rows;
-- verified at normalized total `-$12,570.54`;
-- left at `ready_for_review`;
-- not approved;
-- not converted into trust conclusions.
+Verified infrastructure includes:
 
-A read-only reconciliation interface exists at:
+- `supported_people`
+- `program_participants`
+- authenticated participant identity resolution
+- workspace-scoped access
+- program-scoped participation
+- Row Level Security
+- participant, admin, and outsider validation
+- no broad participant self-management of identity or participation records
+
+This identity spine should be treated as established infrastructure unless a defect or live-schema discrepancy appears.
+
+### Today
+
+The participant home is working.
+
+It provides participant-facing entry points into:
+
+- Wellness
+- Goals
+- Support
+- Budget
+- My Program
+- Reports
+
+The page uses contained financial context and avoids assigning intent, responsibility, relapse, incapacity, trust misuse, or other conclusions from displayed activity.
+
+### My Program
+
+The participant program summary is working.
+
+The signed-in participant can review the active program and current participation in plain language.
+
+Program ownership and authority remain administrative rather than participant-controlled.
+
+### Budget
+
+The participant Budget route is working for its current approved read-only purpose.
+
+Verified behavior includes:
+
+- active budget period display
+- planned amount
+- recorded activity
+- remaining amount
+- category-level summaries
+- progress bars
+- neutral participant-facing status language
+- recent account activity
+- observational financial framing
+
+Participant budget editing remains outside the currently approved scope.
+
+### Banking and financial evidence
+
+The financial evidence foundation is installed and partially connected.
+
+Verified infrastructure includes:
+
+- financial sources
+- import batches
+- staged transactions
+- ownership mapping
+- review state
+- transaction evidence
+- January 2025 ingestion work
+- synthetic participant financial visibility
+- read-only reporting
+
+The next participant-facing work should focus on understandable evidence and participant explanations rather than repeating broad schema verification.
+
+### Transaction explanations
+
+The participant transaction explanation model exists at the database and policy level.
+
+A full participant-facing explanation workflow is not yet confirmed as complete.
+
+The next smallest product step in this area is to connect one participant explanation interaction to the already validated model.
+
+### Wellness
+
+Wellness is working for the currently approved participant purpose.
+
+Verified behavior includes:
+
+- installed table
+- constraints
+- business-date handling
+- trigger
+- RLS
+- current active check-in read
+- participant reflection form
+- same-day controlled update behavior
+- duplicate prevention
+- archive behavior
+- synthetic participant validation
+
+General participant saving remains intentionally off pending a separate rollout decision.
+
+Wellness selections do not automatically create Support requests, clinical findings, emergency actions, Goals, or other obligations.
+
+### Goals
+
+Goals are working.
+
+Verified behavior includes:
+
+- installed `participant_goals` v0.2 model
+- participant-owned Goal creation
+- guided creation
+- editable participant wording
+- next-step planning
+- progress lifecycle
+- participant editing
+- completion
+- archive
+- read-only archived history
+- no hard delete
+- authenticated participant, outsider, and admin validation
+
+Goals remain participant-owned.
+
+No staff-assigned Goal workflow, automatic Wellness-to-Goal creation, or Trust Engine synchronization is authorized.
+
+### Support
+
+Support is now working for its validated controlled scope.
+
+Verified infrastructure includes:
+
+- persistent Support request records
+- request entries
+- request links
+- immutable status-event audit history
+- installed RLS
+- privilege hardening
+- participant and reviewer authenticated paths
+- guarded lifecycle controls
+- archived-link preservation
+- routing
+- reviewer assignment
+- audit events for lifecycle, routing, assignment, and link archival
+
+Support Path B has been validated through the fifth slice.
+
+The current validated synthetic request remains:
 
 ```text
-/financial-ingestion-january-2025/reconciliation
+status = in_progress
+routing_category = goal_support
+assigned_member_id = cca88550-bac5-49b2-92a6-d5d9e19dd8ea
 ```
+The fifth slice proved:
 
-### Person-centered governance
+- `routing_category: null -> goal_support`
+- `assigned_member_id: null -> verified active Support member`
+- exactly one `routing_changed` event
+- exactly one `assignment_changed` event
+- no new fifth-slice `status_changed` event
+- no completion, archival, withdrawal, hard delete, schema change, or Trust Engine synchronization
 
-`README.md` and `GOVERNANCE.md` have been recentered around:
+The Support test harness was relocked after validation.
 
-- one person at a time;
-- explain before flagging;
-- facts, patterns, explanations, and conclusions as separate concepts;
-- support without shame;
-- personal growth as the outcome;
-- independent systems remaining independent.
+This does not authorize a sixth Support slice.
 
-### Personal financial explanation model
+### Reports
 
-A documentation model exists for future personal explanations.
+Reports are working for the currently approved read-only purpose.
 
-No explanation table has been created.
+Participant-facing reporting includes:
 
-The imported bank observation remains immutable and separate from any future personal explanation.
+- statement periods
+- connected sources
+- imported transaction totals
+- category summaries
+- recorded outflow
+- source-boundary language
 
-### Supported-person identity
+Bank evidence, THRIVE calculations, participant explanations, staff notes, and any future Trust-reported facts remain distinct.
 
-The architecture model identifies a real schema gap: the database has authenticated users, workspaces, memberships, and programs, but no neutral supported-person identity.
+### PWA / mobile
 
-The following artifacts exist:
+The PWA and mobile application shell are working at the application level.
 
-- `docs/THRIVE_SUPPORTED_PERSON_IDENTITY_MODEL_v0_1.md`
-- `docs/supabase/THRIVE_SUPPORTED_PERSON_IDENTITY_SCHEMA_CANDIDATE_v0_1.sql`
+Verified infrastructure includes:
 
-The v0.1 SQL candidate has not been executed.
+- manifest
+- application metadata
+- icons
+- mobile navigation
+- shared route-aware shell
 
-## Live Database Findings
+An actual-phone installation and navigation test remains a future product gate.
 
-The live foundation includes:
+### Trust Engine comparison
 
-- `profiles`
-- `workspaces`
-- `workspace_members`
-- `programs`
+Trust Engine comparison remains blocked by design.
 
-RLS is enabled on the foundation tables.
+THRIVE and the Trust Engine remain independent systems.
 
-Existing workspace roles include:
+No synchronization, merged participant workflow, automatic authority transfer, or shared decision-making is approved.
 
-- `admin`
-- `trustee`
-- `support`
-- `individual`
-- `viewer`
+### Deployment
 
-Johnny's future workspace membership should use `individual`.
+Production deployment remains blocked.
 
-Existing helper functions include:
+Local development continues to function.
 
-- `is_workspace_member(uuid)`
-- `is_workspace_admin(uuid)`
-- `is_program_in_workspace(uuid, uuid)`
+Deployment should not proceed until separately approved security, dependency, product-readiness, and operational review gates are completed.
 
-They are security-definer functions with `search_path=public`.
+## Current Product Classification
+
+THRIVE should be treated as an integrated internal alpha with several working participant modules.
+
+It is not:
+
+- an early schema experiment
+- production-ready
+- approved for Johnny activation
+- approved for Trust Engine synchronization
+- approved for public launch
+- approved for uncontrolled participant writes
+
+It does contain working, validated product infrastructure across identity, Today, My Program, Budget, Wellness, Goals, Support, Reports, and financial evidence.
 
 ## Frozen Boundaries
 
 Do not:
 
-- create Johnny's auth account yet;
-- insert Johnny's supported-person record yet;
-- execute the v0.1 supported-person SQL candidate;
-- create the personal financial explanation table;
-- synchronize with the Trust Engine;
-- merge personal and trust records;
-- grant broad workspace-member access without explicit justification;
-- add delete policies;
-- push to remote without explicit approval.
+- create or activate Johnny's auth account
+- insert or activate real Johnny participant records
+- synchronize THRIVE with the Trust Engine
+- merge personal and trust records
+- infer intent, relapse, incapacity, irresponsibility, trust misuse, or other conclusions from bank observations
+- broaden participant write authority without a separately approved product gate
+- introduce clinical escalation or emergency-response capability
+- introduce service-role shortcuts into participant-path validation
+- add hard-delete behavior
+- deploy
+- merge
+- push without explicit approval
+
+## Current Documentation Truth
+
+The following control spine should be treated as the active project guide:
+
+- `docs/RENEWING/00_RENEWING_THRIVE_EXECUTIVE_DOCTRINE.md`
+- `docs/RENEWING/01_RENEWING_THRIVE_FOLDER_GOVERNANCE.md`
+- `docs/RENEWING/02_RENEWING_THRIVE_COLLABORATION_GUARDRAILS.md`
+- `docs/RENEWING/03_CURRENT_EXECUTIVE_HANDOFF.md`
+- `docs/RENEWING/04_PROJECT_INSTRUCTIONS_FOR_CHATGPT.md`
+- `docs/RENEWING/05_FULL_SPECTRUM_PRODUCT_READINESS_MATRIX.md`
+- `docs/BUILD_CHECKPOINTS.md`
+
+Detailed historical candidates, SQL files, validation records, screenshots, and evidence remain supporting artifacts rather than the first place to restart each working session.
+
+## Recommended Working Order
+
+1. Finish reconciling the authoritative product-control documents.
+2. Review Banking evidence and participant explanations.
+3. Complete a real-device PWA phone test.
+4. Review deployment readiness separately.
+
+Support should remain at its current validated scope unless a defect appears or a separately approved Support refinement is intentionally selected.
 
 ## Exact Next Gate
 
-Create a corrected **review-only v0.2 supported-person schema candidate** based on the live database inspection.
+Complete this documentation reconciliation pass, then review the Banking / financial evidence and participant explanation layers against current repository and live application truth.
 
-The candidate should include:
+Do not begin a sixth Support slice during this reconciliation.
 
-- `supported_people`;
-- `program_participants`;
-- nullable unique `auth_user_id`;
-- composite scope-preserving foreign keys;
-- updated-at triggers;
-- RLS enabled;
-- admin create and update policies;
-- linked supported-person self-read policies;
-- no self-create or self-update;
-- no broad member read unless specifically justified;
-- no delete policies;
-- no Johnny insert;
-- no auth-user creation;
-- no explanation table;
-- no Trust Engine synchronization.
-
-## Intended Access Model
-
-```text
-DSS administrator
-  -> may create and manage supported-person and participation records
-
-Linked supported person
-  -> may read their own supported-person record
-  -> may read their own authorized program participation
-  -> may not create, assign, edit, archive, approve, or delete those records
-```
-
-## First Action in the New Thread
-
-Read this handoff, restate the current verified state and frozen boundaries, then inspect the existing v0.1 candidate before drafting v0.2.
-
-Do not execute SQL.
+Do not modify schema or RLS, broaden participant writes, activate Johnny, synchronize with the Trust Engine, deploy, merge, or push unless separately approved.
