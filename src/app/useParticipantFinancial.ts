@@ -110,6 +110,56 @@ export function formatDate(
   });
 }
 
+function localDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function preferredActiveBudgetPeriod(
+  periods: BudgetPeriod[],
+) {
+  const today = localDateKey();
+  const activePeriods = periods.filter(
+    (period) => period.status === "active",
+  );
+
+  const current = activePeriods
+    .filter(
+      (period) =>
+        period.period_start <= today &&
+        period.period_end >= today,
+    )
+    .sort((a, b) =>
+      b.period_start.localeCompare(a.period_start),
+    );
+
+  if (current[0]) {
+    return current[0];
+  }
+
+  const upcoming = activePeriods
+    .filter((period) => period.period_start > today)
+    .sort((a, b) =>
+      a.period_start.localeCompare(b.period_start),
+    );
+
+  if (upcoming[0]) {
+    return upcoming[0];
+  }
+
+  const past = activePeriods
+    .filter((period) => period.period_end < today)
+    .sort((a, b) =>
+      b.period_end.localeCompare(a.period_end),
+    );
+
+  return past[0] ?? null;
+}
+
 export function useParticipantFinancial() {
   const [participant, setParticipant] =
     useState<SupportedPerson | null>(null);
@@ -246,6 +296,18 @@ export function useParticipantFinancial() {
       (periodResult.data ??
         []) as BudgetPeriod[];
 
+    const preferredActive =
+      preferredActiveBudgetPeriod(periods);
+
+    const orderedPeriods = preferredActive
+      ? [
+          preferredActive,
+          ...periods.filter(
+            (period) => period.id !== preferredActive.id,
+          ),
+        ]
+      : periods;
+
     setSources(
       (sourceResult.data ??
         []) as FinancialSource[],
@@ -261,7 +323,7 @@ export function useParticipantFinancial() {
         []) as FinancialTransaction[],
     );
 
-    setBudgetPeriods(periods);
+    setBudgetPeriods(orderedPeriods);
 
     if (periods.length > 0) {
       const periodIds = periods.map(
