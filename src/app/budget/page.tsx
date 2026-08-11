@@ -15,6 +15,7 @@ import {
   TransactionExplanationDraft,
   useParticipantTransactionExplanations,
 } from "../transaction-explanations/useParticipantTransactionExplanations";
+import BudgetDraftCategoryBuilder from "./BudgetDraftCategoryBuilder";
 import { useParticipantBudgetBuilder } from "./useParticipantBudgetBuilder";
 
 const explanationCategories: Array<{
@@ -234,7 +235,8 @@ function TransactionContextPanel({
           onChange={(event) =>
             setDraft((current) => ({
               ...current,
-              explanationCategory: event.target.value as TransactionExplanationCategory,
+              explanationCategory:
+                event.target.value as TransactionExplanationCategory,
             }))
           }
           className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
@@ -271,7 +273,11 @@ function TransactionContextPanel({
           disabled={working}
           className="rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
         >
-          {working ? "Saving..." : explanation ? "Save changes" : "Save context"}
+          {working
+            ? "Saving..."
+            : explanation
+              ? "Save changes"
+              : "Save context"}
         </button>
 
         <button
@@ -290,7 +296,11 @@ function TransactionContextPanel({
 
       {notice ? (
         <p
-          role={notice.includes("saved") || notice.includes("updated") ? "status" : "alert"}
+          role={
+            notice.includes("saved") || notice.includes("updated")
+              ? "status"
+              : "alert"
+          }
           aria-live="polite"
           className="mt-3 text-sm font-semibold text-slate-700"
         >
@@ -463,7 +473,9 @@ export default function BudgetPage() {
 
             {errorMessage && (
               <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-950">
-                <p className="font-black">Budget information could not be loaded.</p>
+                <p className="font-black">
+                  Budget information could not be loaded.
+                </p>
                 <p className="mt-2 text-sm">{errorMessage}</p>
               </section>
             )}
@@ -529,7 +541,10 @@ export default function BudgetPage() {
                           Enter what you expect to have available during this plan period.
                         </span>
                         <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4">
-                          <span aria-hidden="true" className="font-black text-slate-500">
+                          <span
+                            aria-hidden="true"
+                            className="font-black text-slate-500"
+                          >
                             $
                           </span>
                           <input
@@ -602,20 +617,19 @@ export default function BudgetPage() {
                           disabled={budgetWorking || !activeProgramId}
                           className="rounded-2xl bg-emerald-700 px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {budgetWorking ? "Building your plan..." : "Build my plan"}
+                          {budgetWorking
+                            ? "Building your plan..."
+                            : "Build my plan"}
                         </button>
                       </div>
                     </form>
                   </section>
                 ) : (
-                  <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
-                    <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
-                      Draft plan
-                    </p>
-                    <p className="mt-2 font-black text-emerald-950">
-                      Your draft is saved. Next you will choose categories and planned amounts.
-                    </p>
-                  </section>
+                  <BudgetDraftCategoryBuilder
+                    draftPeriod={draftPeriod}
+                    currentLines={currentLines}
+                    refresh={refresh}
+                  />
                 )}
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
@@ -641,24 +655,36 @@ export default function BudgetPage() {
 
                   <div className="mt-6 grid gap-4 md:grid-cols-3">
                     <div className="rounded-2xl bg-emerald-700 p-6 text-white">
-                      <p className="text-sm font-bold text-emerald-100">Planned</p>
-                      <p className="mt-3 text-4xl font-black">{formatMoney(plannedTotal)}</p>
+                      <p className="text-sm font-bold text-emerald-100">
+                        Planned
+                      </p>
+                      <p className="mt-3 text-4xl font-black">
+                        {formatMoney(plannedTotal)}
+                      </p>
                       <p className="mt-2 text-sm text-emerald-100">
                         Amount currently set aside across this plan
                       </p>
                     </div>
 
                     <div className="rounded-2xl bg-slate-50 p-6">
-                      <p className="text-sm font-bold text-slate-500">Recorded activity</p>
-                      <p className="mt-3 text-4xl font-black">{formatMoney(actualTotal)}</p>
+                      <p className="text-sm font-bold text-slate-500">
+                        Recorded activity
+                      </p>
+                      <p className="mt-3 text-4xl font-black">
+                        {formatMoney(actualTotal)}
+                      </p>
                       <p className="mt-2 text-sm text-slate-500">
                         Amount currently recorded for this plan
                       </p>
                     </div>
 
                     <div className="rounded-2xl bg-slate-50 p-6">
-                      <p className="text-sm font-bold text-slate-500">Remaining</p>
-                      <p className="mt-3 text-4xl font-black">{formatMoney(remainingTotal)}</p>
+                      <p className="text-sm font-bold text-slate-500">
+                        Remaining
+                      </p>
+                      <p className="mt-3 text-4xl font-black">
+                        {formatMoney(remainingTotal)}
+                      </p>
                       <p className="mt-2 text-sm text-slate-500">
                         Amount left within the current plan
                       </p>
@@ -697,12 +723,19 @@ export default function BudgetPage() {
                         const planned = toNumber(line.planned_amount);
                         const actual = toNumber(line.actual_amount);
                         const remaining = toNumber(line.remaining_amount);
-                        const status = getBudgetStatus(planned, actual, remaining);
+                        const status = getBudgetStatus(
+                          planned,
+                          actual,
+                          remaining,
+                        );
                         const usedPercent =
                           planned > 0
                             ? Math.max(
                                 0,
-                                Math.min(100, Math.round((actual / planned) * 100)),
+                                Math.min(
+                                  100,
+                                  Math.round((actual / planned) * 100),
+                                ),
                               )
                             : 0;
 
@@ -716,7 +749,9 @@ export default function BudgetPage() {
                                 <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
                                   {status.label}
                                 </p>
-                                <h3 className="mt-2 text-xl font-black">{line.category_name}</h3>
+                                <h3 className="mt-2 text-xl font-black">
+                                  {line.category_name}
+                                </h3>
                                 <p className="mt-1 text-sm capitalize text-slate-500">
                                   {line.category_type.replaceAll("_", " ")}
                                 </p>
@@ -747,7 +782,9 @@ export default function BudgetPage() {
                                 </p>
                               </div>
                               <div className="rounded-2xl bg-slate-50 p-4">
-                                <p className="font-bold text-slate-500">Recorded activity</p>
+                                <p className="font-bold text-slate-500">
+                                  Recorded activity
+                                </p>
                                 <p className="mt-1 font-black">
                                   {formatMoney(line.actual_amount)}
                                 </p>
@@ -765,7 +802,9 @@ export default function BudgetPage() {
                     </div>
                   ) : (
                     <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-                      <p className="font-black">Your Budget plan has not been created yet.</p>
+                      <p className="font-black">
+                        Your Budget plan has not been created yet.
+                      </p>
                       <p className="mt-2 text-sm leading-6 text-slate-600">
                         Connected account activity can still be reviewed below.
                       </p>
@@ -804,7 +843,9 @@ export default function BudgetPage() {
 
                   <div className="mt-5 space-y-3">
                     {transactions.slice(0, 8).map((transaction) => {
-                      const explanation = explanationByTransactionId.get(transaction.id);
+                      const explanation = explanationByTransactionId.get(
+                        transaction.id,
+                      );
 
                       return (
                         <article
@@ -814,7 +855,8 @@ export default function BudgetPage() {
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                               <p className="font-black">
-                                {transaction.merchant_name ?? "Merchant not provided"}
+                                {transaction.merchant_name ??
+                                  "Merchant not provided"}
                               </p>
                               <p className="mt-1 text-sm text-slate-500">
                                 {formatDate(transaction.posted_date)}
@@ -824,7 +866,9 @@ export default function BudgetPage() {
                               </p>
                             </div>
 
-                            <p className="font-black">{formatMoney(transaction.amount)}</p>
+                            <p className="font-black">
+                              {formatMoney(transaction.amount)}
+                            </p>
                           </div>
 
                           <TransactionContextPanel
