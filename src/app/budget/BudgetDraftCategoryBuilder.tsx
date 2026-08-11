@@ -80,6 +80,7 @@ export default function BudgetDraftCategoryBuilder({
     errorMessage,
     addLine,
     updateLine,
+    activateBudget,
   } = useParticipantBudgetBuilder();
 
   const [categoryName, setCategoryName] = useState("");
@@ -94,6 +95,8 @@ export default function BudgetDraftCategoryBuilder({
     plannedAmount: "",
   });
   const [editNotice, setEditNotice] = useState("");
+  const [activationNotice, setActivationNotice] = useState("");
+  const [acknowledgeOverPlan, setAcknowledgeOverPlan] = useState(false);
 
   const expectedIncome = toNumber(draftPeriod.expected_income);
 
@@ -126,6 +129,7 @@ export default function BudgetDraftCategoryBuilder({
 
   const abovePlanTotal = Math.max(actualTotal - plannedTotal, 0);
   const stillUnplanned = expectedIncome - plannedTotal;
+  const isOverPlanned = plannedTotal > expectedIncome;
 
   const existingNames = useMemo(
     () =>
@@ -278,6 +282,35 @@ export default function BudgetDraftCategoryBuilder({
     }
 
     setEditingLineId(null);
+    await refresh();
+  }
+
+  async function handleActivateBudget() {
+    setActivationNotice("");
+
+    if (currentLines.length === 0) {
+      setActivationNotice("Add at least one category before using this plan.");
+      return;
+    }
+
+    if (isOverPlanned && !acknowledgeOverPlan) {
+      setActivationNotice(
+        `Your current plan is ${formatMoney(plannedTotal - expectedIncome)} above the income you entered. Confirm that you want to use it this way first.`,
+      );
+      return;
+    }
+
+    const result = await activateBudget(
+      draftPeriod.id,
+      isOverPlanned ? acknowledgeOverPlan : false,
+    );
+
+    setActivationNotice(result.message);
+
+    if (!result.ok) {
+      return;
+    }
+
     await refresh();
   }
 
@@ -604,6 +637,85 @@ export default function BudgetDraftCategoryBuilder({
           No categories have been added to this draft yet.
         </p>
       )}
+
+      <section className="mt-8 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+        <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
+          Ready when you are
+        </p>
+        <h3 className="mt-2 text-xl font-black text-slate-950">
+          Use this plan for this Budget period?
+        </h3>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
+          Activating the plan keeps your categories and planned amounts in place and marks this Budget period as active. You can keep reviewing the plan as account activity is recorded.
+        </p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl bg-white p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Expected income</p>
+            <p className="mt-1 text-xl font-black">{formatMoney(expectedIncome)}</p>
+          </div>
+          <div className="rounded-2xl bg-white p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Planned</p>
+            <p className="mt-1 text-xl font-black">{formatMoney(plannedTotal)}</p>
+          </div>
+          <div className="rounded-2xl bg-white p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              {isOverPlanned ? "Above income by" : "Still unplanned"}
+            </p>
+            <p className="mt-1 text-xl font-black">
+              {formatMoney(Math.abs(stillUnplanned))}
+            </p>
+          </div>
+        </div>
+
+        {currentLines.length === 0 ? (
+          <p className="mt-4 rounded-2xl bg-white p-4 text-sm font-semibold text-slate-700">
+            Add at least one category before using this plan.
+          </p>
+        ) : null}
+
+        {isOverPlanned ? (
+          <label className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <input
+              type="checkbox"
+              checked={acknowledgeOverPlan}
+              onChange={(event) => setAcknowledgeOverPlan(event.target.checked)}
+              disabled={working}
+              className="mt-1 h-4 w-4"
+            />
+            <span>
+              I understand this plan is {formatMoney(plannedTotal - expectedIncome)} above the income I entered, and I want to use it this way for now.
+            </span>
+          </label>
+        ) : (
+          <p className="mt-4 text-sm leading-6 text-slate-600">
+            You do not have to assign every dollar before using the plan. Unplanned money can remain available.
+          </p>
+        )}
+
+        {activationNotice ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-4 rounded-2xl bg-white p-4 text-sm font-semibold text-slate-700"
+          >
+            {activationNotice}
+          </p>
+        ) : null}
+
+        <button
+          type="button"
+          disabled={
+            working ||
+            currentLines.length === 0 ||
+            (isOverPlanned && !acknowledgeOverPlan)
+          }
+          onClick={() => void handleActivateBudget()}
+          className="mt-5 rounded-2xl bg-emerald-700 px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {working ? "Activating plan..." : "Use this plan"}
+        </button>
+      </section>
     </section>
   );
 }
