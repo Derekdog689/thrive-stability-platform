@@ -92,6 +92,25 @@ export default function BudgetDraftCategoryBuilder({
     [currentLines],
   );
 
+  const actualTotal = useMemo(
+    () =>
+      currentLines.reduce(
+        (sum, line) => sum + toNumber(line.actual_amount),
+        0,
+      ),
+    [currentLines],
+  );
+
+  const remainingTotal = useMemo(
+    () =>
+      currentLines.reduce(
+        (sum, line) => sum + toNumber(line.remaining_amount),
+        0,
+      ),
+    [currentLines],
+  );
+
+  const abovePlanTotal = Math.max(actualTotal - plannedTotal, 0);
   const stillUnplanned = expectedIncome - plannedTotal;
 
   const existingNames = useMemo(
@@ -175,7 +194,11 @@ export default function BudgetDraftCategoryBuilder({
         amounts for you.
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div
+        className={`mt-6 grid gap-4 ${
+          abovePlanTotal > 0 ? "sm:grid-cols-2 xl:grid-cols-5" : "sm:grid-cols-3"
+        }`}
+      >
         <div className="rounded-2xl bg-emerald-700 p-5 text-white">
           <p className="text-sm font-bold text-emerald-100">
             Expected income
@@ -208,6 +231,31 @@ export default function BudgetDraftCategoryBuilder({
             </p>
           ) : null}
         </div>
+
+        {abovePlanTotal > 0 ? (
+          <>
+            <div className="rounded-2xl bg-slate-50 p-5">
+              <p className="text-sm font-bold text-slate-500">
+                Remaining
+              </p>
+              <p className="mt-2 text-3xl font-black">
+                {formatMoney(remainingTotal)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+              <p className="text-sm font-bold text-amber-800">
+                Above plan by
+              </p>
+              <p className="mt-2 text-3xl font-black text-amber-950">
+                {formatMoney(abovePlanTotal)}
+              </p>
+              <p className="mt-2 text-sm text-amber-900">
+                Recorded activity is above the amount currently planned.
+              </p>
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div className="mt-7">
@@ -342,24 +390,62 @@ export default function BudgetDraftCategoryBuilder({
         <div className="mt-7">
           <p className="text-sm font-black">Currently in this draft</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {currentLines.map((line) => (
-              <div
-                key={line.id}
-                className="rounded-2xl border border-slate-100 bg-white p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-black">{line.category_name}</p>
-                    <p className="mt-1 text-xs font-semibold capitalize text-slate-500">
-                      {line.category_type.replaceAll("_", " ")}
+            {currentLines.map((line) => {
+              const planned = toNumber(line.planned_amount);
+              const actual = toNumber(line.actual_amount);
+              const remaining = toNumber(line.remaining_amount);
+              const abovePlanAmount = Math.max(actual - planned, 0);
+
+              return (
+                <div
+                  key={line.id}
+                  className="rounded-2xl border border-slate-100 bg-white p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-black">{line.category_name}</p>
+                      <p className="mt-1 text-xs font-semibold capitalize text-slate-500">
+                        {line.category_type.replaceAll("_", " ")}
+                      </p>
+                    </div>
+                    <p className="font-black">
+                      {formatMoney(planned)} planned
                     </p>
                   </div>
-                  <p className="font-black">
-                    {formatMoney(line.planned_amount)}
-                  </p>
+
+                  <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="font-semibold text-slate-500">Recorded</p>
+                      <p className="mt-1 font-black">{formatMoney(actual)}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="font-semibold text-slate-500">Remaining</p>
+                      <p className="mt-1 font-black">{formatMoney(remaining)}</p>
+                    </div>
+                    {abovePlanAmount > 0 ? (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <p className="font-semibold text-amber-800">Above plan by</p>
+                        <p className="mt-1 font-black text-amber-950">
+                          {formatMoney(abovePlanAmount)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl bg-slate-50 p-3">
+                        <p className="font-semibold text-slate-500">Above plan by</p>
+                        <p className="mt-1 font-black">$0.00</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {abovePlanAmount > 0 ? (
+                    <p className="mt-3 text-sm leading-6 text-amber-900">
+                      Recorded activity is {formatMoney(abovePlanAmount)} above the
+                      amount currently planned for {line.category_name}.
+                    </p>
+                  ) : null}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (
