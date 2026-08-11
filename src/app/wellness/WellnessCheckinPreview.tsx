@@ -136,6 +136,7 @@ function ChoiceGroup({
           </span>
         ) : null}
       </legend>
+
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {choices.map((choice) => {
           const selected = value === choice.value;
@@ -236,10 +237,11 @@ export default function WellnessCheckinPreview({
         <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
           Your reflection
         </p>
+
         <h2 className="mt-2 text-2xl font-black">How is today going?</h2>
+
         <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-          Choose what feels useful. Saving is not available yet, so your choices
-          will remain on this screen.
+          Choose what feels useful. You can save one check-in for today.
         </p>
 
         <div className="mt-6">
@@ -257,9 +259,11 @@ export default function WellnessCheckinPreview({
         <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
           A little more detail
         </p>
+
         <h2 className="mt-2 text-2xl font-black">
           Choose only what feels useful
         </h2>
+
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {reflectionGroups.map((group) => (
             <ChoiceGroup
@@ -286,7 +290,9 @@ export default function WellnessCheckinPreview({
         <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
           Next step
         </p>
+
         <h2 className="mt-2 text-2xl font-black">Choose something small</h2>
+
         <div className="mt-6">
           <ChoiceGroup
             label="What may help next?"
@@ -306,9 +312,11 @@ export default function WellnessCheckinPreview({
             Optional
           </span>
         </label>
+
         <p className="mt-2 text-sm leading-6 text-slate-500">
           Keep it as short or detailed as you want.
         </p>
+
         <textarea
           id="wellness-note"
           value={note}
@@ -320,6 +328,7 @@ export default function WellnessCheckinPreview({
           className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
           placeholder="Optional note"
         />
+
         <p className="mt-2 text-right text-xs font-semibold text-slate-400">
           {note.length}/2000
         </p>
@@ -329,9 +338,11 @@ export default function WellnessCheckinPreview({
         <p className="text-xs font-black uppercase tracking-wide text-amber-700">
           Your selections
         </p>
+
         <h2 className="mt-2 text-2xl font-black text-amber-950">
-          Saving is not available yet
+          Review your check-in
         </h2>
+
         <p className="mt-3 leading-7 text-amber-900">
           Overall day:{" "}
           {overallDay
@@ -341,6 +352,7 @@ export default function WellnessCheckinPreview({
             : "Not selected"}
           . Optional items selected: {selectedCount}.
         </p>
+
         <button
           type="button"
           disabled={!writeEnabled}
@@ -357,10 +369,11 @@ export default function WellnessCheckinPreview({
         >
           {writeEnabled
             ? hasSavedCheckin
-              ? "Update test check-in"
-              : "Save test check-in"
+              ? "Update check-in"
+              : "Save check-in"
             : "Save check-in unavailable"}
         </button>
+
         {actionMessage ? (
           <p className="mt-3 text-sm font-bold text-amber-900">
             {actionMessage}

@@ -53,15 +53,6 @@ export type WellnessDraft = {
   participantNote: string;
 };
 
-const PERSON_D_AUTH_USER_ID =
-  "d48b7268-9aa6-4498-a923-2851fd5232c9";
-
-const PERSON_D_SUPPORTED_PERSON_ID =
-  "71000000-0000-4000-8000-000000000009";
-
-const CLIENT_PATH_TEST_ENABLED =
-  process.env.NEXT_PUBLIC_THRIVE_WELLNESS_PERSON_D_TEST === "true";
-
 export type WellnessWriteResult =
   | {
       ok: true;
@@ -347,19 +338,6 @@ export function useWellnessCheckinCandidate() {
   async function executeInsertCandidate(
     draft: WellnessDraft,
   ): Promise<WellnessWriteResult> {
-    const WRITE_EXECUTION_ENABLED =
-      CLIENT_PATH_TEST_ENABLED &&
-      authenticatedUserId === PERSON_D_AUTH_USER_ID &&
-      participant?.id === PERSON_D_SUPPORTED_PERSON_ID;
-
-    if (!WRITE_EXECUTION_ENABLED) {
-      return {
-        ok: false,
-        code: "write_disabled",
-        message: "Saving is still disabled while this workflow is under review.",
-      };
-    }
-
     const payload = buildInsertCandidate(draft);
 
     if (!participant || !participation || !authenticatedUserId) {
@@ -407,68 +385,12 @@ export function useWellnessCheckinCandidate() {
   async function executeSameDayUpdate(
     draft: WellnessDraft,
   ): Promise<WellnessWriteResult> {
-    const WRITE_EXECUTION_ENABLED =
-      CLIENT_PATH_TEST_ENABLED &&
-      authenticatedUserId === PERSON_D_AUTH_USER_ID &&
-      participant?.id === PERSON_D_SUPPORTED_PERSON_ID;
-
-    if (!WRITE_EXECUTION_ENABLED) {
-      return {
-        ok: false,
-        code: "write_disabled",
-        message: "Updating is still disabled while this workflow is under review.",
-      };
-    }
-
-    if (!todayCheckin) {
-      return {
-        ok: false,
-        code: "missing_identity",
-        message: "No saved check-in is available to update.",
-      };
-    }
-
-    if (!draft.overallDay) {
-      return {
-        ok: false,
-        code: "missing_overall_day",
-        message: "Choose how today is going before updating.",
-      };
-    }
-
-    const result = await supabase
-      .from("participant_wellness_checkins")
-      .update({
-        overall_day: draft.overallDay,
-        stress: draft.stress,
-        sleep: draft.sleep,
-        energy: draft.energy,
-        confidence: draft.confidence,
-        routine: draft.routine,
-        recovery_support: draft.recoverySupport,
-        support_needed: draft.supportNeeded,
-        chosen_next_step: draft.chosenNextStep,
-        participant_note: draft.participantNote.trim() || null,
-      })
-      .eq("id", todayCheckin.id)
-      .eq("checkin_date", today)
-      .eq("status", "active")
-      .select(
-        "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
-      )
-      .single();
-
-    if (result.error) {
-      return mapWriteError(result.error);
-    }
-
-    const row = result.data as WellnessCheckinRow;
-    setTodayCheckin(row);
+    void draft;
 
     return {
-      ok: true,
-      mode: "update",
-      row,
+      ok: false,
+      code: "write_disabled",
+      message: "Editing today's saved check-in is not available yet.",
     };
   }
 
@@ -483,10 +405,11 @@ export function useWellnessCheckinCandidate() {
     refreshTodayCheckin,
     executeInsertCandidate,
     executeSameDayUpdate,
-    writeEnabled:
-      CLIENT_PATH_TEST_ENABLED &&
-      authenticatedUserId === PERSON_D_AUTH_USER_ID &&
-      participant?.id === PERSON_D_SUPPORTED_PERSON_ID,
-    clientPathTestEnabled: CLIENT_PATH_TEST_ENABLED,
+    writeEnabled: Boolean(
+      authenticatedUserId &&
+        participant &&
+        participation,
+    ),
+    clientPathTestEnabled: false,
   };
 }
