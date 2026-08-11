@@ -66,23 +66,42 @@ type SupportedPerson = {
   display_name: string;
 };
 
-export function toNumber(value: number | string | null | undefined) {
-  const parsed = typeof value === "number" ? value : Number(value ?? 0);
+type ProgramParticipant = {
+  program_id: string;
+  workspace_id: string;
+  status: string;
+};
+
+export function toNumber(
+  value: number | string | null | undefined,
+) {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : Number(value ?? 0);
+
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function formatMoney(value: number | string) {
+export function formatMoney(
+  value: number | string,
+) {
   return toNumber(value).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });
 }
 
-export function formatDate(value: string | null | undefined) {
+export function formatDate(
+  value: string | null | undefined,
+) {
   if (!value) return "Not available";
 
   const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return value;
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
 
   return parsed.toLocaleDateString("en-US", {
     month: "short",
@@ -92,138 +111,229 @@ export function formatDate(value: string | null | undefined) {
 }
 
 export function useParticipantFinancial() {
-  const [participant, setParticipant] = useState<SupportedPerson | null>(null);
-  const [sources, setSources] = useState<FinancialSource[]>([]);
-  const [batches, setBatches] = useState<FinancialBatch[]>([]);
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
-  const [budgetPeriods, setBudgetPeriods] = useState<BudgetPeriod[]>([]);
-  const [budgetLines, setBudgetLines] = useState<BudgetLine[]>([]);
+  const [participant, setParticipant] =
+    useState<SupportedPerson | null>(null);
+
+  const [activeProgramId, setActiveProgramId] =
+    useState<string | null>(null);
+
+  const [sources, setSources] =
+    useState<FinancialSource[]>([]);
+
+  const [batches, setBatches] =
+    useState<FinancialBatch[]>([]);
+
+  const [transactions, setTransactions] =
+    useState<FinancialTransaction[]>([]);
+
+  const [budgetPeriods, setBudgetPeriods] =
+    useState<BudgetPeriod[]>([]);
+
+  const [budgetLines, setBudgetLines] =
+    useState<BudgetLine[]>([]);
+
   const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
-  useEffect(() => {
-    let mounted = true;
+  async function load() {
+    setLoading(true);
+    setErrorMessage("");
 
-    async function load() {
-      setLoading(true);
-      setErrorMessage("");
+    const sessionResult =
+      await supabase.auth.getSession();
 
-      const sessionResult = await supabase.auth.getSession();
-      const user = sessionResult.data.session?.user ?? null;
+    const user =
+      sessionResult.data.session?.user ?? null;
 
-      if (!mounted) return;
-
-      if (sessionResult.error || !user) {
-        setErrorMessage(
-          sessionResult.error?.message ?? "Sign in to view your THRIVE information.",
-        );
-        setLoading(false);
-        return;
-      }
-
-      const personResult = await supabase
-        .from("supported_people")
-        .select("id, preferred_name, display_name")
-        .eq("auth_user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (!mounted) return;
-
-      if (personResult.error) {
-        setErrorMessage(personResult.error.message);
-        setLoading(false);
-        return;
-      }
-
-      const person = (personResult.data as SupportedPerson | null) ?? null;
-      setParticipant(person);
-
-      const [sourceResult, batchResult, transactionResult, periodResult] =
-        await Promise.all([
-          supabase.rpc("get_my_financial_sources_v1"),
-          supabase.rpc("get_my_financial_batches_v1"),
-          supabase.rpc("get_my_financial_transactions_v1"),
-          supabase
-            .from("participant_budget_periods")
-            .select(
-              "id, period_start, period_end, status, expected_income, notes",
-            )
-            .order("period_start", { ascending: false }),
-        ]);
-
-      if (!mounted) return;
-
-      const firstError =
-        sourceResult.error ??
-        batchResult.error ??
-        transactionResult.error ??
-        periodResult.error;
-
-      if (firstError) {
-        setErrorMessage(firstError.message);
-        setLoading(false);
-        return;
-      }
-
-      const periods = (periodResult.data ?? []) as BudgetPeriod[];
-      setSources((sourceResult.data ?? []) as FinancialSource[]);
-      setBatches((batchResult.data ?? []) as FinancialBatch[]);
-      setTransactions(
-        (transactionResult.data ?? []) as FinancialTransaction[],
+    if (sessionResult.error || !user) {
+      setErrorMessage(
+        sessionResult.error?.message ??
+          "Sign in to view your THRIVE information.",
       );
-      setBudgetPeriods(periods);
-
-      if (periods.length > 0) {
-        const periodIds = periods.map((period) => period.id);
-        const lineResult = await supabase
-          .from("participant_budget_lines")
-          .select(
-            "id, budget_period_id, category_name, category_type, planned_amount, actual_amount, remaining_amount, sort_order, is_active",
-          )
-          .in("budget_period_id", periodIds)
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true });
-
-        if (!mounted) return;
-
-        if (lineResult.error) {
-          setErrorMessage(lineResult.error.message);
-          setLoading(false);
-          return;
-        }
-
-        setBudgetLines((lineResult.data ?? []) as BudgetLine[]);
-      } else {
-        setBudgetLines([]);
-      }
 
       setLoading(false);
+      return;
     }
 
-    void load();
+    const personResult = await supabase
+      .from("supported_people")
+      .select(
+        "id, preferred_name, display_name",
+      )
+      .eq("auth_user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
 
-    return () => {
-      mounted = false;
-    };
+    if (personResult.error) {
+      setErrorMessage(
+        personResult.error.message,
+      );
+
+      setLoading(false);
+      return;
+    }
+
+    const person =
+      (personResult.data as
+        | SupportedPerson
+        | null) ?? null;
+
+    setParticipant(person);
+
+    const [
+      sourceResult,
+      batchResult,
+      transactionResult,
+      periodResult,
+      programParticipantResult,
+    ] = await Promise.all([
+      supabase.rpc(
+        "get_my_financial_sources_v1",
+      ),
+
+      supabase.rpc(
+        "get_my_financial_batches_v1",
+      ),
+
+      supabase.rpc(
+        "get_my_financial_transactions_v1",
+      ),
+
+      supabase
+        .from("participant_budget_periods")
+        .select(
+          "id, period_start, period_end, status, expected_income, notes",
+        )
+        .order("period_start", {
+          ascending: false,
+        }),
+
+      supabase
+        .from("program_participants")
+        .select(
+          "program_id, workspace_id, status",
+        )
+        .eq("status", "active"),
+    ]);
+
+    const firstError =
+      sourceResult.error ??
+      batchResult.error ??
+      transactionResult.error ??
+      periodResult.error ??
+      programParticipantResult.error;
+
+    if (firstError) {
+      setErrorMessage(firstError.message);
+      setLoading(false);
+      return;
+    }
+
+    const activePrograms =
+      (programParticipantResult.data ??
+        []) as ProgramParticipant[];
+
+    if (activePrograms.length === 1) {
+      setActiveProgramId(
+        activePrograms[0].program_id,
+      );
+    } else {
+      setActiveProgramId(null);
+    }
+
+    const periods =
+      (periodResult.data ??
+        []) as BudgetPeriod[];
+
+    setSources(
+      (sourceResult.data ??
+        []) as FinancialSource[],
+    );
+
+    setBatches(
+      (batchResult.data ??
+        []) as FinancialBatch[],
+    );
+
+    setTransactions(
+      (transactionResult.data ??
+        []) as FinancialTransaction[],
+    );
+
+    setBudgetPeriods(periods);
+
+    if (periods.length > 0) {
+      const periodIds = periods.map(
+        (period) => period.id,
+      );
+
+      const lineResult = await supabase
+        .from("participant_budget_lines")
+        .select(
+          "id, budget_period_id, category_name, category_type, planned_amount, actual_amount, remaining_amount, sort_order, is_active",
+        )
+        .in(
+          "budget_period_id",
+          periodIds,
+        )
+        .eq("is_active", true)
+        .order("sort_order", {
+          ascending: true,
+        });
+
+      if (lineResult.error) {
+        setErrorMessage(
+          lineResult.error.message,
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      setBudgetLines(
+        (lineResult.data ??
+          []) as BudgetLine[],
+      );
+    } else {
+      setBudgetLines([]);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    void load();
   }, []);
 
   const participantName =
-    participant?.preferred_name ?? participant?.display_name ?? "Participant";
+    participant?.preferred_name ??
+    participant?.display_name ??
+    "Participant";
 
   const totalOutflow = useMemo(
     () =>
-      transactions.reduce((sum, transaction) => {
-        const amount = toNumber(transaction.amount);
-        return amount < 0 ? sum + Math.abs(amount) : sum;
-      }, 0),
+      transactions.reduce(
+        (sum, transaction) => {
+          const amount = toNumber(
+            transaction.amount,
+          );
+
+          return amount < 0
+            ? sum + Math.abs(amount)
+            : sum;
+        },
+        0,
+      ),
     [transactions],
   );
 
   const latestBatch = useMemo(
     () =>
       [...batches].sort((a, b) =>
-        b.statement_period_end.localeCompare(a.statement_period_end),
+        b.statement_period_end.localeCompare(
+          a.statement_period_end,
+        ),
       )[0] ?? null,
     [batches],
   );
@@ -231,6 +341,7 @@ export function useParticipantFinancial() {
   return {
     participant,
     participantName,
+    activeProgramId,
     sources,
     batches,
     transactions,
@@ -240,5 +351,6 @@ export function useParticipantFinancial() {
     latestBatch,
     loading,
     errorMessage,
+    refresh: load,
   };
 }
