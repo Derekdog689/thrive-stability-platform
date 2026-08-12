@@ -662,7 +662,7 @@ export default function BudgetPage() {
                     ) : null}
                   </div>
 
-                  <div className="mt-6 grid gap-4 md:grid-cols-3">
+                  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-2xl bg-emerald-700 p-6 text-white">
                       <p className="text-sm font-bold text-emerald-100">
                         Planned
@@ -674,6 +674,18 @@ export default function BudgetPage() {
                         Amount currently set aside across this plan
                       </p>
                     </div>
+
+                  <div className="rounded-2xl bg-slate-50 p-6">
+  <p className="text-sm font-bold text-slate-500">
+    Expected income
+  </p>
+  <p className="mt-3 text-4xl font-black">
+    {formatMoney(currentPeriod?.expected_income ?? 0)}
+  </p>
+  <p className="mt-2 text-sm text-slate-500">
+    Amount you expect to have available during this plan
+  </p>
+</div>
 
                     <div className="rounded-2xl bg-slate-50 p-6">
                       <p className="text-sm font-bold text-slate-500">
