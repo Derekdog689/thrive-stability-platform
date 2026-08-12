@@ -39,6 +39,14 @@ const dailyPathCards = [
   },
 ];
 
+function formatLabel(value: string | null | undefined) {
+  if (!value) return "Not available";
+
+  return value
+    .replaceAll("_", " ")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
+
 export default function TodayPage() {
   const {
     participantName,
@@ -73,6 +81,18 @@ export default function TodayPage() {
     budgetPeriods.find((period) => period.status === "active") ??
     budgetPeriods[0] ??
     null;
+ const latestWellness = todayCheckin ?? null;
+
+const currentGoal =
+  activeGoals.find((goal) => goal.progress_status !== "completed") ??
+  activeGoals[0] ??
+  null;
+
+const unresolvedSupportRequest =
+  requests.find(
+    (request) =>
+      !["completed", "withdrawn", "archived"].includes(request.status),
+  ) ?? null;
 
   return (
     <AuthGate>
@@ -93,6 +113,110 @@ export default function TodayPage() {
                 choose one useful next step.
               </p>
             </header>
+
+            <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+    What matters right now
+  </p>
+
+  <h2 className="mt-2 text-2xl font-black text-slate-950">
+    A quick look at what is active today
+  </h2>
+
+  <div className="mt-6 grid gap-4 lg:grid-cols-3">
+    <div className="rounded-2xl bg-emerald-50 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+        Wellness
+      </p>
+
+      {wellnessLoading ? (
+        <p className="mt-3 text-sm text-emerald-900">
+          Loading your latest reflection.
+        </p>
+      ) : wellnessErrorMessage ? (
+        <p className="mt-3 text-sm text-emerald-900">
+          Your latest Wellness reflection is not available right now.
+        </p>
+      ) : latestWellness ? (
+        <>
+          <p className="mt-3 font-black text-slate-950">
+            Latest reflection: {latestWellness.overall_day}
+          </p>
+
+          {latestWellness.chosen_next_step ? (
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              Next step: {latestWellness.chosen_next_step.replaceAll("_", " ")}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <p className="mt-3 text-sm text-slate-700">
+          No Wellness reflection has been saved for today yet.
+        </p>
+      )}
+    </div>
+
+    <div className="rounded-2xl bg-slate-50 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+        Goal
+      </p>
+
+      {goalsLoading ? (
+        <p className="mt-3 text-sm text-slate-600">
+          Loading your current goal.
+        </p>
+      ) : goalsErrorMessage ? (
+        <p className="mt-3 text-sm text-slate-600">
+          Your current goal is not available right now.
+        </p>
+      ) : currentGoal ? (
+        <>
+          <p className="mt-3 font-black text-slate-950">
+            {currentGoal.title}
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            Next step: {currentGoal.next_step}
+          </p>
+        </>
+      ) : (
+        <p className="mt-3 text-sm text-slate-700">
+          No active goal is available yet.
+        </p>
+      )}
+    </div>
+
+    <div className="rounded-2xl bg-slate-50 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+        Support
+      </p>
+
+      {supportLoading ? (
+        <p className="mt-3 text-sm text-slate-600">
+          Loading your support status.
+        </p>
+      ) : supportErrorMessage ? (
+        <p className="mt-3 text-sm text-slate-600">
+          Your support status is not available right now.
+        </p>
+      ) : unresolvedSupportRequest ? (
+        <>
+          <p className="mt-3 font-black text-slate-950">
+            {unresolvedSupportRequest.status.replaceAll("_", " ")}
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            {unresolvedSupportRequest.participant_message}
+          </p>
+        </>
+      ) : (
+        <p className="mt-3 text-sm text-slate-700">
+          No open support request is currently active.
+        </p>
+      )}
+    </div>
+  </div>
+</section>
 
             {loading && (
               <section className="rounded-3xl bg-white p-6 shadow-sm">
