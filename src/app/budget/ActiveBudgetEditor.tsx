@@ -12,6 +12,25 @@ import {
   useParticipantBudgetBuilder,
 } from "./useParticipantBudgetBuilder";
 
+const starterCategories: Array<{
+  name: string;
+  type: BudgetCategoryType;
+}> = [
+  { name: "Housing", type: "protected" },
+  { name: "Electric", type: "protected" },
+  { name: "Internet / cable", type: "protected" },
+  { name: "Food & household", type: "protected" },
+  { name: "Transportation", type: "flexible" },
+  { name: "Car insurance", type: "protected" },
+  { name: "Car registration", type: "protected" },
+  { name: "Phone", type: "protected" },
+  { name: "Medical / wellness", type: "support" },
+  { name: "Personal", type: "flexible" },
+  { name: "Entertainment", type: "flexible" },
+  { name: "Savings / reserve", type: "reserve" },
+  { name: "Emergency cushion", type: "reserve" },
+];
+
 const categoryTypes: Array<{
   value: BudgetCategoryType;
   label: string;
@@ -39,12 +58,13 @@ export default function ActiveBudgetEditor({
   currentLines,
   refresh,
 }: Props) {
-  const {
-    working,
-    errorMessage,
-    updatePeriod,
-    updateLine,
-  } = useParticipantBudgetBuilder();
+ const {
+  working,
+  errorMessage,
+  updatePeriod,
+  addLine,
+  updateLine,
+} = useParticipantBudgetBuilder();
 
   const [open, setOpen] = useState(false);
   const [periodDraft, setPeriodDraft] = useState({
@@ -58,7 +78,19 @@ export default function ActiveBudgetEditor({
     categoryType: "protected",
     plannedAmount: "",
   });
+  const [newLineDraft, setNewLineDraft] = useState<LineDraft>({
+  categoryName: "",
+  categoryType: "protected",
+  plannedAmount: "",
+});
   const [lineNotice, setLineNotice] = useState("");
+  const [newLineNotice, setNewLineNotice] = useState("");
+  const [addingLine, setAddingLine] = useState(false);
+  const existingNames = new Set(
+  currentLines.map((line) =>
+    line.category_name.trim().toLowerCase(),
+  ),
+);
 
   function resetPeriodDraft() {
     setPeriodDraft({
@@ -93,6 +125,58 @@ export default function ActiveBudgetEditor({
 
     await refresh();
   }
+
+  async function handleAddLine(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  setNewLineNotice("");
+
+  const categoryName = newLineDraft.categoryName.trim();
+
+  if (!categoryName) {
+    setNewLineNotice("Enter a category name.");
+    return;
+  }
+
+  const duplicateName = currentLines.some(
+    (candidate) =>
+      candidate.category_name.trim().toLowerCase() ===
+      categoryName.toLowerCase(),
+  );
+
+  if (duplicateName) {
+    setNewLineNotice("That category name is already part of this plan.");
+    return;
+  }
+
+  const plannedAmount = Number(newLineDraft.plannedAmount);
+
+  if (!Number.isFinite(plannedAmount) || plannedAmount < 0) {
+    setNewLineNotice("Enter a planned amount of zero or more.");
+    return;
+  }
+
+  const result = await addLine({
+    budgetPeriodId: activePeriod.id,
+    categoryName,
+    categoryType: newLineDraft.categoryType,
+    plannedAmount,
+    sortOrder: currentLines.length,
+  });
+
+  setNewLineNotice(result.message);
+
+  if (!result.ok) {
+    return;
+  }
+
+  setNewLineDraft({
+    categoryName: "",
+    categoryType: "protected",
+    plannedAmount: "",
+  });
+
+  await refresh();
+}
 
   function beginLineEdit(line: BudgetLine) {
     setEditingLineId(line.id);
@@ -305,15 +389,168 @@ export default function ActiveBudgetEditor({
           </button>
         </div>
       </form>
+        <div className="mt-7 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <p className="text-sm font-black">Categories in this active plan</p>
+    <p className="mt-1 text-sm leading-6 text-slate-500">
+      Planned amounts can change. Recorded and remaining amounts are shown for
+      context and are not directly editable.
+    </p>
+  </div>
 
-      <div className="mt-7 space-y-4">
-        <div>
-          <p className="text-sm font-black">Categories in this active plan</p>
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            Planned amounts can change. Recorded and remaining amounts are shown for
-            context and are not directly editable.
-          </p>
+  <button
+    type="button"
+    disabled={working}
+    onClick={() => {
+      setNewLineNotice("");
+      setAddingLine(true);
+    }}
+    className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-900 disabled:opacity-60"
+  >
+    Add category
+  </button>
+</div>
+{addingLine ? (
+  <form
+    onSubmit={handleAddLine}
+    className="grid gap-4 rounded-3xl border border-emerald-100 bg-emerald-50 p-5"
+  >
+    <div>
+  <p className="text-sm font-black">Starter categories</p>
+  <p className="mt-1 text-sm text-slate-600">
+    Choose one to fill the category name and type, or enter your own below.
+  </p>
+
+  <div className="mt-3 flex flex-wrap gap-2">
+    {starterCategories.map((starter) => {
+      const alreadyUsed = existingNames.has(starter.name.toLowerCase());
+
+      return (
+        <button
+          key={starter.name}
+          type="button"
+          disabled={working || alreadyUsed}
+          onClick={() => {
+            setNewLineDraft({
+              categoryName: starter.name,
+              categoryType: starter.type,
+              plannedAmount: "",
+            });
+            setNewLineNotice("");
+          }}
+          className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-black text-emerald-900 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {starter.name}
+        </button>
+      );
+    })}
+  </div>
+</div>
+
+    <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]">
+      <label className="text-sm font-black">
+        Category name
+        <input
+          type="text"
+          required
+          disabled={working}
+          value={newLineDraft.categoryName}
+          onChange={(event) =>
+            setNewLineDraft((current) => ({
+              ...current,
+              categoryName: event.target.value,
+            }))
+          }
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
+        />
+      </label>
+
+      <label className="text-sm font-black">
+        Type
+        <select
+          disabled={working}
+          value={newLineDraft.categoryType}
+          onChange={(event) =>
+            setNewLineDraft((current) => ({
+              ...current,
+              categoryType: event.target.value as BudgetCategoryType,
+            }))
+          }
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
+        >
+          {categoryTypes.map((type) => (
+            <option key={type.value} value={type.value}>
+              {type.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="text-sm font-black">
+        Planned amount
+        <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4">
+          <span aria-hidden="true" className="font-black text-slate-500">
+            $
+          </span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            required
+            disabled={working}
+            value={newLineDraft.plannedAmount}
+            onChange={(event) =>
+              setNewLineDraft((current) => ({
+                ...current,
+                plannedAmount: event.target.value,
+              }))
+            }
+            className="w-full bg-transparent px-3 py-3 font-normal outline-none"
+          />
         </div>
+      </label>
+    </div>
+
+    {newLineNotice ? (
+      <p
+        role="status"
+        aria-live="polite"
+        className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-700"
+      >
+        {newLineNotice}
+      </p>
+    ) : null}
+
+    <div className="flex flex-wrap gap-3">
+      <button
+        type="submit"
+        disabled={working}
+        className="rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
+      >
+        {working ? "Saving..." : "Save new category"}
+      </button>
+
+      <button
+        type="button"
+        disabled={working}
+        onClick={() => {
+          setNewLineDraft({
+            categoryName: "",
+            categoryType: "protected",
+            plannedAmount: "",
+          });
+          setNewLineNotice("");
+          setAddingLine(false);
+        }}
+        className="rounded-2xl border border-slate-300 bg-white px-5 py-2 font-black text-slate-700 disabled:opacity-60"
+      >
+        Cancel
+      </button>
+    </div>
+  </form>
+) : null}
 
         {currentLines.map((line) => {
           const isEditing = editingLineId === line.id;
