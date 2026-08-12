@@ -114,19 +114,44 @@ function businessDateKey() {
   return `${year}-${month}-${day}`;
 }
 
+function shiftDateKey(dateKey: string, days: number) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+
+  const shiftedYear = date.getUTCFullYear();
+  const shiftedMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const shiftedDay = String(date.getUTCDate()).padStart(2, "0");
+
+  return `${shiftedYear}-${shiftedMonth}-${shiftedDay}`;
+}
+
 export function useWellnessCheckinCandidate() {
-  const [participant, setParticipant] = useState<SupportedPerson | null>(null);
+  const [participant, setParticipant] =
+    useState<SupportedPerson | null>(null);
+
   const [participation, setParticipation] =
     useState<ProgramParticipation | null>(null);
-  const [todayCheckin, setTodayCheckin] =
-    useState<WellnessCheckinRow | null>(null);
-  const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(
-    null,
-  );
+
+  const [todayCheckins, setTodayCheckins] =
+    useState<WellnessCheckinRow[]>([]);
+
+  const todayCheckin = todayCheckins[0] ?? null;
+  const [recentCheckins, setRecentCheckins] =
+  useState<WellnessCheckinRow[]>([]);
+
+  const [authenticatedUserId, setAuthenticatedUserId] =
+    useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   const today = useMemo(() => businessDateKey(), []);
+  const recentWindowStart = useMemo(
+  () => shiftDateKey(today, -6),
+  [today],
+);
 
   useEffect(() => {
     let mounted = true;
@@ -207,11 +232,11 @@ export function useWellnessCheckinCandidate() {
           "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
         )
         .eq("supported_person_id", person.id)
-        .eq("program_id", activeParticipation.program_id)
-        .eq("workspace_id", person.workspace_id)
-        .eq("checkin_date", today)
-        .eq("status", "active")
-        .maybeSingle();
+.eq("program_id", activeParticipation.program_id)
+.eq("workspace_id", person.workspace_id)
+.eq("checkin_date", today)
+.eq("status", "active")
+.order("created_at", { ascending: false });
 
       if (!mounted) return;
 
@@ -221,10 +246,37 @@ export function useWellnessCheckinCandidate() {
         return;
       }
 
-      setTodayCheckin(
-        (checkinResult.data as WellnessCheckinRow | null) ?? null,
-      );
-      setLoading(false);
+    setTodayCheckins(
+  (checkinResult.data as WellnessCheckinRow[] | null) ?? [],
+);
+
+const recentCheckinsResult = await supabase
+  .from("participant_wellness_checkins")
+  .select(
+    "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
+  )
+  .eq("supported_person_id", person.id)
+  .eq("program_id", activeParticipation.program_id)
+  .eq("workspace_id", person.workspace_id)
+  .gte("checkin_date", recentWindowStart)
+  .lte("checkin_date", today)
+  .eq("status", "active")
+  .order("checkin_date", { ascending: false })
+  .order("created_at", { ascending: false });
+
+if (!mounted) return;
+
+if (recentCheckinsResult.error) {
+  setErrorMessage(recentCheckinsResult.error.message);
+  setLoading(false);
+  return;
+}
+
+setRecentCheckins(
+  (recentCheckinsResult.data as WellnessCheckinRow[] | null) ?? [],
+);
+
+setLoading(false);
     }
 
     void load();
@@ -232,7 +284,7 @@ export function useWellnessCheckinCandidate() {
     return () => {
       mounted = false;
     };
-  }, [today]);
+  }, [recentWindowStart, today]);
 
   function buildInsertCandidate(
     draft: WellnessDraft,
@@ -308,32 +360,35 @@ export function useWellnessCheckinCandidate() {
   }
 
   async function refreshTodayCheckin() {
-    if (!participant || !participation) {
-      setTodayCheckin(null);
-      return null;
-    }
-
-    const result = await supabase
-      .from("participant_wellness_checkins")
-      .select(
-        "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
-      )
-      .eq("supported_person_id", participant.id)
-      .eq("program_id", participation.program_id)
-      .eq("workspace_id", participant.workspace_id)
-      .eq("checkin_date", today)
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (result.error) {
-      setErrorMessage(result.error.message);
-      return null;
-    }
-
-    const row = (result.data as WellnessCheckinRow | null) ?? null;
-    setTodayCheckin(row);
-    return row;
+  if (!participant || !participation) {
+    setTodayCheckins([]);
+    return [];
   }
+
+  const result = await supabase
+    .from("participant_wellness_checkins")
+    .select(
+      "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
+    )
+    .eq("supported_person_id", participant.id)
+    .eq("program_id", participation.program_id)
+    .eq("workspace_id", participant.workspace_id)
+    .eq("checkin_date", today)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (result.error) {
+    setErrorMessage(result.error.message);
+    return [];
+  }
+
+  const rows =
+    (result.data as WellnessCheckinRow[] | null) ?? [];
+
+  setTodayCheckins(rows);
+
+  return rows;
+}
 
   async function executeInsertCandidate(
     draft: WellnessDraft,
@@ -372,8 +427,21 @@ export function useWellnessCheckinCandidate() {
       return mapWriteError(result.error);
     }
 
-    const row = result.data as WellnessCheckinRow;
-    setTodayCheckin(row);
+   const row = result.data as WellnessCheckinRow;
+
+setTodayCheckins((current) => [
+  row,
+  ...current.filter(
+    (checkin) => checkin.id !== row.id,
+  ),
+]);
+
+setRecentCheckins((current) => [
+  row,
+  ...current.filter(
+    (checkin) => checkin.id !== row.id,
+  ),
+]);
 
     return {
       ok: true,
@@ -397,7 +465,9 @@ export function useWellnessCheckinCandidate() {
   return {
     participant,
     participation,
+    todayCheckins,
     todayCheckin,
+    recentCheckins,
     today,
     loading,
     errorMessage,
