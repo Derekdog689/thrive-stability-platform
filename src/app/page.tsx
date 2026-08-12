@@ -140,12 +140,12 @@ const unresolvedSupportRequest =
       ) : latestWellness ? (
         <>
           <p className="mt-3 font-black text-slate-950">
-            Latest reflection: {latestWellness.overall_day}
+            Latest reflection: {formatLabel(latestWellness.overall_day)}
           </p>
 
           {latestWellness.chosen_next_step ? (
             <p className="mt-2 text-sm leading-6 text-slate-700">
-              Next step: {latestWellness.chosen_next_step.replaceAll("_", " ")}
+              Next step: {formatLabel(latestWellness.chosen_next_step)}
             </p>
           ) : null}
         </>
@@ -202,7 +202,7 @@ const unresolvedSupportRequest =
       ) : unresolvedSupportRequest ? (
         <>
           <p className="mt-3 font-black text-slate-950">
-            {unresolvedSupportRequest.status.replaceAll("_", " ")}
+            {formatLabel(unresolvedSupportRequest.status)}
           </p>
 
           <p className="mt-2 text-sm leading-6 text-slate-700">
