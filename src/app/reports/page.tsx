@@ -10,14 +10,47 @@ import {
 } from "../useParticipantFinancial";
 
 export default function ReportsPage() {
-  const {
-    sources,
-    batches,
-    transactions,
-    totalOutflow,
-    loading,
-    errorMessage,
-  } = useParticipantFinancial();
+
+const {
+  sources,
+  batches,
+  transactions,
+  budgetPeriods,
+  budgetLines,
+  totalOutflow,
+  loading,
+  errorMessage,
+} = useParticipantFinancial();
+
+const activeBudgetPeriod =
+  budgetPeriods.find((period) => period.status === "active") ?? null;
+
+const activeBudgetLines = activeBudgetPeriod
+  ? budgetLines.filter(
+      (line) => line.budget_period_id === activeBudgetPeriod.id,
+    )
+  : [];
+
+const plannedTotal = activeBudgetLines.reduce(
+  (sum, line) => sum + toNumber(line.planned_amount),
+  0,
+);
+
+const recordedBudgetTotal = activeBudgetLines.reduce(
+  (sum, line) => sum + toNumber(line.actual_amount),
+  0,
+);
+
+const remainingBudgetTotal = activeBudgetLines.reduce(
+  (sum, line) => sum + toNumber(line.remaining_amount),
+  0,
+);
+
+const expectedIncome = activeBudgetPeriod
+  ? toNumber(activeBudgetPeriod.expected_income)
+  : 0;
+
+const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
 
   const categoryTotals = transactions.reduce<Record<string, number>>(
     (summary, transaction) => {
@@ -95,6 +128,76 @@ export default function ReportsPage() {
                     </p>
                   </div>
                 </section>
+
+                <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+    Current plan
+  </p>
+
+  <h2 className="mt-2 text-2xl font-black">
+    Your plan compared with what is recorded
+  </h2>
+
+  <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+    These numbers come from your current Budget plan. They remain separate
+    from the imported account totals shown elsewhere in Reports.
+  </p>
+
+  {activeBudgetPeriod ? (
+    <>
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl bg-emerald-700 p-5 text-white">
+          <p className="text-sm font-bold text-emerald-100">
+            Expected income
+          </p>
+          <p className="mt-3 text-3xl font-black">
+            {formatMoney(expectedIncome)}
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-sm font-bold text-slate-500">
+            Currently planned
+          </p>
+          <p className="mt-3 text-3xl font-black">
+            {formatMoney(plannedTotal)}
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-sm font-bold text-slate-500">
+            Recorded against Budget
+          </p>
+          <p className="mt-3 text-3xl font-black">
+            {formatMoney(recordedBudgetTotal)}
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-5">
+          <p className="text-sm font-bold text-slate-500">
+            Remaining in plan
+          </p>
+          <p className="mt-3 text-3xl font-black">
+            {formatMoney(remainingBudgetTotal)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-100 p-5">
+        <p className="text-sm font-bold text-slate-500">
+          Expected income not yet assigned to categories
+        </p>
+        <p className="mt-2 text-2xl font-black">
+          {formatMoney(unplannedAmount)}
+        </p>
+      </div>
+    </>
+  ) : (
+    <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-slate-600">
+      No active Budget plan is available for comparison yet.
+    </div>
+  )}
+</section>
 
                 <section className="grid gap-6 lg:grid-cols-2">
                   <div className="rounded-3xl bg-white p-6 shadow-sm">
