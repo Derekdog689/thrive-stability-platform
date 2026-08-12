@@ -483,7 +483,7 @@ export default function BudgetPage() {
 
             {!loading && !errorMessage && (
               <>
-                {!draftPeriod ? (
+                {!draftPeriod && !activePeriod ? (
                   <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
                     <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
                       Build your next plan
@@ -625,13 +625,13 @@ export default function BudgetPage() {
                       </div>
                     </form>
                   </section>
-                ) : (
+                ) : draftPeriod ? (
                   <BudgetDraftCategoryBuilder
                     draftPeriod={draftPeriod}
                     currentLines={currentLines}
                     refresh={refresh}
                   />
-                )}
+                ) : null}
 
                 {activePeriod && !draftPeriod ? (
                   <ActiveBudgetEditor
