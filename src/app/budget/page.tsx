@@ -15,6 +15,7 @@ import {
   TransactionExplanationDraft,
   useParticipantTransactionExplanations,
 } from "../transaction-explanations/useParticipantTransactionExplanations";
+import ActiveBudgetEditor from "./ActiveBudgetEditor";
 import BudgetDraftCategoryBuilder from "./BudgetDraftCategoryBuilder";
 import { useParticipantBudgetBuilder } from "./useParticipantBudgetBuilder";
 
@@ -631,6 +632,14 @@ export default function BudgetPage() {
                     refresh={refresh}
                   />
                 )}
+
+                {activePeriod && !draftPeriod ? (
+                  <ActiveBudgetEditor
+                    activePeriod={activePeriod}
+                    currentLines={currentLines}
+                    refresh={refresh}
+                  />
+                ) : null}
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                   <div className="flex flex-wrap items-start justify-between gap-4">
