@@ -3,6 +3,9 @@
 import Link from "next/link";
 import AuthGate from "./AuthGate";
 import ThriveSidebar from "./ThriveSidebar";
+import { useParticipantGoals } from "./goals/useParticipantGoals";
+import { useParticipantSupport } from "./support/useParticipantSupport";
+import { useWellnessCheckinCandidate } from "./wellness/useWellnessCheckinCandidate";
 import {
   formatDate,
   formatMoney,
@@ -47,6 +50,24 @@ export default function TodayPage() {
     loading,
     errorMessage,
   } = useParticipantFinancial();
+
+  const {
+    todayCheckin,
+    loading: wellnessLoading,
+    errorMessage: wellnessErrorMessage,
+  } = useWellnessCheckinCandidate();
+
+  const {
+    activeGoals,
+    loading: goalsLoading,
+    errorMessage: goalsErrorMessage,
+  } = useParticipantGoals();
+
+  const {
+    requests,
+    loading: supportLoading,
+    errorMessage: supportErrorMessage,
+  } = useParticipantSupport();
 
   const activeBudgetPeriod =
     budgetPeriods.find((period) => period.status === "active") ??
