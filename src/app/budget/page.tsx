@@ -5,6 +5,7 @@ import AuthGate from "../AuthGate";
 import ThriveSidebar from "../ThriveSidebar";
 import {
   BudgetLine,
+  BudgetPeriod,
   FinancialTransaction,
   formatDate,
   formatMoney,
@@ -321,12 +322,14 @@ function TransactionContextPanel({
 function TransactionAllocationPanel({
   transaction,
   budgetLines,
+  budgetPeriods,
   allocations,
   working,
   onAllocate,
 }: {
   transaction: FinancialTransaction;
   budgetLines: BudgetLine[];
+  budgetPeriods: BudgetPeriod[];
   allocations: ParticipantTransactionAllocation[];
   working: boolean;
   onAllocate: (
@@ -347,7 +350,18 @@ function TransactionAllocationPanel({
   );
   const transactionAmount = Math.abs(toNumber(transaction.amount));
   const unassignedAmount = Math.max(transactionAmount - allocatedTotal, 0);
- async function handleAllocate(event: FormEvent<HTMLFormElement>) {
+
+  function allocationPeriodIsActive(
+  allocation: ParticipantTransactionAllocation,
+  ) {
+  return budgetLines.some(
+    (line) =>
+      line.budget_period_id === allocation.budget_period_id &&
+      line.is_active,
+  );
+}
+
+  async function handleAllocate(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
   setAllocationNotice("");
 
@@ -384,131 +398,160 @@ function TransactionAllocationPanel({
   }
 }
 
-  return (
-    <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-600">
-        Budget allocation
-      </p>
-
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        Choose how this recorded transaction relates to your Budget. This does
-        not change the bank record.
-      </p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl bg-white p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-            Assigned
-          </p>
-          <p className="mt-1 font-black">
-            {formatMoney(allocatedTotal)}
-          </p>
-        </div>
-
-        {allocations.filter((allocation) => allocation.status === "active").length >
-0 ? (
-  <div className="mt-4">
-    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-      Applied to
+return (
+  <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <p className="text-xs font-black uppercase tracking-wide text-slate-600">
+      Budget allocation
     </p>
 
-    <div className="mt-2 space-y-2">
-      {allocations
-        .filter((allocation) => allocation.status === "active")
-        .map((allocation) => (
-          <div
-            key={allocation.allocation_id}
-            className="flex items-center justify-between rounded-xl bg-white p-3"
-          >
-            <span className="text-sm font-semibold text-slate-700">
-              {allocation.budget_category_name}
-            </span>
+    <p className="mt-2 text-sm leading-6 text-slate-600">
+      Choose how this recorded transaction relates to your Budget. This does
+      not change the bank record.
+    </p>
 
-            <span className="text-sm font-black text-slate-900">
-              {formatMoney(allocation.allocated_amount)}
-            </span>
-          </div>
-        ))}
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="rounded-xl bg-white p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Assigned
+        </p>
+
+        <p className="mt-1 font-black">
+          {formatMoney(allocatedTotal)}
+        </p>
+      </div>
+
+      <div className="rounded-xl bg-white p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Unassigned
+        </p>
+
+        <p className="mt-1 font-black">
+          {formatMoney(unassignedAmount)}
+        </p>
+      </div>
     </div>
-  </div>
-) : null}
 
-        <div className="rounded-xl bg-white p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-            Unassigned
-          </p>
-          <p className="mt-1 font-black">
-            {formatMoney(unassignedAmount)}
-          </p>
+    {allocations.filter(
+      (allocation) =>
+        allocation.status === "active" &&
+        allocationPeriodIsActive(allocation),
+    ).length > 0 ? (
+      <div className="mt-4">
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+          Applied to
+        </p>
+
+        <div className="mt-2 space-y-2">
+          {allocations
+            .filter(
+              (allocation) =>
+                allocation.status === "active" &&
+                allocationPeriodIsActive(allocation),
+            )
+            .map((allocation) => (
+              <div
+  key={allocation.allocation_id}
+  className="rounded-xl bg-white p-3"
+>
+  <div className="flex items-center justify-between gap-3">
+    <span className="text-sm font-semibold text-slate-700">
+      {allocation.budget_category_name}
+    </span>
+
+    <span className="text-sm font-black text-slate-900">
+      {formatMoney(allocation.allocated_amount)}
+    </span>
+  </div>
+
+  <p className="mt-1 text-xs text-slate-500">
+    Budget period:{" "}
+    {formatDate(
+      budgetPeriods.find(
+        (period) => period.id === allocation.budget_period_id,
+      )?.period_start,
+    )}{" "}
+    to{" "}
+    {formatDate(
+      budgetPeriods.find(
+        (period) => period.id === allocation.budget_period_id,
+      )?.period_end,
+    )}
+  </p>
+</div>
+            ))}
         </div>
       </div>
-  {unassignedAmount > 0 && budgetLines.length > 0 ? (
-  <form onSubmit={handleAllocate} className="mt-4">
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className="block text-sm font-black">
-        Budget category
-        <select
-          value={selectedBudgetLineId}
-          onChange={(event) => {
-            setSelectedBudgetLineId(event.target.value);
-            setAllocationNotice("");
-          }}
-          disabled={working}
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
-        >
-          <option value="">Choose a category</option>
-
-          {budgetLines.map((line) => (
-            <option key={line.id} value={line.id}>
-              {line.category_name}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="block text-sm font-black">
-        Amount to assign
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          max={unassignedAmount}
-          value={allocationAmount}
-          onChange={(event) => {
-            setAllocationAmount(event.target.value);
-            setAllocationNotice("");
-          }}
-          disabled={working}
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
-        />
-      </label>
-    </div>
-
-    <button
-      type="submit"
-      disabled={working}
-      className="mt-4 rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
-    >
-      {working ? "Applying..." : "Apply to Budget"}
-    </button>
-
-    {allocationNotice ? (
-      <p
-        role={allocationNotice.includes("saved") ? "status" : "alert"}
-        aria-live="polite"
-        className="mt-3 text-sm font-semibold text-slate-700"
-      >
-        {allocationNotice}
-      </p>
     ) : null}
-  </form>
-) : null}
 
-      <p className="mt-4 text-sm text-slate-500">
-        {budgetLines.length} active Budget categories available.
-      </p>
-    </section>
-  );
+    {unassignedAmount > 0 && budgetLines.length > 0 ? (
+      <form onSubmit={handleAllocate} className="mt-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-black">
+            Budget category
+
+            <select
+              value={selectedBudgetLineId}
+              onChange={(event) => {
+                setSelectedBudgetLineId(event.target.value);
+                setAllocationNotice("");
+              }}
+              disabled={working}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+            >
+              <option value="">Choose a category</option>
+
+              {budgetLines.map((line) => (
+                <option key={line.id} value={line.id}>
+                  {line.category_name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block text-sm font-black">
+            Amount to assign
+
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              max={unassignedAmount}
+              value={allocationAmount}
+              onChange={(event) => {
+                setAllocationAmount(event.target.value);
+                setAllocationNotice("");
+              }}
+              disabled={working}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+            />
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={working}
+          className="mt-4 rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
+        >
+          {working ? "Applying..." : "Apply to Budget"}
+        </button>
+
+        {allocationNotice ? (
+          <p
+            role={allocationNotice.includes("saved") ? "status" : "alert"}
+            aria-live="polite"
+            className="mt-3 text-sm font-semibold text-slate-700"
+          >
+            {allocationNotice}
+          </p>
+        ) : null}
+      </form>
+    ) : null}
+
+    <p className="mt-4 text-sm text-slate-500">
+      {budgetLines.length} active Budget categories available.
+    </p>
+  </section>
+);
 }
 
 export default function BudgetPage() {
@@ -1227,11 +1270,12 @@ const remainingTotal = currentLines.reduce(
                             onUpdate={updateDraft}
                           />
                           <TransactionAllocationPanel
-                           transaction={transaction}
-                           budgetLines={getEligibleAllocationLines(transaction)}
-                           allocations={transactionAllocations}
-                           working={allocationWorkingTransactionId === transaction.id}
-                           onAllocate={allocateTransactionAndRefresh}
+                            transaction={transaction}
+                            budgetLines={getEligibleAllocationLines(transaction)}
+                            budgetPeriods={budgetPeriods}
+                            allocations={transactionAllocations}
+                            working={allocationWorkingTransactionId === transaction.id}
+                            onAllocate={allocateTransaction}
                           />
                         </article>
                       );
