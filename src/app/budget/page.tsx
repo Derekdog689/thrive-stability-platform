@@ -4,6 +4,8 @@ import { FormEvent, useMemo, useState } from "react";
 import AuthGate from "../AuthGate";
 import ThriveSidebar from "../ThriveSidebar";
 import {
+  BudgetLine,
+  FinancialTransaction,
   formatDate,
   formatMoney,
   toNumber,
@@ -18,6 +20,10 @@ import {
 import ActiveBudgetEditor from "./ActiveBudgetEditor";
 import BudgetDraftCategoryBuilder from "./BudgetDraftCategoryBuilder";
 import { useParticipantBudgetBuilder } from "./useParticipantBudgetBuilder";
+import {
+  ParticipantTransactionAllocation,
+  useParticipantTransactionAllocations,
+} from "../transaction-allocations/useParticipantTransactionAllocations";
 
 const explanationCategories: Array<{
   value: TransactionExplanationCategory;
@@ -312,6 +318,199 @@ function TransactionContextPanel({
   );
 }
 
+function TransactionAllocationPanel({
+  transaction,
+  budgetLines,
+  allocations,
+  working,
+  onAllocate,
+}: {
+  transaction: FinancialTransaction;
+  budgetLines: BudgetLine[];
+  allocations: ParticipantTransactionAllocation[];
+  working: boolean;
+  onAllocate: (
+    stagedTransactionId: string,
+    budgetLineId: string,
+    allocatedAmount: number,
+  ) => Promise<{ ok: boolean; message: string }>;
+}) {
+  const [selectedBudgetLineId, setSelectedBudgetLineId] = useState("");
+  const [allocationAmount, setAllocationAmount] = useState("");
+  const [allocationNotice, setAllocationNotice] = useState("");
+
+  const allocatedTotal = allocations
+  .filter((allocation) => allocation.status === "active")
+  .reduce(
+    (sum, allocation) => sum + toNumber(allocation.allocated_amount),
+    0,
+  );
+  const transactionAmount = Math.abs(toNumber(transaction.amount));
+  const unassignedAmount = Math.max(transactionAmount - allocatedTotal, 0);
+ async function handleAllocate(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  setAllocationNotice("");
+
+  const amount = toNumber(allocationAmount);
+
+  if (!selectedBudgetLineId) {
+    setAllocationNotice("Choose a Budget category.");
+    return;
+  }
+
+  if (amount <= 0) {
+    setAllocationNotice("Enter an amount greater than zero.");
+    return;
+  }
+
+  if (amount > unassignedAmount) {
+    setAllocationNotice(
+      "The amount cannot be greater than the unassigned transaction amount.",
+    );
+    return;
+  }
+
+  const result = await onAllocate(
+    transaction.id,
+    selectedBudgetLineId,
+    amount,
+  );
+
+  setAllocationNotice(result.message);
+
+  if (result.ok) {
+    setSelectedBudgetLineId("");
+    setAllocationAmount("");
+  }
+}
+
+  return (
+    <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-600">
+        Budget allocation
+      </p>
+
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        Choose how this recorded transaction relates to your Budget. This does
+        not change the bank record.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl bg-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+            Assigned
+          </p>
+          <p className="mt-1 font-black">
+            {formatMoney(allocatedTotal)}
+          </p>
+        </div>
+
+        {allocations.filter((allocation) => allocation.status === "active").length >
+0 ? (
+  <div className="mt-4">
+    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+      Applied to
+    </p>
+
+    <div className="mt-2 space-y-2">
+      {allocations
+        .filter((allocation) => allocation.status === "active")
+        .map((allocation) => (
+          <div
+            key={allocation.allocation_id}
+            className="flex items-center justify-between rounded-xl bg-white p-3"
+          >
+            <span className="text-sm font-semibold text-slate-700">
+              {allocation.budget_category_name}
+            </span>
+
+            <span className="text-sm font-black text-slate-900">
+              {formatMoney(allocation.allocated_amount)}
+            </span>
+          </div>
+        ))}
+    </div>
+  </div>
+) : null}
+
+        <div className="rounded-xl bg-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+            Unassigned
+          </p>
+          <p className="mt-1 font-black">
+            {formatMoney(unassignedAmount)}
+          </p>
+        </div>
+      </div>
+  {unassignedAmount > 0 && budgetLines.length > 0 ? (
+  <form onSubmit={handleAllocate} className="mt-4">
+    <div className="grid gap-3 sm:grid-cols-2">
+      <label className="block text-sm font-black">
+        Budget category
+        <select
+          value={selectedBudgetLineId}
+          onChange={(event) => {
+            setSelectedBudgetLineId(event.target.value);
+            setAllocationNotice("");
+          }}
+          disabled={working}
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+        >
+          <option value="">Choose a category</option>
+
+          {budgetLines.map((line) => (
+            <option key={line.id} value={line.id}>
+              {line.category_name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="block text-sm font-black">
+        Amount to assign
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          max={unassignedAmount}
+          value={allocationAmount}
+          onChange={(event) => {
+            setAllocationAmount(event.target.value);
+            setAllocationNotice("");
+          }}
+          disabled={working}
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+        />
+      </label>
+    </div>
+
+    <button
+      type="submit"
+      disabled={working}
+      className="mt-4 rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
+    >
+      {working ? "Applying..." : "Apply to Budget"}
+    </button>
+
+    {allocationNotice ? (
+      <p
+        role={allocationNotice.includes("saved") ? "status" : "alert"}
+        aria-live="polite"
+        className="mt-3 text-sm font-semibold text-slate-700"
+      >
+        {allocationNotice}
+      </p>
+    ) : null}
+  </form>
+) : null}
+
+      <p className="mt-4 text-sm text-slate-500">
+        {budgetLines.length} active Budget categories available.
+      </p>
+    </section>
+  );
+}
+
 export default function BudgetPage() {
   const {
     activeProgramId,
@@ -335,6 +534,32 @@ export default function BudgetPage() {
     createDraft,
     updateDraft,
   } = useParticipantTransactionExplanations();
+
+  const {
+  allocationsByTransactionId,
+  loading: allocationsLoading,
+  errorMessage: allocationErrorMessage,
+  workingTransactionId: allocationWorkingTransactionId,
+  allocateTransaction,
+} = useParticipantTransactionAllocations();
+
+async function allocateTransactionAndRefresh(
+  stagedTransactionId: string,
+  budgetLineId: string,
+  allocatedAmount: number,
+) {
+  const result = await allocateTransaction(
+    stagedTransactionId,
+    budgetLineId,
+    allocatedAmount,
+  );
+
+  if (result.ok) {
+    await refresh();
+  }
+
+  return result;
+}
 
   const {
     working: budgetWorking,
@@ -362,6 +587,26 @@ export default function BudgetPage() {
   const currentLines = currentPeriod
     ? budgetLines.filter((line) => line.budget_period_id === currentPeriod.id)
     : [];
+
+  function getEligibleAllocationLines(transaction: FinancialTransaction) {
+  const matchingPeriod =
+    budgetPeriods.find(
+      (period) =>
+        period.status === "active" &&
+        transaction.posted_date >= period.period_start &&
+        transaction.posted_date <= period.period_end,
+    ) ?? null;
+
+  if (!matchingPeriod) {
+    return [];
+  }
+
+ return budgetLines.filter(
+  (line) =>
+    line.budget_period_id === matchingPeriod.id &&
+    line.is_active,
+);
+}
 
     const latestBalanceTransaction = transactions.reduce(
   (latest, transaction) => {
@@ -946,6 +1191,8 @@ const remainingTotal = currentLines.reduce(
                       const explanation = explanationByTransactionId.get(
                         transaction.id,
                       );
+                    const transactionAllocations =
+                     allocationsByTransactionId.get(transaction.id) ?? [];
 
                       return (
                         <article
@@ -978,6 +1225,13 @@ const remainingTotal = currentLines.reduce(
                             working={workingTransactionId === transaction.id}
                             onCreate={createDraft}
                             onUpdate={updateDraft}
+                          />
+                          <TransactionAllocationPanel
+                           transaction={transaction}
+                           budgetLines={getEligibleAllocationLines(transaction)}
+                           allocations={transactionAllocations}
+                           working={allocationWorkingTransactionId === transaction.id}
+                           onAllocate={allocateTransactionAndRefresh}
                           />
                         </article>
                       );
