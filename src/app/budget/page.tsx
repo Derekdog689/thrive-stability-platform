@@ -315,6 +315,7 @@ function TransactionContextPanel({
 export default function BudgetPage() {
   const {
     activeProgramId,
+    sources,
     budgetPeriods,
     budgetLines,
     transactions,
@@ -361,6 +362,30 @@ export default function BudgetPage() {
   const currentLines = currentPeriod
     ? budgetLines.filter((line) => line.budget_period_id === currentPeriod.id)
     : [];
+
+    const latestBalanceTransaction = transactions.reduce(
+  (latest, transaction) => {
+    if (transaction.daily_posted_balance == null) {
+      return latest;
+    }
+
+    if (!latest) {
+      return transaction;
+    }
+
+    return transaction.posted_date > latest.posted_date
+      ? transaction
+      : latest;
+  },
+  null as (typeof transactions)[number] | null,
+);
+
+const latestBalanceSource = latestBalanceTransaction
+  ? sources.find(
+      (source) =>
+        source.id === latestBalanceTransaction.financial_source_id,
+    ) ?? null
+  : null;
 
   async function handleCreateBudgetDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -832,6 +857,60 @@ const remainingTotal = currentLines.reduce(
                     </div>
                   )}
                 </section>
+
+                {latestBalanceTransaction ? (
+  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+      Account snapshot
+    </p>
+
+    <h2 className="mt-2 text-2xl font-black">
+      Latest observed posted balance
+    </h2>
+
+    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+      This is the latest posted-balance evidence available from the connected
+      financial source. It is not an available-balance estimate.
+    </p>
+
+    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <div className="rounded-2xl bg-slate-50 p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Connected source
+        </p>
+        <p className="mt-2 font-black">
+          {latestBalanceSource?.source_name ?? "Connected account"}
+        </p>
+        {latestBalanceSource?.account_mask ? (
+          <p className="mt-1 text-sm text-slate-500">
+            Account ending {latestBalanceSource.account_mask}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="rounded-2xl bg-slate-50 p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Latest posted balance
+        </p>
+        <p className="mt-2 text-2xl font-black">
+          {latestBalanceTransaction.daily_posted_balance != null
+          ? formatMoney(latestBalanceTransaction.daily_posted_balance)
+          : "Not available"}
+        </p>
+      </div>
+
+      <div className="rounded-2xl bg-slate-50 p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Observed
+        </p>
+        <p className="mt-2 font-black">
+          {formatDate(latestBalanceTransaction.posted_date)}
+        </p>
+      </div>
+    </div>
+  </section>
+) : null}
+
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
