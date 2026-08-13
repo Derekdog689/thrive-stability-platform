@@ -350,6 +350,13 @@ function TransactionAllocationPanel({
   );
   const transactionAmount = Math.abs(toNumber(transaction.amount));
   const unassignedAmount = Math.max(transactionAmount - allocatedTotal, 0);
+  const transactionBudgetPeriod =
+    budgetPeriods.find(
+      (period) =>
+        period.status === "active" &&
+        transaction.posted_date >= period.period_start &&
+        transaction.posted_date <= period.period_end,
+    ) ?? null;
 
   function allocationPeriodIsActive(
   allocation: ParticipantTransactionAllocation,
@@ -548,7 +555,11 @@ return (
     ) : null}
 
     <p className="mt-4 text-sm text-slate-500">
-      {budgetLines.length} active Budget categories available.
+      {transactionBudgetPeriod
+        ? `${budgetLines.length} Budget categories available for ${formatDate(
+            transactionBudgetPeriod.period_start,
+          )} to ${formatDate(transactionBudgetPeriod.period_end)}.`
+        : "No active Budget categories are available for this transaction period."}
     </p>
   </section>
 );
@@ -1215,6 +1226,26 @@ const remainingTotal = currentLines.reduce(
                         )}.`
                       : "."}
                   </p>
+
+                  {latestBatch &&
+                  currentPeriod &&
+                  (latestBatch.statement_period_start !== currentPeriod.period_start ||
+                    latestBatch.statement_period_end !== currentPeriod.period_end) ? (
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+                      <p className="text-xs font-black uppercase tracking-wide">
+                        Historical account activity
+                      </p>
+                      <p className="mt-2 text-sm leading-6">
+                        These transactions come from {formatDate(
+                          latestBatch.statement_period_start,
+                        )} to {formatDate(latestBatch.statement_period_end)}. They belong
+                        to a different Budget period and do not change the {formatDate(
+                          currentPeriod.period_start,
+                        )} to {formatDate(currentPeriod.period_end)} plan shown above.
+                      </p>
+                    </div>
+                  ) : null}
+
                   <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
                     A displayed transaction is account evidence. It does not establish intent,
                     responsibility, relapse, incapacity, or misuse.
@@ -1275,7 +1306,7 @@ const remainingTotal = currentLines.reduce(
                             budgetPeriods={budgetPeriods}
                             allocations={transactionAllocations}
                             working={allocationWorkingTransactionId === transaction.id}
-                            onAllocate={allocateTransaction}
+                            onAllocate={allocateTransactionAndRefresh}
                           />
                         </article>
                       );
