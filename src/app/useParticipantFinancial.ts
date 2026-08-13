@@ -47,6 +47,7 @@ export type BudgetPeriod = {
   status: string;
   expected_income: number | string;
   notes: string | null;
+  completed_at: string | null;
 };
 
 export type BudgetLine = {
@@ -118,6 +119,64 @@ function localDateKey() {
   const day = String(now.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+export type BudgetLifecycleView =
+  | "current"
+  | "recent_history"
+  | "historical";
+
+export function getBudgetLifecycleView(
+  period: BudgetPeriod,
+): BudgetLifecycleView {
+ if (
+  period.status === "draft" ||
+  period.status === "active"
+) {
+  return "current";
+}
+
+  if (
+    period.status === "completed" &&
+    period.completed_at
+  ) {
+    const completedAt = new Date(period.completed_at);
+
+    if (!Number.isNaN(completedAt.getTime())) {
+      const correctionClosesAt = new Date(
+        completedAt.getTime() +
+          45 * 24 * 60 * 60 * 1000,
+      );
+
+      if (new Date() <= correctionClosesAt) {
+        return "recent_history";
+      }
+    }
+  }
+
+  return "historical";
+}
+
+export function getBudgetCorrectionClosesAt(
+  period: BudgetPeriod,
+): Date | null {
+  if (
+    period.status !== "completed" ||
+    !period.completed_at
+  ) {
+    return null;
+  }
+
+  const completedAt = new Date(period.completed_at);
+
+  if (Number.isNaN(completedAt.getTime())) {
+    return null;
+  }
+
+  return new Date(
+    completedAt.getTime() +
+      45 * 24 * 60 * 60 * 1000,
+  );
 }
 
 function preferredActiveBudgetPeriod(
@@ -254,7 +313,7 @@ export function useParticipantFinancial() {
       supabase
         .from("participant_budget_periods")
         .select(
-          "id, period_start, period_end, status, expected_income, notes",
+          "id, period_start, period_end, status, expected_income, notes, completed_at",
         )
         .order("period_start", {
           ascending: false,

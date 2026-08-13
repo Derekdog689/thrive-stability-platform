@@ -9,6 +9,8 @@ import {
   FinancialTransaction,
   formatDate,
   formatMoney,
+  getBudgetCorrectionClosesAt,
+  getBudgetLifecycleView,
   toNumber,
   useParticipantFinancial,
 } from "../useParticipantFinancial";
@@ -638,6 +640,14 @@ async function allocateTransactionAndRefresh(
 
   const currentPeriod = draftPeriod ?? activePeriod;
 
+  const recentHistoryPeriods = budgetPeriods.filter(
+  (period) => getBudgetLifecycleView(period) === "recent_history",
+);
+
+const currentLifecycle = currentPeriod
+  ? getBudgetLifecycleView(currentPeriod)
+  : null;
+
   const currentLines = currentPeriod
     ? budgetLines.filter((line) => line.budget_period_id === currentPeriod.id)
     : [];
@@ -980,10 +990,14 @@ const remainingTotal = currentLines.reduce(
                     </div>
 
                     {currentPeriod ? (
-                      <span className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-black capitalize text-emerald-900">
-                        {currentPeriod.status}
-                      </span>
-                    ) : null}
+  <span className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-900">
+    {currentLifecycle === "current"
+      ? "Current Budget"
+      : currentLifecycle === "recent_history"
+        ? "Recent History"
+        : "Historical"}
+  </span>
+) : null}
                   </div>
 
                   <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1049,6 +1063,69 @@ const remainingTotal = currentLines.reduce(
                     </p>
                   </div>
                 </section>
+                {recentHistoryPeriods.length > 0 ? (
+  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+    <div>
+      <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+        Recent Budget history
+      </p>
+
+      <h2 className="mt-2 text-2xl font-black">
+        Recently completed periods
+      </h2>
+
+      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+        These Budget periods have ended, but financial allocation
+        corrections remain available for a limited time. The original
+        bank activity remains unchanged.
+      </p>
+    </div>
+
+    <div className="mt-6 grid gap-4">
+      {recentHistoryPeriods.map((period) => {
+        const correctionClosesAt =
+          getBudgetCorrectionClosesAt(period);
+
+        return (
+          <article
+            key={period.id}
+            className="rounded-2xl border border-amber-200 bg-amber-50 p-5"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-black text-slate-950">
+                  {formatDate(period.period_start)} to{" "}
+                  {formatDate(period.period_end)}
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  This Budget period is complete and is now part of your
+                  recent history.
+                </p>
+              </div>
+
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-amber-900">
+                Correction window open
+              </span>
+            </div>
+
+            {correctionClosesAt ? (
+              <p className="mt-4 text-sm font-bold text-amber-950">
+                Financial allocation corrections are available until{" "}
+                {correctionClosesAt.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                .
+              </p>
+            ) : null}
+          </article>
+        );
+      })}
+    </div>
+  </section>
+) : null}
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
