@@ -112,7 +112,7 @@ export default function BudgetDraftCategoryBuilder({
   const actualTotal = useMemo(
     () =>
       currentLines.reduce(
-        (sum, line) => sum + toNumber(line.actual_amount),
+        (sum, line) => sum + toNumber(line.derived_actual_amount),
         0,
       ),
     [currentLines],
@@ -121,7 +121,7 @@ export default function BudgetDraftCategoryBuilder({
   const remainingTotal = useMemo(
     () =>
       currentLines.reduce(
-        (sum, line) => sum + toNumber(line.remaining_amount),
+        (sum, line) => sum + toNumber(line.derived_remaining_amount),
         0,
       ),
     [currentLines],
@@ -487,8 +487,8 @@ export default function BudgetDraftCategoryBuilder({
           <div className="mt-3 grid gap-3">
             {currentLines.map((line) => {
               const planned = toNumber(line.planned_amount);
-              const actual = toNumber(line.actual_amount);
-              const remaining = toNumber(line.remaining_amount);
+              const actual = toNumber(line.derived_actual_amount);
+              const remaining = toNumber(line.derived_remaining_amount);
               const abovePlanAmount = Math.max(actual - planned, 0);
               const isEditing = editingLineId === line.id;
 

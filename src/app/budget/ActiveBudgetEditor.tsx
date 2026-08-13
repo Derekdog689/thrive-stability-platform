@@ -572,16 +572,16 @@ export default function ActiveBudgetEditor({
                   <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="font-bold text-slate-500">Recorded</p>
-                      <p className="mt-1 font-black">{formatMoney(line.actual_amount)}</p>
+                      <p className="mt-1 font-black">{formatMoney(line.derived_actual_amount)}</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="font-bold text-slate-500">Remaining</p>
-                      <p className="mt-1 font-black">{formatMoney(line.remaining_amount)}</p>
+                      <p className="mt-1 font-black">{formatMoney(line.derived_remaining_amount)}</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="font-bold text-slate-500">Above plan by</p>
                       <p className="mt-1 font-black">
-                        {formatMoney(Math.max(toNumber(line.actual_amount) - toNumber(line.planned_amount), 0))}
+                        {formatMoney(Math.max(toNumber(line.derived_actual_amount) - toNumber(line.planned_amount), 0))}
                       </p>
                     </div>
                   </div>
@@ -658,16 +658,19 @@ export default function ActiveBudgetEditor({
                     </label>
                   </div>
 
-                  <div className="grid gap-3 text-sm sm:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="font-bold text-slate-500">Recorded activity</p>
-                      <p className="mt-1 font-black">{formatMoney(line.actual_amount)}</p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="font-bold text-slate-500">Current remaining</p>
-                      <p className="mt-1 font-black">{formatMoney(line.remaining_amount)}</p>
-                    </div>
-                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-4">
+  <p className="font-bold text-slate-500">Recorded activity</p>
+  <p className="mt-1 font-black">
+    {formatMoney(line.derived_actual_amount)}
+  </p>
+</div>
+
+<div className="rounded-2xl bg-slate-50 p-4">
+  <p className="font-bold text-slate-500">Current remaining</p>
+  <p className="mt-1 font-black">
+    {formatMoney(line.derived_remaining_amount)}
+  </p>
+</div>
 
                   {errorMessage ? (
                     <p role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-950">

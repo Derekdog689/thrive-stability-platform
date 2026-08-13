@@ -37,12 +37,12 @@ const plannedTotal = activeBudgetLines.reduce(
 );
 
 const recordedBudgetTotal = activeBudgetLines.reduce(
-  (sum, line) => sum + toNumber(line.actual_amount),
+  (sum, line) => sum + toNumber(line.derived_actual_amount),
   0,
 );
 
 const remainingBudgetTotal = activeBudgetLines.reduce(
-  (sum, line) => sum + toNumber(line.remaining_amount),
+  (sum, line) => sum + toNumber(line.derived_remaining_amount),
   0,
 );
 

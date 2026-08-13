@@ -419,15 +419,15 @@ export default function BudgetPage() {
     0,
   );
 
-  const actualTotal = currentLines.reduce(
-    (sum, line) => sum + toNumber(line.actual_amount),
-    0,
-  );
+const actualTotal = currentLines.reduce(
+  (sum, line) => sum + toNumber(line.derived_actual_amount),
+  0,
+);
 
-  const remainingTotal = currentLines.reduce(
-    (sum, line) => sum + toNumber(line.remaining_amount),
-    0,
-  );
+const remainingTotal = currentLines.reduce(
+  (sum, line) => sum + toNumber(line.derived_remaining_amount),
+  0,
+);
 
   const overallStatus = getBudgetStatus(
     plannedTotal,
@@ -742,8 +742,8 @@ export default function BudgetPage() {
                     <div className="mt-6 grid gap-4">
                       {currentLines.map((line) => {
                         const planned = toNumber(line.planned_amount);
-                        const actual = toNumber(line.actual_amount);
-                        const remaining = toNumber(line.remaining_amount);
+                        const actual = toNumber(line.derived_actual_amount);
+                        const remaining = toNumber(line.derived_remaining_amount);
                         const status = getBudgetStatus(
                           planned,
                           actual,
@@ -779,7 +779,7 @@ export default function BudgetPage() {
                               </div>
 
                               <p className="text-lg font-black">
-                                {formatMoney(line.remaining_amount)} remaining
+                                {formatMoney(line.derived_remaining_amount)} remaining
                               </p>
                             </div>
 
@@ -807,13 +807,13 @@ export default function BudgetPage() {
                                   Recorded activity
                                 </p>
                                 <p className="mt-1 font-black">
-                                  {formatMoney(line.actual_amount)}
+                                  {formatMoney(line.derived_actual_amount)}
                                 </p>
                               </div>
                               <div className="rounded-2xl bg-slate-50 p-4">
                                 <p className="font-bold text-slate-500">Remaining</p>
                                 <p className="mt-1 font-black">
-                                  {formatMoney(line.remaining_amount)}
+                                  {formatMoney(line.derived_remaining_amount)}
                                 </p>
                               </div>
                             </div>

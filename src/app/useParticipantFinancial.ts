@@ -35,6 +35,7 @@ export type FinancialTransaction = {
   category_name: string | null;
   subcategory_name: string | null;
   amount: number | string;
+  daily_posted_balance: number | string | null;
   transaction_lifecycle: string;
   parse_status: string;
 };
@@ -54,8 +55,8 @@ export type BudgetLine = {
   category_name: string;
   category_type: string;
   planned_amount: number | string;
-  actual_amount: number | string;
-  remaining_amount: number | string;
+  derived_actual_amount: number | string;
+  derived_remaining_amount: number | string;
   sort_order: number;
   is_active: boolean;
 };
@@ -247,7 +248,7 @@ export function useParticipantFinancial() {
       ),
 
       supabase.rpc(
-        "get_my_financial_transactions_v1",
+        "get_my_financial_transactions_v2",
       ),
 
       supabase
@@ -330,33 +331,33 @@ export function useParticipantFinancial() {
         (period) => period.id,
       );
 
-      const lineResult = await supabase
-        .from("participant_budget_lines")
-        .select(
-          "id, budget_period_id, category_name, category_type, planned_amount, actual_amount, remaining_amount, sort_order, is_active",
-        )
-        .in(
-          "budget_period_id",
-          periodIds,
-        )
-        .eq("is_active", true)
-        .order("sort_order", {
-          ascending: true,
-        });
+    const lineResults = await Promise.all(
+  periodIds.map((budgetPeriodId) =>
+    supabase.rpc("get_my_budget_lines_v2", {
+      p_budget_period_id: budgetPeriodId,
+    }),
+  ),
+);
 
-      if (lineResult.error) {
-        setErrorMessage(
-          lineResult.error.message,
-        );
+     const lineErrors = lineResults
+  .map((result) => result.error)
+  .filter((error) => error);
 
-        setLoading(false);
-        return;
-      }
+if (lineErrors.length > 0) {
+  setErrorMessage(
+    lineErrors[0]?.message ??
+      "Budget lines could not be loaded.",
+  );
 
-      setBudgetLines(
-        (lineResult.data ??
-          []) as BudgetLine[],
-      );
+  setLoading(false);
+  return;
+}
+
+setBudgetLines(
+  lineResults.flatMap(
+    (result) => result.data ?? [],
+  ) as BudgetLine[],
+);
     } else {
       setBudgetLines([]);
     }
