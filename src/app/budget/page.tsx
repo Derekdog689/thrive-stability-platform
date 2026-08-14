@@ -20,13 +20,13 @@ import {
   TransactionExplanationDraft,
   useParticipantTransactionExplanations,
 } from "../transaction-explanations/useParticipantTransactionExplanations";
-import ActiveBudgetEditor from "./ActiveBudgetEditor";
-import BudgetDraftCategoryBuilder from "./BudgetDraftCategoryBuilder";
-import { useParticipantBudgetBuilder } from "./useParticipantBudgetBuilder";
 import {
   ParticipantTransactionAllocation,
   useParticipantTransactionAllocations,
 } from "../transaction-allocations/useParticipantTransactionAllocations";
+import ActiveBudgetEditor from "./ActiveBudgetEditor";
+import BudgetDraftCategoryBuilder from "./BudgetDraftCategoryBuilder";
+import { useParticipantBudgetBuilder } from "./useParticipantBudgetBuilder";
 
 const explanationCategories: Array<{
   value: TransactionExplanationCategory;
@@ -54,8 +54,8 @@ const emptyExplanationDraft: TransactionExplanationDraft = {
 function getBudgetStatus(planned: number, actual: number, remaining: number) {
   if (planned <= 0 && actual <= 0) {
     return {
-      label: "No activity yet",
-      detail: "No planned or recorded amount is connected for this category.",
+      label: "Plan available",
+      detail: "Nothing has been recorded against this part of the plan yet.",
     };
   }
 
@@ -70,16 +70,14 @@ function getBudgetStatus(planned: number, actual: number, remaining: number) {
   if (planned > 0 && remaining === 0) {
     return {
       label: "Plan fully used",
-      detail:
-        "The currently planned amount has been fully matched by recorded activity.",
+      detail: "The amount planned for this category has been fully used.",
     };
   }
 
   if (planned > 0 && actual / planned >= 0.8) {
     return {
       label: "Most of the plan is used",
-      detail:
-        "A smaller portion of the current planned amount remains available.",
+      detail: "A smaller portion of this planned amount remains.",
     };
   }
 
@@ -92,8 +90,7 @@ function getBudgetStatus(planned: number, actual: number, remaining: number) {
 
   return {
     label: "Plan available",
-    detail:
-      "The planned amount is available and no recorded activity is connected yet.",
+    detail: "This planned amount is still available.",
   };
 }
 
@@ -127,7 +124,6 @@ function TransactionContextPanel({
 }) {
   const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState("");
-
   const [draft, setDraft] = useState<TransactionExplanationDraft>({
     explanationCategory:
       explanation?.explanation_category ??
@@ -232,7 +228,6 @@ function TransactionContextPanel({
       <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
         Your context
       </p>
-
       <p className="mt-2 text-sm leading-6 text-slate-700">
         Add your own context to this account record. This does not change the
         imported transaction.
@@ -289,7 +284,6 @@ function TransactionContextPanel({
               ? "Save changes"
               : "Save context"}
         </button>
-
         <button
           type="button"
           disabled={working}
@@ -321,17 +315,17 @@ function TransactionContextPanel({
   );
 }
 
-function TransactionAllocationPanel({
+function BudgetRelationshipPanel({
   transaction,
+  activePeriod,
   budgetLines,
-  budgetPeriods,
   allocations,
   working,
   onAllocate,
 }: {
   transaction: FinancialTransaction;
+  activePeriod: BudgetPeriod | null;
   budgetLines: BudgetLine[];
-  budgetPeriods: BudgetPeriod[];
   allocations: ParticipantTransactionAllocation[];
   working: boolean;
   onAllocate: (
@@ -342,219 +336,412 @@ function TransactionAllocationPanel({
 }) {
   const [selectedBudgetLineId, setSelectedBudgetLineId] = useState("");
   const [allocationAmount, setAllocationAmount] = useState("");
-  const [allocationNotice, setAllocationNotice] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const allocatedTotal = allocations
-  .filter((allocation) => allocation.status === "active")
-  .reduce(
+  const activeAllocations = allocations.filter(
+    (allocation) => allocation.status === "active",
+  );
+
+  const assignedTotal = activeAllocations.reduce(
     (sum, allocation) => sum + toNumber(allocation.allocated_amount),
     0,
   );
+
   const transactionAmount = Math.abs(toNumber(transaction.amount));
-  const unassignedAmount = Math.max(transactionAmount - allocatedTotal, 0);
-  const transactionBudgetPeriod =
-  budgetPeriods.find(
-    (period) =>
-      (period.status === "active" ||
-        getBudgetLifecycleView(period) === "recent_history") &&
-      transaction.posted_date >= period.period_start &&
-      transaction.posted_date <= period.period_end,
-  ) ?? null;
+  const unassignedAmount = Math.max(transactionAmount - assignedTotal, 0);
 
-
-  async function handleAllocate(event: FormEvent<HTMLFormElement>) {
-  event.preventDefault();
-  setAllocationNotice("");
-
-  const amount = toNumber(allocationAmount);
-
-  if (!selectedBudgetLineId) {
-    setAllocationNotice("Choose a Budget category.");
-    return;
-  }
-
-  if (amount <= 0) {
-    setAllocationNotice("Enter an amount greater than zero.");
-    return;
-  }
-
-  if (amount > unassignedAmount) {
-    setAllocationNotice(
-      "The amount cannot be greater than the unassigned transaction amount.",
-    );
-    return;
-  }
-
-  const result = await onAllocate(
-    transaction.id,
-    selectedBudgetLineId,
-    amount,
+  const transactionFallsInsideActiveBudget = Boolean(
+    activePeriod &&
+      transaction.posted_date >= activePeriod.period_start &&
+      transaction.posted_date <= activePeriod.period_end,
   );
 
-  setAllocationNotice(result.message);
+  const canAllocate = Boolean(
+    activePeriod &&
+      transactionFallsInsideActiveBudget &&
+      budgetLines.length > 0 &&
+      unassignedAmount > 0,
+  );
 
-  if (result.ok) {
-    setSelectedBudgetLineId("");
-    setAllocationAmount("");
+  async function handleAllocate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNotice("");
+
+    const amount = toNumber(allocationAmount);
+
+    if (!selectedBudgetLineId) {
+      setNotice("Choose a Budget category.");
+      return;
+    }
+
+    if (amount <= 0) {
+      setNotice("Enter an amount greater than zero.");
+      return;
+    }
+
+    if (amount > unassignedAmount) {
+      setNotice(
+        "The amount cannot be greater than the unassigned transaction amount.",
+      );
+      return;
+    }
+
+    const result = await onAllocate(
+      transaction.id,
+      selectedBudgetLineId,
+      amount,
+    );
+
+    setNotice(result.message);
+
+    if (result.ok) {
+      setSelectedBudgetLineId("");
+      setAllocationAmount("");
+    }
   }
+
+  return (
+    <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-600">
+        Budget relationship
+      </p>
+
+      {activeAllocations.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {activeAllocations.map((allocation) => (
+            <div
+              key={allocation.allocation_id}
+              className="rounded-xl bg-white p-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-slate-700">
+                  {allocation.budget_category_name}
+                </span>
+                <span className="text-sm font-black text-slate-900">
+                  {formatMoney(allocation.allocated_amount)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          No current Budget relationship is recorded for this transaction.
+        </p>
+      )}
+
+      {canAllocate ? (
+        <form onSubmit={handleAllocate} className="mt-4">
+          <p className="text-sm leading-6 text-slate-600">
+            Connect this transaction to the active Budget. This does not change
+            the bank record.
+          </p>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-black">
+              Budget category
+              <select
+                value={selectedBudgetLineId}
+                onChange={(event) => {
+                  setSelectedBudgetLineId(event.target.value);
+                  setNotice("");
+                }}
+                disabled={working}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+              >
+                <option value="">Choose a category</option>
+                {budgetLines.map((line) => (
+                  <option key={line.id} value={line.id}>
+                    {line.category_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm font-black">
+              Amount to assign
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                max={unassignedAmount}
+                value={allocationAmount}
+                onChange={(event) => {
+                  setAllocationAmount(event.target.value);
+                  setNotice("");
+                }}
+                disabled={working}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+              />
+            </label>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <button
+              type="submit"
+              disabled={working}
+              className="rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
+            >
+              {working ? "Applying..." : "Apply to Budget"}
+            </button>
+            <p className="text-sm text-slate-500">
+              {formatMoney(unassignedAmount)} not yet connected to this Budget.
+            </p>
+          </div>
+
+          {notice ? (
+            <p
+              role={notice.includes("saved") ? "status" : "alert"}
+              aria-live="polite"
+              className="mt-3 text-sm font-semibold text-slate-700"
+            >
+              {notice}
+            </p>
+          ) : null}
+        </form>
+      ) : activePeriod && transactionFallsInsideActiveBudget ? (
+        <p className="mt-3 text-sm text-slate-500">
+          This transaction is already fully connected to the active Budget or
+          no active category is available.
+        </p>
+      ) : (
+        <p className="mt-3 text-sm text-slate-500">
+          This is not part of an open Budget, so Budget editing is not available.
+        </p>
+      )}
+    </section>
+  );
 }
 
-return (
-  <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-    <p className="text-xs font-black uppercase tracking-wide text-slate-600">
-      Budget allocation
-    </p>
+function BudgetSummary({
+  period,
+  lines,
+}: {
+  period: BudgetPeriod;
+  lines: BudgetLine[];
+}) {
+  const plannedTotal = lines.reduce(
+    (sum, line) => sum + toNumber(line.planned_amount),
+    0,
+  );
+  const actualTotal = lines.reduce(
+    (sum, line) => sum + toNumber(line.derived_actual_amount),
+    0,
+  );
+  const remainingTotal = lines.reduce(
+    (sum, line) => sum + toNumber(line.derived_remaining_amount),
+    0,
+  );
+  const status = getBudgetStatus(plannedTotal, actualTotal, remainingTotal);
 
-    <p className="mt-2 text-sm leading-6 text-slate-600">
-      Choose how this recorded transaction relates to your Budget. This does
-      not change the bank record.
-    </p>
-
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-      <div className="rounded-xl bg-white p-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-          Assigned
-        </p>
-
-        <p className="mt-1 font-black">
-          {formatMoney(allocatedTotal)}
-        </p>
-      </div>
-
-      <div className="rounded-xl bg-white p-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-          Unassigned
-        </p>
-
-        <p className="mt-1 font-black">
-          {formatMoney(unassignedAmount)}
-        </p>
-      </div>
-    </div>
-
-    {allocations.filter(
-      (allocation) =>
-      allocation.status === "active"
-    ).length > 0 ? (
-      <div className="mt-4">
-        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-          Applied to
-        </p>
-
-        <div className="mt-2 space-y-2">
-          {allocations
-            .filter(
-              (allocation) =>
-               allocation.status === "active"
-            )
-            .map((allocation) => (
-              <div
-  key={allocation.allocation_id}
-  className="rounded-xl bg-white p-3"
->
-  <div className="flex items-center justify-between gap-3">
-    <span className="text-sm font-semibold text-slate-700">
-      {allocation.budget_category_name}
-    </span>
-
-    <span className="text-sm font-black text-slate-900">
-      {formatMoney(allocation.allocated_amount)}
-    </span>
-  </div>
-
-  <p className="mt-1 text-xs text-slate-500">
-    Budget period:{" "}
-    {formatDate(
-      budgetPeriods.find(
-        (period) => period.id === allocation.budget_period_id,
-      )?.period_start,
-    )}{" "}
-    to{" "}
-    {formatDate(
-      budgetPeriods.find(
-        (period) => period.id === allocation.budget_period_id,
-      )?.period_end,
-    )}
-  </p>
-</div>
-            ))}
-        </div>
-      </div>
-    ) : null}
-
-    {unassignedAmount > 0 && budgetLines.length > 0 ? (
-      <form onSubmit={handleAllocate} className="mt-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm font-black">
-            Budget category
-
-            <select
-              value={selectedBudgetLineId}
-              onChange={(event) => {
-                setSelectedBudgetLineId(event.target.value);
-                setAllocationNotice("");
-              }}
-              disabled={working}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
-            >
-              <option value="">Choose a category</option>
-
-              {budgetLines.map((line) => (
-                <option key={line.id} value={line.id}>
-                  {line.category_name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-sm font-black">
-            Amount to assign
-
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              max={unassignedAmount}
-              value={allocationAmount}
-              onChange={(event) => {
-                setAllocationAmount(event.target.value);
-                setAllocationNotice("");
-              }}
-              disabled={working}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
-            />
-          </label>
-        </div>
-
-        <button
-          type="submit"
-          disabled={working}
-          className="mt-4 rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
-        >
-          {working ? "Applying..." : "Apply to Budget"}
-        </button>
-
-        {allocationNotice ? (
-          <p
-            role={allocationNotice.includes("saved") ? "status" : "alert"}
-            aria-live="polite"
-            className="mt-3 text-sm font-semibold text-slate-700"
-          >
-            {allocationNotice}
+  return (
+    <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+            Current Budget
           </p>
-        ) : null}
-      </form>
-    ) : null}
+          <h2 className="mt-2 text-2xl font-black">{status.label}</h2>
+          <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+            {status.detail}
+          </p>
+        </div>
+        <span className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-900">
+          Active
+        </span>
+      </div>
 
-    <p className="mt-4 text-sm text-slate-500">
-      {transactionBudgetPeriod
-        ? `${budgetLines.length} Budget categories available for ${formatDate(
-            transactionBudgetPeriod.period_start,
-          )} to ${formatDate(transactionBudgetPeriod.period_end)}.`
-        : "No Budget categories are available for allocation for this transaction period."}
-    </p>
-  </section>
-);
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl bg-emerald-700 p-6 text-white">
+          <p className="text-sm font-bold text-emerald-100">Planned</p>
+          <p className="mt-3 text-4xl font-black">{formatMoney(plannedTotal)}</p>
+          <p className="mt-2 text-sm text-emerald-100">
+            Amount currently set aside across this plan
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-6">
+          <p className="text-sm font-bold text-slate-500">Expected income</p>
+          <p className="mt-3 text-4xl font-black">
+            {formatMoney(period.expected_income)}
+          </p>
+          <p className="mt-2 text-sm text-slate-500">
+            Amount you expect to have available during this plan
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-6">
+          <p className="text-sm font-bold text-slate-500">Recorded activity</p>
+          <p className="mt-3 text-4xl font-black">{formatMoney(actualTotal)}</p>
+          <p className="mt-2 text-sm text-slate-500">
+            Amount currently connected to this plan
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-6">
+          <p className="text-sm font-bold text-slate-500">Remaining</p>
+          <p className="mt-3 text-4xl font-black">
+            {formatMoney(remainingTotal)}
+          </p>
+          <p className="mt-2 text-sm text-slate-500">
+            Amount left within the current plan
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-slate-100 p-5">
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+          Budget period
+        </p>
+        <p className="mt-2 font-black">
+          {formatDate(period.period_start)} to {formatDate(period.period_end)}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function BudgetCategorySummary({ lines }: { lines: BudgetLine[] }) {
+  if (lines.length === 0) return null;
+
+  return (
+    <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+        Your categories
+      </p>
+      <h2 className="mt-2 text-2xl font-black">See how each part is going</h2>
+      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+        These numbers describe the current plan and connected activity. They do
+        not judge why a transaction happened or what it means about you.
+      </p>
+
+      <div className="mt-6 grid gap-4">
+        {lines.map((line) => {
+          const planned = toNumber(line.planned_amount);
+          const actual = toNumber(line.derived_actual_amount);
+          const remaining = toNumber(line.derived_remaining_amount);
+          const status = getBudgetStatus(planned, actual, remaining);
+          const usedPercent =
+            planned > 0
+              ? Math.max(0, Math.min(100, Math.round((actual / planned) * 100)))
+              : 0;
+
+          return (
+            <article
+              key={line.id}
+              className="rounded-3xl border border-slate-100 p-5 sm:p-6"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                    {status.label}
+                  </p>
+                  <h3 className="mt-2 text-xl font-black">{line.category_name}</h3>
+                  <p className="mt-1 text-sm capitalize text-slate-500">
+                    {line.category_type.replaceAll("_", " ")}
+                  </p>
+                </div>
+                <p className="text-lg font-black">
+                  {formatMoney(line.derived_remaining_amount)} remaining
+                </p>
+              </div>
+
+              <p className="mt-4 text-sm leading-6 text-slate-600">
+                {status.detail}
+              </p>
+
+              <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-emerald-600"
+                  style={{ width: `${usedPercent}%` }}
+                  aria-label={`${usedPercent}% of the planned amount recorded`}
+                />
+              </div>
+
+              <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="font-bold text-slate-500">Planned</p>
+                  <p className="mt-1 font-black">{formatMoney(line.planned_amount)}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="font-bold text-slate-500">Recorded activity</p>
+                  <p className="mt-1 font-black">
+                    {formatMoney(line.derived_actual_amount)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="font-bold text-slate-500">Remaining</p>
+                  <p className="mt-1 font-black">
+                    {formatMoney(line.derived_remaining_amount)}
+                  </p>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function BudgetHistorySection({ periods }: { periods: BudgetPeriod[] }) {
+  if (periods.length === 0) return null;
+
+  return (
+    <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+        Budget history
+      </p>
+      <h2 className="mt-2 text-2xl font-black">Recent Budgets</h2>
+      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+        Completed Budgets remain part of your history. They are read-only unless
+        you deliberately enter an approved correction process.
+      </p>
+
+      <div className="mt-6 grid gap-3">
+        {periods.map((period) => {
+          const lifecycle = getBudgetLifecycleView(period);
+          const correctionClosesAt = getBudgetCorrectionClosesAt(period);
+
+          return (
+            <article
+              key={period.id}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="font-black">
+                    {formatDate(period.period_start)} to {formatDate(period.period_end)}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-600">Completed Budget</p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">
+                  Completed
+                </span>
+              </div>
+
+              {lifecycle === "recent_history" && correctionClosesAt ? (
+                <p className="mt-3 text-sm text-slate-500">
+                  If something needs correction, the correction period remains
+                  available until{" "}
+                  {correctionClosesAt.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                  .
+                </p>
+              ) : (
+                <p className="mt-3 text-sm text-slate-500">
+                  This Budget is part of your read-only history.
+                </p>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 export default function BudgetPage() {
@@ -582,30 +769,12 @@ export default function BudgetPage() {
   } = useParticipantTransactionExplanations();
 
   const {
-  allocationsByTransactionId,
-  loading: allocationsLoading,
-  errorMessage: allocationErrorMessage,
-  workingTransactionId: allocationWorkingTransactionId,
-  allocateTransaction,
-} = useParticipantTransactionAllocations();
-
-async function allocateTransactionAndRefresh(
-  stagedTransactionId: string,
-  budgetLineId: string,
-  allocatedAmount: number,
-) {
-  const result = await allocateTransaction(
-    stagedTransactionId,
-    budgetLineId,
-    allocatedAmount,
-  );
-
-  if (result.ok) {
-    await refresh();
-  }
-
-  return result;
-}
+    allocationsByTransactionId,
+    loading: allocationsLoading,
+    errorMessage: allocationErrorMessage,
+    workingTransactionId: allocationWorkingTransactionId,
+    allocateTransaction,
+  } = useParticipantTransactionAllocations();
 
   const {
     working: budgetWorking,
@@ -619,76 +788,66 @@ async function allocateTransactionAndRefresh(
     expectedIncome: "",
     notes: "",
   });
-
   const [budgetNotice, setBudgetNotice] = useState("");
 
   const activePeriod =
     budgetPeriods.find((period) => period.status === "active") ?? null;
-
   const draftPeriod =
     budgetPeriods.find((period) => period.status === "draft") ?? null;
+  const hasOpenBudget = Boolean(activePeriod || draftPeriod);
 
-  const currentPeriod = draftPeriod ?? activePeriod;
-
-  const recentHistoryPeriods = budgetPeriods.filter(
-  (period) => getBudgetLifecycleView(period) === "recent_history",
-);
-
-const historicalPeriods = budgetPeriods.filter(
-  (period) => getBudgetLifecycleView(period) === "historical",
-);
-
-const currentLifecycle = currentPeriod
-  ? getBudgetLifecycleView(currentPeriod)
-  : null;
-
-  const currentLines = currentPeriod
-    ? budgetLines.filter((line) => line.budget_period_id === currentPeriod.id)
+  const activeLines = activePeriod
+    ? budgetLines.filter(
+        (line) => line.budget_period_id === activePeriod.id && line.is_active,
+      )
     : [];
 
-  function getEligibleAllocationLines(transaction: FinancialTransaction) {
- const matchingPeriod =
-  budgetPeriods.find(
-    (period) =>
-      (period.status === "active" ||
-        getBudgetLifecycleView(period) === "recent_history") &&
-      transaction.posted_date >= period.period_start &&
-      transaction.posted_date <= period.period_end,
-  ) ?? null;
-  if (!matchingPeriod) {
-    return [];
+  const draftLines = draftPeriod
+    ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id)
+    : [];
+
+  const completedPeriods = budgetPeriods.filter(
+    (period) => period.status === "completed" || period.status === "archived",
+  );
+
+  const latestBalanceTransaction = transactions.reduce(
+    (latest, transaction) => {
+      if (transaction.daily_posted_balance == null) return latest;
+      if (!latest) return transaction;
+      return transaction.posted_date > latest.posted_date ? transaction : latest;
+    },
+    null as FinancialTransaction | null,
+  );
+
+  const latestBalanceSource = latestBalanceTransaction
+    ? sources.find(
+        (source) => source.id === latestBalanceTransaction.financial_source_id,
+      ) ?? null
+    : null;
+
+  const explanationStatusMessage = useMemo(() => {
+    if (explanationsLoading) return "Loading your transaction context.";
+    if (explanationErrorMessage) return explanationErrorMessage;
+    return "";
+  }, [explanationErrorMessage, explanationsLoading]);
+
+  async function allocateTransactionAndRefresh(
+    stagedTransactionId: string,
+    budgetLineId: string,
+    allocatedAmount: number,
+  ) {
+    const result = await allocateTransaction(
+      stagedTransactionId,
+      budgetLineId,
+      allocatedAmount,
+    );
+
+    if (result.ok) {
+      await refresh();
+    }
+
+    return result;
   }
-
- return budgetLines.filter(
-  (line) =>
-    line.budget_period_id === matchingPeriod.id &&
-    line.is_active,
-);
-}
-
-    const latestBalanceTransaction = transactions.reduce(
-  (latest, transaction) => {
-    if (transaction.daily_posted_balance == null) {
-      return latest;
-    }
-
-    if (!latest) {
-      return transaction;
-    }
-
-    return transaction.posted_date > latest.posted_date
-      ? transaction
-      : latest;
-  },
-  null as (typeof transactions)[number] | null,
-);
-
-const latestBalanceSource = latestBalanceTransaction
-  ? sources.find(
-      (source) =>
-        source.id === latestBalanceTransaction.financial_source_id,
-    ) ?? null
-  : null;
 
   async function handleCreateBudgetDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -728,12 +887,9 @@ const latestBalanceSource = latestBalanceTransaction
 
     setBudgetNotice(result.message);
 
-    if (!result.ok) {
-      return;
-    }
+    if (!result.ok) return;
 
     await refresh();
-
     setNewBudgetDraft({
       periodStart: "",
       periodEnd: "",
@@ -741,39 +897,6 @@ const latestBalanceSource = latestBalanceTransaction
       notes: "",
     });
   }
-
-  const plannedTotal = currentLines.reduce(
-    (sum, line) => sum + toNumber(line.planned_amount),
-    0,
-  );
-
-const actualTotal = currentLines.reduce(
-  (sum, line) => sum + toNumber(line.derived_actual_amount),
-  0,
-);
-
-const remainingTotal = currentLines.reduce(
-  (sum, line) => sum + toNumber(line.derived_remaining_amount),
-  0,
-);
-
-  const overallStatus = getBudgetStatus(
-    plannedTotal,
-    actualTotal,
-    remainingTotal,
-  );
-
-  const explanationStatusMessage = useMemo(() => {
-    if (explanationsLoading) {
-      return "Loading your transaction context.";
-    }
-
-    if (explanationErrorMessage) {
-      return explanationErrorMessage;
-    }
-
-    return "";
-  }, [explanationErrorMessage, explanationsLoading]);
 
   return (
     <AuthGate>
@@ -787,41 +910,40 @@ const remainingTotal = currentLines.reduce(
                 Budget
               </p>
               <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
-                Protect essentials. See what remains.
+                Make a plan. See what happened. Choose what comes next.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                Compare your current plan with connected account activity.
+                Your Budget is your plan. Connected account activity can help you
+                compare the plan with what actually happened.
               </p>
             </header>
 
-            {loading && (
+            {loading ? (
               <section className="rounded-3xl bg-white p-6 shadow-sm">
                 Loading your Budget.
               </section>
-            )}
+            ) : null}
 
-            {errorMessage && (
+            {errorMessage ? (
               <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-950">
-                <p className="font-black">
-                  Budget information could not be loaded.
-                </p>
+                <p className="font-black">Budget information could not be loaded.</p>
                 <p className="mt-2 text-sm">{errorMessage}</p>
               </section>
-            )}
+            ) : null}
 
-            {!loading && !errorMessage && (
+            {!loading && !errorMessage ? (
               <>
-                {!draftPeriod && !activePeriod ? (
+                {!hasOpenBudget ? (
                   <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
                     <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      Build your next plan
+                      Start your next Budget
                     </p>
                     <h2 className="mt-2 text-2xl font-black">
-                      Start with what you expect to have available.
+                      You do not have a current Budget open.
                     </h2>
                     <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-                      Enter the period and expected income yourself. You will choose
-                      the parts of your plan in the next step.
+                      Start a new plan when you are ready. Your completed Budgets
+                      remain available below as read-only history.
                     </p>
 
                     <form
@@ -867,13 +989,10 @@ const remainingTotal = currentLines.reduce(
                       <label className="text-sm font-black">
                         Expected income
                         <span className="mt-1 block text-xs font-normal text-slate-500">
-                          Enter what you expect to have available during this plan period.
+                          What do you expect to have available during this plan?
                         </span>
                         <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4">
-                          <span
-                            aria-hidden="true"
-                            className="font-black text-slate-500"
-                          >
+                          <span aria-hidden="true" className="font-black text-slate-500">
                             $
                           </span>
                           <input
@@ -917,7 +1036,7 @@ const remainingTotal = currentLines.reduce(
 
                       {!activeProgramId ? (
                         <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-950">
-                          THRIVE needs one active program before a participant Budget can be created.
+                          THRIVE needs one active program before a Budget can be created.
                         </p>
                       ) : null}
 
@@ -946,392 +1065,71 @@ const remainingTotal = currentLines.reduce(
                           disabled={budgetWorking || !activeProgramId}
                           className="rounded-2xl bg-emerald-700 px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {budgetWorking
-                            ? "Building your plan..."
-                            : "Build my plan"}
+                          {budgetWorking ? "Building your plan..." : "Build my Budget"}
                         </button>
                       </div>
                     </form>
                   </section>
-                ) : draftPeriod ? (
+                ) : null}
+
+                {draftPeriod ? (
                   <BudgetDraftCategoryBuilder
                     draftPeriod={draftPeriod}
-                    currentLines={currentLines}
+                    currentLines={draftLines}
                     refresh={refresh}
                   />
                 ) : null}
 
                 {activePeriod && !draftPeriod ? (
-                  <ActiveBudgetEditor
-                    activePeriod={activePeriod}
-                    currentLines={currentLines}
-                    refresh={refresh}
-                  />
+                  <>
+                    <ActiveBudgetEditor
+                      activePeriod={activePeriod}
+                      currentLines={activeLines}
+                      refresh={refresh}
+                    />
+                    <BudgetSummary period={activePeriod} lines={activeLines} />
+                    <BudgetCategorySummary lines={activeLines} />
+                  </>
                 ) : null}
 
-                <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                        Current picture
-                      </p>
-                      <h2 className="mt-2 text-2xl font-black">
-                        {overallStatus.label}
-                      </h2>
-                      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-                        {overallStatus.detail}
-                      </p>
-                    </div>
-
-                    {currentPeriod ? (
-  <span className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-900">
-    {currentLifecycle === "current"
-      ? "Current Budget"
-      : currentLifecycle === "recent_history"
-        ? "Recent History"
-        : "Historical"}
-  </span>
-) : null}
-                  </div>
-
-                  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl bg-emerald-700 p-6 text-white">
-                      <p className="text-sm font-bold text-emerald-100">
-                        Planned
-                      </p>
-                      <p className="mt-3 text-4xl font-black">
-                        {formatMoney(plannedTotal)}
-                      </p>
-                      <p className="mt-2 text-sm text-emerald-100">
-                        Amount currently set aside across this plan
-                      </p>
-                    </div>
-
-                  <div className="rounded-2xl bg-slate-50 p-6">
-  <p className="text-sm font-bold text-slate-500">
-    Expected income
-  </p>
-  <p className="mt-3 text-4xl font-black">
-    {formatMoney(currentPeriod?.expected_income ?? 0)}
-  </p>
-  <p className="mt-2 text-sm text-slate-500">
-    Amount you expect to have available during this plan
-  </p>
-</div>
-
-                    <div className="rounded-2xl bg-slate-50 p-6">
-                      <p className="text-sm font-bold text-slate-500">
-                        Recorded activity
-                      </p>
-                      <p className="mt-3 text-4xl font-black">
-                        {formatMoney(actualTotal)}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Amount currently recorded for this plan
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-slate-50 p-6">
-                      <p className="text-sm font-bold text-slate-500">
-                        Remaining
-                      </p>
-                      <p className="mt-3 text-4xl font-black">
-                        {formatMoney(remainingTotal)}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Amount left within the current plan
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 rounded-2xl border border-slate-100 p-5">
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      Budget period
-                    </p>
-                    <p className="mt-2 font-black">
-                      {currentPeriod
-                        ? `${formatDate(currentPeriod.period_start)} to ${formatDate(
-                            currentPeriod.period_end,
-                          )}`
-                        : "No current participant budget period is available yet"}
-                    </p>
-                  </div>
-                </section>
-                {recentHistoryPeriods.length > 0 ? (
-  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-    <div>
-      <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-        Recent Budget history
-      </p>
-
-      <h2 className="mt-2 text-2xl font-black">
-        Recently completed periods
-      </h2>
-
-      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-        These Budget periods have ended, but financial allocation
-        corrections remain available for a limited time. The original
-        bank activity remains unchanged.
-      </p>
-    </div>
-
-    <div className="mt-6 grid gap-4">
-      {recentHistoryPeriods.map((period) => {
-        const correctionClosesAt =
-          getBudgetCorrectionClosesAt(period);
-
-        return (
-          <article
-            key={period.id}
-            className="rounded-2xl border border-amber-200 bg-amber-50 p-5"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-black text-slate-950">
-                  {formatDate(period.period_start)} to{" "}
-                  {formatDate(period.period_end)}
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-slate-700">
-                  This Budget period is complete and is now part of your
-                  recent history.
-                </p>
-              </div>
-
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-amber-900">
-                Correction window open
-              </span>
-            </div>
-
-            {correctionClosesAt ? (
-              <p className="mt-4 text-sm font-bold text-amber-950">
-                Financial allocation corrections are available until{" "}
-                {correctionClosesAt.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-                .
-              </p>
-            ) : null}
-          </article>
-        );
-      })}
-    </div>
-  </section>
-) : null}
-
-{historicalPeriods.length > 0 ? (
-  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-    <div>
-      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-        Budget history
-      </p>
-
-      <h2 className="mt-2 text-2xl font-black">
-        Historical periods
-      </h2>
-
-      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-        These Budget periods are part of your financial history.
-        Financial allocation corrections are closed, but the recorded
-        history remains available to review.
-      </p>
-    </div>
-
-    <div className="mt-6 grid gap-4">
-      {historicalPeriods.map((period) => (
-        <article
-          key={period.id}
-          className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-black text-slate-950">
-                {formatDate(period.period_start)} to{" "}
-                {formatDate(period.period_end)}
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                This Budget period is historical. Its financial
-                allocations are read-only.
-              </p>
-            </div>
-
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">
-              Historical
-            </span>
-          </div>
-
-          <p className="mt-4 text-sm font-bold text-slate-700">
-            Financial corrections for this period are closed.
-          </p>
-        </article>
-      ))}
-    </div>
-  </section>
-) : null}
-
-                <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                    Your categories
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black">
-                    See how each part of the plan is going
-                  </h2>
-                  <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-                    These labels describe connected numbers only. They do not judge the
-                    reason for a transaction or what it means about you.
-                  </p>
-
-                  {currentLines.length > 0 ? (
-                    <div className="mt-6 grid gap-4">
-                      {currentLines.map((line) => {
-                        const planned = toNumber(line.planned_amount);
-                        const actual = toNumber(line.derived_actual_amount);
-                        const remaining = toNumber(line.derived_remaining_amount);
-                        const status = getBudgetStatus(
-                          planned,
-                          actual,
-                          remaining,
-                        );
-                        const usedPercent =
-                          planned > 0
-                            ? Math.max(
-                                0,
-                                Math.min(
-                                  100,
-                                  Math.round((actual / planned) * 100),
-                                ),
-                              )
-                            : 0;
-
-                        return (
-                          <article
-                            key={line.id}
-                            className="rounded-3xl border border-slate-100 p-5 sm:p-6"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-4">
-                              <div>
-                                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                                  {status.label}
-                                </p>
-                                <h3 className="mt-2 text-xl font-black">
-                                  {line.category_name}
-                                </h3>
-                                <p className="mt-1 text-sm capitalize text-slate-500">
-                                  {line.category_type.replaceAll("_", " ")}
-                                </p>
-                              </div>
-
-                              <p className="text-lg font-black">
-                                {formatMoney(line.derived_remaining_amount)} remaining
-                              </p>
-                            </div>
-
-                            <p className="mt-4 text-sm leading-6 text-slate-600">
-                              {status.detail}
-                            </p>
-
-                            <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
-                              <div
-                                className="h-full rounded-full bg-emerald-600"
-                                style={{ width: `${usedPercent}%` }}
-                                aria-label={`${usedPercent}% of the planned amount recorded`}
-                              />
-                            </div>
-
-                            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-                              <div className="rounded-2xl bg-slate-50 p-4">
-                                <p className="font-bold text-slate-500">Planned</p>
-                                <p className="mt-1 font-black">
-                                  {formatMoney(line.planned_amount)}
-                                </p>
-                              </div>
-                              <div className="rounded-2xl bg-slate-50 p-4">
-                                <p className="font-bold text-slate-500">
-                                  Recorded activity
-                                </p>
-                                <p className="mt-1 font-black">
-                                  {formatMoney(line.derived_actual_amount)}
-                                </p>
-                              </div>
-                              <div className="rounded-2xl bg-slate-50 p-4">
-                                <p className="font-bold text-slate-500">Remaining</p>
-                                <p className="mt-1 font-black">
-                                  {formatMoney(line.derived_remaining_amount)}
-                                </p>
-                              </div>
-                            </div>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-                      <p className="font-black">
-                        Your Budget plan has not been created yet.
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        Connected account activity can still be reviewed below.
-                      </p>
-                    </div>
-                  )}
-                </section>
+                {!hasOpenBudget ? (
+                  <BudgetHistorySection periods={completedPeriods} />
+                ) : null}
 
                 {latestBalanceTransaction ? (
-  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-      Account snapshot
-    </p>
+                  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                          Connected account
+                        </p>
+                        <h2 className="mt-2 text-xl font-black">
+                          {latestBalanceSource?.source_name ?? "Connected account"}
+                        </h2>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {latestBalanceSource?.account_mask
+                            ? `Account ending ${latestBalanceSource.account_mask}`
+                            : "Account details available"}
+                        </p>
+                      </div>
 
-    <h2 className="mt-2 text-2xl font-black">
-      Latest observed posted balance
-    </h2>
-
-    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-      This is the latest posted-balance evidence available from the connected
-      financial source. It is not an available-balance estimate.
-    </p>
-
-    <div className="mt-5 grid gap-3 sm:grid-cols-3">
-      <div className="rounded-2xl bg-slate-50 p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-          Connected source
-        </p>
-        <p className="mt-2 font-black">
-          {latestBalanceSource?.source_name ?? "Connected account"}
-        </p>
-        {latestBalanceSource?.account_mask ? (
-          <p className="mt-1 text-sm text-slate-500">
-            Account ending {latestBalanceSource.account_mask}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="rounded-2xl bg-slate-50 p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-          Latest posted balance
-        </p>
-        <p className="mt-2 text-2xl font-black">
-          {latestBalanceTransaction.daily_posted_balance != null
-          ? formatMoney(latestBalanceTransaction.daily_posted_balance)
-          : "Not available"}
-        </p>
-      </div>
-
-      <div className="rounded-2xl bg-slate-50 p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-          Observed
-        </p>
-        <p className="mt-2 font-black">
-          {formatDate(latestBalanceTransaction.posted_date)}
-        </p>
-      </div>
-    </div>
-  </section>
-) : null}
-
+                      <div className="text-left sm:text-right">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Latest posted balance
+                        </p>
+                        <p className="mt-1 text-2xl font-black">
+                          {latestBalanceTransaction.daily_posted_balance != null
+                            ? formatMoney(latestBalanceTransaction.daily_posted_balance)
+                            : "Not available"}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Observed {formatDate(latestBalanceTransaction.posted_date)}.
+                          Posted-balance evidence, not an available-balance estimate.
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                ) : null}
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
@@ -1348,29 +1146,9 @@ const remainingTotal = currentLines.reduce(
                         )}.`
                       : "."}
                   </p>
-
-                  {latestBatch &&
-                  currentPeriod &&
-                  (latestBatch.statement_period_start !== currentPeriod.period_start ||
-                    latestBatch.statement_period_end !== currentPeriod.period_end) ? (
-                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
-                      <p className="text-xs font-black uppercase tracking-wide">
-                        Historical account activity
-                      </p>
-                      <p className="mt-2 text-sm leading-6">
-                        These transactions come from {formatDate(
-                          latestBatch.statement_period_start,
-                        )} to {formatDate(latestBatch.statement_period_end)}. They belong
-                        to a different Budget period and do not change the {formatDate(
-                          currentPeriod.period_start,
-                        )} to {formatDate(currentPeriod.period_end)} plan shown above.
-                      </p>
-                    </div>
-                  ) : null}
-
                   <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-                    A displayed transaction is account evidence. It does not establish intent,
-                    responsibility, relapse, incapacity, or misuse.
+                    A displayed transaction is account evidence. It does not establish
+                    intent, responsibility, relapse, incapacity, or misuse.
                   </p>
 
                   {explanationStatusMessage ? (
@@ -1382,13 +1160,23 @@ const remainingTotal = currentLines.reduce(
                     </p>
                   ) : null}
 
+                  {allocationsLoading ? (
+                    <p className="mt-3 text-sm font-semibold text-slate-600">
+                      Loading Budget relationships.
+                    </p>
+                  ) : null}
+
+                  {allocationErrorMessage ? (
+                    <p role="alert" className="mt-3 text-sm font-semibold text-rose-700">
+                      {allocationErrorMessage}
+                    </p>
+                  ) : null}
+
                   <div className="mt-5 space-y-3">
                     {transactions.slice(0, 8).map((transaction) => {
-                      const explanation = explanationByTransactionId.get(
-                        transaction.id,
-                      );
-                    const transactionAllocations =
-                     allocationsByTransactionId.get(transaction.id) ?? [];
+                      const explanation = explanationByTransactionId.get(transaction.id);
+                      const transactionAllocations =
+                        allocationsByTransactionId.get(transaction.id) ?? [];
 
                       return (
                         <article
@@ -1398,8 +1186,7 @@ const remainingTotal = currentLines.reduce(
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                               <p className="font-black">
-                                {transaction.merchant_name ??
-                                  "Merchant not provided"}
+                                {transaction.merchant_name ?? "Merchant not provided"}
                               </p>
                               <p className="mt-1 text-sm text-slate-500">
                                 {formatDate(transaction.posted_date)}
@@ -1408,10 +1195,7 @@ const remainingTotal = currentLines.reduce(
                                   : ""}
                               </p>
                             </div>
-
-                            <p className="font-black">
-                              {formatMoney(transaction.amount)}
-                            </p>
+                            <p className="font-black">{formatMoney(transaction.amount)}</p>
                           </div>
 
                           <TransactionContextPanel
@@ -1422,23 +1206,26 @@ const remainingTotal = currentLines.reduce(
                             onCreate={createDraft}
                             onUpdate={updateDraft}
                           />
-                          <TransactionAllocationPanel
+
+                          <BudgetRelationshipPanel
                             transaction={transaction}
-                            budgetLines={getEligibleAllocationLines(transaction)}
-                            budgetPeriods={budgetPeriods}
+                            activePeriod={activePeriod}
+                            budgetLines={activeLines}
                             allocations={transactionAllocations}
-                            working={allocationWorkingTransactionId === transaction.id}
+                            working={
+                              allocationWorkingTransactionId === transaction.id
+                            }
                             onAllocate={allocateTransactionAndRefresh}
                           />
                         </article>
                       );
                     })}
 
-                    {transactions.length === 0 && (
+                    {transactions.length === 0 ? (
                       <p className="rounded-2xl bg-slate-50 p-5 text-slate-600">
                         No participant-owned transaction records are connected to this account.
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </section>
 
@@ -1453,7 +1240,7 @@ const remainingTotal = currentLines.reduce(
                   </p>
                 </section>
               </>
-            )}
+            ) : null}
           </section>
         </section>
       </main>
