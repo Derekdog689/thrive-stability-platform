@@ -794,8 +794,6 @@ export default function BudgetPage() {
     budgetPeriods,
     budgetLines,
     transactions,
-    latestBatch,
-    totalOutflow,
     loading,
     errorMessage,
     refresh,
@@ -860,14 +858,6 @@ export default function BudgetPage() {
         transaction.posted_date <= activePeriod.period_end,
     )
   : [];
-
-const olderAccountTransactions = activePeriod
-  ? transactions.filter(
-      (transaction) =>
-        transaction.posted_date < activePeriod.period_start ||
-        transaction.posted_date > activePeriod.period_end,
-    )
-  : transactions;
 
   const latestBalanceTransaction = transactions.reduce(
     (latest, transaction) => {
