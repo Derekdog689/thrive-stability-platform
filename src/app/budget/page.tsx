@@ -361,15 +361,6 @@ function TransactionAllocationPanel({
       transaction.posted_date <= period.period_end,
   ) ?? null;
 
-  function allocationPeriodIsActive(
-  allocation: ParticipantTransactionAllocation,
-  ) {
-  return budgetLines.some(
-    (line) =>
-      line.budget_period_id === allocation.budget_period_id &&
-      line.is_active,
-  );
-}
 
   async function handleAllocate(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
@@ -443,8 +434,7 @@ return (
 
     {allocations.filter(
       (allocation) =>
-        allocation.status === "active" &&
-        allocationPeriodIsActive(allocation),
+      allocation.status === "active"
     ).length > 0 ? (
       <div className="mt-4">
         <p className="text-xs font-black uppercase tracking-wide text-slate-500">
@@ -455,8 +445,7 @@ return (
           {allocations
             .filter(
               (allocation) =>
-                allocation.status === "active" &&
-                allocationPeriodIsActive(allocation),
+               allocation.status === "active"
             )
             .map((allocation) => (
               <div
@@ -562,7 +551,7 @@ return (
         ? `${budgetLines.length} Budget categories available for ${formatDate(
             transactionBudgetPeriod.period_start,
           )} to ${formatDate(transactionBudgetPeriod.period_end)}.`
-        : "No active Budget categories are available for this transaction period."}
+        : "No Budget categories are available for allocation for this transaction period."}
     </p>
   </section>
 );
