@@ -516,10 +516,18 @@ function BudgetRelationshipPanel({
 function BudgetSummary({
   period,
   lines,
+  latestBalanceTransaction,
+  latestBalanceSource,
 }: {
   period: BudgetPeriod;
   lines: BudgetLine[];
+  latestBalanceTransaction: FinancialTransaction | null;
+  latestBalanceSource: {
+    source_name: string | null;
+    account_mask: string | null;
+  } | null;
 }) {
+
   const plannedTotal = lines.reduce(
     (sum, line) => sum + toNumber(line.planned_amount),
     0,
@@ -597,6 +605,41 @@ function BudgetSummary({
           {formatDate(period.period_start)} to {formatDate(period.period_end)}
         </p>
       </div>
+
+      {latestBalanceTransaction ? (
+  <div className="mt-4 rounded-2xl border border-slate-100 p-5">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+          Connected account
+        </p>
+        <p className="mt-2 font-black">
+          {latestBalanceSource?.source_name ?? "Connected account"}
+        </p>
+        {latestBalanceSource?.account_mask ? (
+          <p className="mt-1 text-sm text-slate-500">
+            Account ending {latestBalanceSource.account_mask}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="text-left sm:text-right">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Latest posted balance
+        </p>
+        <p className="mt-1 text-2xl font-black">
+          {latestBalanceTransaction.daily_posted_balance != null
+            ? formatMoney(latestBalanceTransaction.daily_posted_balance)
+            : "Not available"}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Observed {formatDate(latestBalanceTransaction.posted_date)}
+        </p>
+      </div>
+    </div>
+  </div>
+) : null}
+
     </section>
   );
 }
@@ -809,6 +852,22 @@ export default function BudgetPage() {
   const completedPeriods = budgetPeriods.filter(
     (period) => period.status === "completed" || period.status === "archived",
   );
+
+  const currentBudgetTransactions = activePeriod
+  ? transactions.filter(
+      (transaction) =>
+        transaction.posted_date >= activePeriod.period_start &&
+        transaction.posted_date <= activePeriod.period_end,
+    )
+  : [];
+
+const olderAccountTransactions = activePeriod
+  ? transactions.filter(
+      (transaction) =>
+        transaction.posted_date < activePeriod.period_start ||
+        transaction.posted_date > activePeriod.period_end,
+    )
+  : transactions;
 
   const latestBalanceTransaction = transactions.reduce(
     (latest, transaction) => {
@@ -1087,7 +1146,12 @@ export default function BudgetPage() {
                       currentLines={activeLines}
                       refresh={refresh}
                     />
-                    <BudgetSummary period={activePeriod} lines={activeLines} />
+                    <BudgetSummary
+                      period={activePeriod}
+                      lines={activeLines}
+                      latestBalanceTransaction={latestBalanceTransaction}
+                      latestBalanceSource={latestBalanceSource}
+                    />
                     <BudgetCategorySummary lines={activeLines} />
                   </>
                 ) : null}
@@ -1096,55 +1160,15 @@ export default function BudgetPage() {
                   <BudgetHistorySection periods={completedPeriods} />
                 ) : null}
 
-                {latestBalanceTransaction ? (
-                  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                          Connected account
-                        </p>
-                        <h2 className="mt-2 text-xl font-black">
-                          {latestBalanceSource?.source_name ?? "Connected account"}
-                        </h2>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {latestBalanceSource?.account_mask
-                            ? `Account ending ${latestBalanceSource.account_mask}`
-                            : "Account details available"}
-                        </p>
-                      </div>
-
-                      <div className="text-left sm:text-right">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                          Latest posted balance
-                        </p>
-                        <p className="mt-1 text-2xl font-black">
-                          {latestBalanceTransaction.daily_posted_balance != null
-                            ? formatMoney(latestBalanceTransaction.daily_posted_balance)
-                            : "Not available"}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Observed {formatDate(latestBalanceTransaction.posted_date)}.
-                          Posted-balance evidence, not an available-balance estimate.
-                        </p>
-                      </div>
-                    </div>
-                  </section>
-                ) : null}
-
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
                     Recent account activity
                   </p>
                   <h2 className="mt-2 text-2xl font-black">
-                    {transactions.length} posted transactions
+                    {currentBudgetTransactions.length} posted transactions
                   </h2>
                   <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-                    Recorded outflow: {formatMoney(totalOutflow)}
-                    {latestBatch
-                      ? ` for the latest available period ending ${formatDate(
-                          latestBatch.statement_period_end,
-                        )}.`
-                      : "."}
+                    Activity shown here is limited to this Budget period.
                   </p>
                   <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
                     A displayed transaction is account evidence. It does not establish
@@ -1173,7 +1197,7 @@ export default function BudgetPage() {
                   ) : null}
 
                   <div className="mt-5 space-y-3">
-                    {transactions.slice(0, 8).map((transaction) => {
+                    {currentBudgetTransactions.slice(0, 8).map((transaction) => {
                       const explanation = explanationByTransactionId.get(transaction.id);
                       const transactionAllocations =
                         allocationsByTransactionId.get(transaction.id) ?? [];
@@ -1221,9 +1245,9 @@ export default function BudgetPage() {
                       );
                     })}
 
-                    {transactions.length === 0 ? (
+                    {currentBudgetTransactions.length === 0 ? (
                       <p className="rounded-2xl bg-slate-50 p-5 text-slate-600">
-                        No participant-owned transaction records are connected to this account.
+                        No imported account activity is available for this Budget period yet.
                       </p>
                     ) : null}
                   </div>
