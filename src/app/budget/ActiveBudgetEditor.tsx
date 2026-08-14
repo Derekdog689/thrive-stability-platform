@@ -64,6 +64,7 @@ export default function ActiveBudgetEditor({
   updatePeriod,
   addLine,
   updateLine,
+  completeBudget,
 } = useParticipantBudgetBuilder();
 
   const [open, setOpen] = useState(false);
@@ -99,6 +100,29 @@ export default function ActiveBudgetEditor({
     });
     setPeriodNotice("");
   }
+
+  async function handleCompleteBudget() {
+  setPeriodNotice("");
+
+  const confirmed = window.confirm(
+    "Complete this Budget? The plan will become read-only, but transaction allocation corrections will remain available for 45 days.",
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const result = await completeBudget(activePeriod.id);
+
+  setPeriodNotice(result.message);
+
+  if (!result.ok) {
+    return;
+  }
+
+  setOpen(false);
+  await refresh();
+}
 
   async function handleSavePeriod(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -291,6 +315,16 @@ export default function ActiveBudgetEditor({
           >
             Edit active plan
           </button>
+
+          <button
+  type="button"
+  disabled={working}
+  onClick={handleCompleteBudget}
+  className="rounded-2xl border border-slate-300 bg-white px-5 py-3 font-black text-slate-800 disabled:opacity-60"
+>
+  {working ? "Completing..." : "Complete Budget"}
+</button>
+
         </div>
       </section>
     );
