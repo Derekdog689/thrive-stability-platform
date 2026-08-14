@@ -1478,3 +1478,120 @@ Exact next gate:
 Reconcile the authoritative THRIVE product-readiness and executive handoff documents against the current repository state.
 Do not begin a sixth Support slice until the product control spine identifies the next smallest approved product gate.
 Keep Johnny activation, Trust Engine synchronization, schema expansion, service-role use, hard delete, deployment, merge, and push frozen.
+
+## Checkpoint 065: Product Recenter and Checkpoint Continuity Restored
+
+Date: 2026-08-14
+
+Current branch:
+
+`budget-builder-category-v0-1`
+
+Current safe checkpoint:
+
+`d1a3ad9 Preserve historical Budget allocation visibility`
+
+### Continuity note
+
+Formal `BUILD_CHECKPOINTS.md` logging paused after Checkpoint 064 while THRIVE continued through the product-recenter and synthetic-participant usability sequence.
+
+The missing interval is preserved in Git history and supporting project artifacts. No retrospective checkpoint numbers are being invented.
+
+Authoritative evidence for the interval includes:
+
+- Git commit history after `2cf6cba`;
+- `docs/RENEWING/03_CURRENT_EXECUTIVE_HANDOFF.md`;
+- `docs/RENEWING/05_FULL_SPECTRUM_PRODUCT_READINESS_MATRIX.md`;
+- `THRIVE_SYNTHETIC_PARTICIPANT_USABILITY_ANCHOR_v0_1.md`;
+- `THRIVE_WELLNESS_ORDINARY_PARTICIPANT_SAVE_CANDIDATE_v0_1.patch`;
+- current Budget and financial candidate SQL files;
+- preserved `evidence/` records.
+
+### Verified post-064 product progression
+
+Git history confirms the following broad progression after Checkpoint 064:
+
+- Support checkpoint and product-readiness reconciliation;
+- executive handoff reconciliation;
+- transaction explanation proof and RLS correction work;
+- Wellness controlled closeout;
+- ordinary participant Wellness save;
+- ordinary participant Support request flow;
+- ordinary participant Transaction Context;
+- participant Budget Builder draft workflow;
+- Budget category creation and editing;
+- Budget activation and active-period editing;
+- Wellness recent-history expansion;
+- Today participant hooks and synthesis;
+- Reports current-plan comparison;
+- derived financial allocation reads;
+- participant transaction allocation controls;
+- Budget lifecycle history and allocation-period matching;
+- preservation of historical Budget allocation visibility.
+
+This section records the verified sequence at a high level. Git history remains authoritative for exact commits and implementation details.
+
+### Current product-control finding
+
+The most recent participant-facing Budget archive experiment failed human-usability review.
+
+The attempted participant-facing `Archive allocation` behavior caused the archived allocation to stop counting toward the transaction, making the amount appear unassigned and available for reallocation.
+
+This is not accepted THRIVE participant behavior.
+
+The failed UI experiment was not committed and was removed from `src/app/budget/page.tsx`.
+
+The underlying test evidence remains preserved.
+
+### Current Budget interpretation
+
+Budget should remain a practical participant money plan rather than an accounting-style workflow.
+
+Transaction allocations are relationships within a Budget period.
+
+A normal participant-facing `archive allocation` action is not currently approved.
+
+Budget lifecycle and archive semantics must be defined at the Budget-period level before additional participant controls are added.
+
+### Repository state
+
+Verified:
+
+- `src/app/budget/page.tsx` restored to the safe committed state;
+- current safe checkpoint is `d1a3ad9`;
+- `git diff --check` passes;
+- no failed archive-allocation UI code is committed;
+- historical and candidate files remain preserved;
+- no hard delete has occurred.
+
+Local intentionally uncheckpointed work remains and must be reconciled separately:
+
+- `README.md`;
+- `next.config.ts`;
+- `src/app/AuthGate.tsx`;
+- synthetic usability anchor;
+- Wellness ordinary-save patch;
+- recent Budget / financial SQL candidates;
+- `evidence/`.
+
+### Frozen boundaries
+
+Do not:
+
+- delete historical evidence merely because it is superseded;
+- activate Johnny;
+- synchronize THRIVE with the Trust Engine;
+- merge personal and trust authority;
+- execute new SQL during this documentation gate;
+- use service-role shortcuts;
+- deploy;
+- merge;
+- push without explicit approval.
+
+### Exact next gate
+
+Reconcile the current executive handoff and full-spectrum product-readiness matrix against the verified post-064 Git history and current `d1a3ad9` branch state.
+
+After those control documents are reconciled, reconcile `README.md`.
+
+Do not resume Budget feature wiring until the documentation spine accurately reflects the current participant product model and Budget lifecycle semantics.

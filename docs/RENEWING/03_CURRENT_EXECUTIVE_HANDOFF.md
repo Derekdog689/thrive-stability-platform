@@ -1,10 +1,11 @@
 # Renewing THRIVE Current Executive Handoff
 
-**Checkpoint date:** August 9, 2026
+**Checkpoint date:** August 14, 2026
 **Repository:** `thrive-stability-platform`  
-**Branch:** `main`  
-**Current local checkpoint:** `c160d53 Reconcile THRIVE product readiness after Support validation`
-**Remote status:** local branch remains ahead of `origin/main`; do not push without explicit approval.
+**Branch:** `budget-builder-category-v0-1`
+**Current safe checkpoint:** `d1a3ad9 Preserve historical Budget allocation visibility`
+**Checkpoint continuity:** formal `BUILD_CHECKPOINTS.md` logging resumed at Checkpoint 065 after the post-064 usability and Budget sequence.
+**Remote status:** `budget-builder-category-v0-1` is synchronized through `d1a3ad9`; do not push additional work without explicit approval.
 
 ## Project Purpose
 
@@ -39,18 +40,18 @@ This identity spine should be treated as established infrastructure unless a def
 
 ### Today
 
-The participant home is working.
+The participant home is working and now includes cross-module participant synthesis.
 
-It provides participant-facing entry points into:
+Verified behavior includes:
 
-- Wellness
-- Goals
-- Support
-- Budget
-- My Program
-- Reports
+- participant-facing entry points into Wellness, Goals, Support, Budget, My Program, and Reports;
+- participant-domain hooks connected to current module state;
+- plain-language synthesis of useful current information;
+- contained financial context;
+- participant-facing next-step framing;
+- neutral language that does not assign intent, responsibility, relapse, incapacity, trust misuse, or other conclusions from displayed activity.
 
-The page uses contained financial context and avoids assigning intent, responsibility, relapse, incapacity, trust misuse, or other conclusions from displayed activity.
+Today is an action surface. It may summarize authorized information across THRIVE modules, but it does not become an authority engine or silently create participant obligations.
 
 ### My Program
 
@@ -62,69 +63,100 @@ Program ownership and authority remain administrative rather than participant-co
 
 ### Budget
 
-The participant Budget route is working for its current approved read-only purpose.
+The participant Budget route is working as an interactive planning module.
 
 Verified behavior includes:
 
-- active budget period display
-- planned amount
-- recorded activity
-- remaining amount
-- category-level summaries
-- progress bars
-- neutral participant-facing status language
-- recent account activity
-- observational financial framing
+- active Budget period display;
+- participant Budget draft creation;
+- expected-income entry;
+- participant category creation;
+- participant category editing;
+- Budget activation;
+- active-period editing;
+- planned, recorded, and remaining amounts;
+- category-level summaries and progress;
+- recent participant-owned account activity;
+- transaction-to-Budget allocation relationships;
+- Budget lifecycle history;
+- neutral observational financial framing.
 
-Participant budget editing remains outside the currently approved scope.
+Budget is a practical participant money plan, not an accounting system.
+
+Transaction allocations are relationships within the Budget period. They should support understandable comparison between what the participant planned and what actually happened.
+
+A participant-facing `archive allocation` action is not approved. The most recent archive-allocation experiment caused an archived allocation to stop counting and made the amount appear available for reallocation. That behavior failed participant usability review and the UI experiment was removed without being committed.
+
+Budget-level lifecycle semantics remain the current unresolved area. Archiving a Budget should preserve its historical plan, transaction relationships, and totals while closing participant editing for that archived Budget.
+
+No additional Budget lifecycle controls should be added until that human behavior is reconciled against the live database model.
 
 ### Banking and financial evidence
 
-The financial evidence foundation is installed and partially connected.
+The financial evidence foundation is installed and connected to participant-facing reads, but the operational ingestion experience is not yet complete.
 
 Verified infrastructure includes:
 
-- financial sources
-- import batches
-- staged transactions
-- ownership mapping
-- review state
-- transaction evidence
-- January 2025 ingestion work
-- synthetic participant financial visibility
-- read-only reporting
+- financial sources;
+- import batches;
+- staged transactions;
+- ownership mapping;
+- review state;
+- transaction evidence;
+- controlled institution-file ingestion work;
+- synthetic participant financial visibility;
+- derived transaction-allocation reads;
+- account posted-balance snapshot support;
+- participant-facing financial summaries and reporting.
 
-The next participant-facing work should focus on understandable evidence and participant explanations rather than repeating broad schema verification.
+Bank data remains observational evidence. Imported activity does not establish intent, irresponsibility, relapse, incapacity, trust misuse, or any legal, clinical, or fiduciary conclusion.
 
-### Transaction explanations
+The current gap is operational usability rather than basic schema existence. THRIVE still needs a deliberate, traceable Financial Ingestion workflow for authorized statements or other approved financial sources.
 
-The participant transaction explanation model exists at the database and policy level.
+Future ingestion work should preserve source provenance, privacy, participant ownership, and separation between imported evidence, participant explanations, Budget planning, and any external system.
 
-A full participant-facing explanation workflow is not yet confirmed as complete.
+### Transaction Context
 
-The next smallest product step in this area is to connect one participant explanation interaction to the already validated model.
-
-### Wellness
-
-Wellness is working for the currently approved participant purpose.
+The ordinary participant Transaction Context path is connected and persistent.
 
 Verified behavior includes:
 
-- installed table
-- constraints
-- business-date handling
-- trigger
-- RLS
-- current active check-in read
-- participant reflection form
-- same-day controlled update behavior
-- duplicate prevention
-- archive behavior
-- synthetic participant validation
+- participant-owned staged transaction read;
+- existing participant context display;
+- ordinary participant draft context creation;
+- ordinary participant draft context editing;
+- persistent readback after refresh;
+- imported bank evidence remains separate and unchanged.
 
-General participant saving remains intentionally off pending a separate rollout decision.
+Transaction Context lets the participant explain what they say happened without changing the underlying bank record.
 
-Wellness selections do not automatically create Support requests, clinical findings, emergency actions, Goals, or other obligations.
+The current lifecycle still requires semantic review. The ordinary participant path creates context in `draft` status and does not yet expose a complete participant-facing submit or finalize transition.
+
+This draft-only behavior should not be treated as final product semantics until the intended human lifecycle is explicitly defined and verified.
+
+### Wellness
+
+Wellness is working as an ordinary participant reflection module.
+
+Verified behavior includes:
+
+- installed table;
+- constraints;
+- business-date handling;
+- trigger;
+- RLS;
+- current active check-in read;
+- ordinary participant check-in save;
+- persistent readback after refresh;
+- recent-history / multi-checkin support;
+- participant reflection form;
+- synthetic participant validation.
+
+Wellness remains voluntary and non-clinical.
+
+Participant Wellness selections do not automatically create Support requests, clinical findings, emergency actions, Goals, relapse conclusions, capacity judgments, or other obligations.
+
+Wellness lifecycle behavior should remain understandable in the participant view. Historical and archived records must remain preserved without being mistaken for current active check-ins.
 
 ### Goals
 
@@ -151,59 +183,54 @@ No staff-assigned Goal workflow, automatic Wellness-to-Goal creation, or Trust E
 
 ### Support
 
-Support is now working for its validated controlled scope.
+Support is working as an ordinary participant request module with a validated reviewer and lifecycle foundation behind it.
 
 Verified infrastructure includes:
 
-- persistent Support request records
-- request entries
-- request links
-- immutable status-event audit history
-- installed RLS
-- privilege hardening
-- participant and reviewer authenticated paths
-- guarded lifecycle controls
-- archived-link preservation
-- routing
-- reviewer assignment
-- audit events for lifecycle, routing, assignment, and link archival
+- persistent Support request records;
+- request entries;
+- request links;
+- immutable status-event audit history;
+- installed RLS;
+- privilege hardening;
+- ordinary participant request creation;
+- participant request history;
+- participant-friendly status display;
+- reviewer authenticated paths;
+- guarded lifecycle controls;
+- archived-link preservation;
+- routing;
+- reviewer assignment;
+- audit events for lifecycle, routing, assignment, and link archival.
 
-Support Path B has been validated through the fifth slice.
+Support lets the participant ask an authorized human for help.
 
-The current validated synthetic request remains:
+A Support request does not itself create external sharing consent, clinical escalation, emergency-response capability, Trust Engine action, or expanded authority.
 
-```text
-status = in_progress
-routing_category = goal_support
-assigned_member_id = cca88550-bac5-49b2-92a6-d5d9e19dd8ea
-```
-The fifth slice proved:
+Support lifecycle behavior should remain understandable in the participant view. Reviewer-side lifecycle, routing, and assignment controls remain separate from participant-owned request content.
 
-- `routing_category: null -> goal_support`
-- `assigned_member_id: null -> verified active Support member`
-- exactly one `routing_changed` event
-- exactly one `assignment_changed` event
-- no new fifth-slice `status_changed` event
-- no completion, archival, withdrawal, hard delete, schema change, or Trust Engine synchronization
-
-The Support test harness was relocked after validation.
-
-This does not authorize a sixth Support slice.
+The previously validated synthetic Support Path B evidence remains preserved as regression and authorization history. No additional Support expansion is approved during the current documentation reconciliation.
 
 ### Reports
 
-Reports are working for the currently approved read-only purpose.
+Reports are working as a read-only participant history and pattern layer.
 
-Participant-facing reporting includes:
+Verified behavior includes:
 
-- statement periods
-- connected sources
-- imported transaction totals
-- category summaries
-- recorded outflow
-- source-boundary language
+- statement periods;
+- connected financial sources;
+- imported transaction totals;
+- category summaries;
+- recorded outflow;
+- current-plan comparison;
+- source-boundary language;
+- participant-facing historical context.
 
-Bank evidence, THRIVE calculations, participant explanations, staff notes, and any future Trust-reported facts remain distinct.
+Reports should help the participant understand what has been happening over time without collapsing different sources into one conclusion.
+
+Bank evidence, THRIVE calculations, participant explanations, staff notes, Wellness information, Goals, Support activity, and any future Trust-reported facts must remain distinguishable.
+
+Reports may surface patterns and comparisons, but they must not imply causation, assign intent, or convert observed activity into legal, clinical, fiduciary, or behavioral conclusions.
 
 ### PWA / mobile
 
@@ -237,39 +264,65 @@ Deployment should not proceed until separately approved security, dependency, pr
 
 ## Current Product Classification
 
-THRIVE should be treated as an integrated internal alpha with several working participant modules.
+THRIVE should be treated as an integrated internal alpha moving through participant-usability completion.
 
-It is not:
+It is no longer an early schema or foundation experiment.
 
-- an early schema experiment
-- production-ready
-- approved for Johnny activation
-- approved for Trust Engine synchronization
-- approved for public launch
-- approved for uncontrolled participant writes
+Working or substantially connected product areas now include:
 
-It does contain working, validated product infrastructure across identity, Today, My Program, Budget, Wellness, Goals, Support, Reports, and financial evidence.
+- participant identity and access;
+- Today;
+- My Program;
+- Wellness;
+- Goals;
+- Budget planning and participant editing;
+- Bank Activity / financial evidence reads;
+- Transaction Context;
+- Support;
+- Reports;
+- shared mobile / PWA application shell.
+
+The current work is primarily about product coherence, human-understandable lifecycle behavior, operational ingestion, onboarding, and completing the participant feedback loop.
+
+THRIVE is not yet:
+
+- production-ready;
+- approved for Johnny activation;
+- approved for Trust Engine synchronization;
+- approved for public rollout;
+- complete as an operational Financial Ingestion system;
+- complete as an administrator onboarding system;
+- complete in its THRIVE Feedback Layer;
+- complete in all participant-facing lifecycle semantics.
+
+Synthetic and controlled test infrastructure remains valuable for regression, authorization, and edge-case proof, but it should not define the ordinary participant experience.
+
+Future ordinary usability testing should use current-time periods and realistic participant workflows created through the intended application path wherever that path exists.
 
 ## Frozen Boundaries
 
 Do not:
 
-- create or activate Johnny's auth account
-- insert or activate real Johnny participant records
-- synchronize THRIVE with the Trust Engine
-- merge personal and trust records
-- infer intent, relapse, incapacity, irresponsibility, trust misuse, or other conclusions from bank observations
-- broaden participant write authority without a separately approved product gate
-- introduce clinical escalation or emergency-response capability
-- introduce service-role shortcuts into participant-path validation
-- add hard-delete behavior
-- deploy
-- merge
-- push without explicit approval
+- create or activate Johnny's auth account;
+- insert or activate Johnny participant records;
+- synchronize THRIVE with the Trust Engine;
+- merge personal and trust records, ownership, approvals, authority, or decision-making;
+- infer intent, relapse, incapacity, irresponsibility, trust misuse, or other conclusions from bank observations;
+- broaden participant write authority beyond already validated module behavior without a separately approved product gate;
+- treat test-harness behavior, backend status names, or audit mechanics as participant-facing product semantics without human-flow review;
+- introduce clinical escalation or emergency-response capability;
+- introduce service-role shortcuts into participant-path validation;
+- add hard-delete behavior;
+- execute new production SQL during the current documentation reconciliation;
+- deploy;
+- merge;
+- push without explicit approval.
+
+All participant information is private and must be handled as protected information within the authorized THRIVE context, including identity, Wellness, Goals, Budget, Bank Activity, Transaction Context, Support, Reports, and uploaded source material.
 
 ## Current Documentation Truth
 
-The following control spine should be treated as the active project guide:
+The active THRIVE control spine is:
 
 - `docs/RENEWING/00_RENEWING_THRIVE_EXECUTIVE_DOCTRINE.md`
 - `docs/RENEWING/01_RENEWING_THRIVE_FOLDER_GOVERNANCE.md`
@@ -278,22 +331,44 @@ The following control spine should be treated as the active project guide:
 - `docs/RENEWING/04_PROJECT_INSTRUCTIONS_FOR_CHATGPT.md`
 - `docs/RENEWING/05_FULL_SPECTRUM_PRODUCT_READINESS_MATRIX.md`
 - `docs/BUILD_CHECKPOINTS.md`
+- `README.md`
 
-Detailed historical candidates, SQL files, validation records, screenshots, and evidence remain supporting artifacts rather than the first place to restart each working session.
+Detailed SQL candidates, patches, screenshots, test harnesses, validation records, and `evidence/` remain preserved as supporting breadcrumbs.
+
+They are evidence and implementation history, not automatically current product truth.
+
+The formal checkpoint log resumed at Checkpoint 065 after the post-064 usability and Budget sequence. Git history remains authoritative for the implementation interval that was not individually recorded in `BUILD_CHECKPOINTS.md`.
 
 ## Recommended Working Order
 
-1. Finish reconciling the authoritative product-control documents.
-2. Review Banking evidence and participant explanations.
-3. Complete a real-device PWA phone test.
-4. Review deployment readiness separately.
+1. Complete reconciliation of the executive handoff, readiness matrix, and README.
+2. Finish the current Budget human-lifecycle layer, including Budget-level complete/archive semantics and removal of any participant-facing allocation-archive concept.
+3. Preserve and retire the current 2099 synthetic participant from ordinary usability work after the current Budget layer is closed.
+4. Establish a new current-time tester using realistic periods and ordinary application-created data wherever the intended UI path exists.
+5. Complete the operational Financial Ingestion layer for authorized statements and approved financial sources.
+6. Build the authorized Admin / onboarding layer for supported-person setup, program participation, and access management.
+7. Reconcile Transaction Context lifecycle semantics, including the current draft-only participant path.
+8. Continue the THRIVE Feedback Layer and participant Today experience.
+9. Continue Reports as the historical and pattern layer.
+10. Add Resources as the participant's self-directed help path.
+11. Review actual-device use, security, and deployment readiness only after the participant product loop is coherent.
 
-Support should remain at its current validated scope unless a defect appears or a separately approved Support refinement is intentionally selected.
+The working product loop remains:
 
-## Exact Next Gate
+```text
+WELLNESS
+GOALS
+BUDGET
+BANK ACTIVITY
+TRANSACTION CONTEXT
 
-Complete this documentation reconciliation pass, then review the Banking / financial evidence and participant explanation layers against current repository and live application truth.
+        ↓
 
-Do not begin a sixth Support slice during this reconciliation.
+THRIVE FEEDBACK LAYER
 
-Do not modify schema or RLS, broaden participant writes, activate Johnny, synchronize with the Trust Engine, deploy, merge, or push unless separately approved.
+        ↓
+
+TODAY
+REPORTS
+SUPPORT
+RESOURCES
