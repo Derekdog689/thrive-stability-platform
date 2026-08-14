@@ -353,12 +353,13 @@ function TransactionAllocationPanel({
   const transactionAmount = Math.abs(toNumber(transaction.amount));
   const unassignedAmount = Math.max(transactionAmount - allocatedTotal, 0);
   const transactionBudgetPeriod =
-    budgetPeriods.find(
-      (period) =>
-        period.status === "active" &&
-        transaction.posted_date >= period.period_start &&
-        transaction.posted_date <= period.period_end,
-    ) ?? null;
+  budgetPeriods.find(
+    (period) =>
+      (period.status === "active" ||
+        getBudgetLifecycleView(period) === "recent_history") &&
+      transaction.posted_date >= period.period_start &&
+      transaction.posted_date <= period.period_end,
+  ) ?? null;
 
   function allocationPeriodIsActive(
   allocation: ParticipantTransactionAllocation,
@@ -644,6 +645,10 @@ async function allocateTransactionAndRefresh(
   (period) => getBudgetLifecycleView(period) === "recent_history",
 );
 
+const historicalPeriods = budgetPeriods.filter(
+  (period) => getBudgetLifecycleView(period) === "historical",
+);
+
 const currentLifecycle = currentPeriod
   ? getBudgetLifecycleView(currentPeriod)
   : null;
@@ -653,14 +658,14 @@ const currentLifecycle = currentPeriod
     : [];
 
   function getEligibleAllocationLines(transaction: FinancialTransaction) {
-  const matchingPeriod =
-    budgetPeriods.find(
-      (period) =>
-        period.status === "active" &&
-        transaction.posted_date >= period.period_start &&
-        transaction.posted_date <= period.period_end,
-    ) ?? null;
-
+ const matchingPeriod =
+  budgetPeriods.find(
+    (period) =>
+      (period.status === "active" ||
+        getBudgetLifecycleView(period) === "recent_history") &&
+      transaction.posted_date >= period.period_start &&
+      transaction.posted_date <= period.period_end,
+  ) ?? null;
   if (!matchingPeriod) {
     return [];
   }
@@ -1123,6 +1128,57 @@ const remainingTotal = currentLines.reduce(
           </article>
         );
       })}
+    </div>
+  </section>
+) : null}
+
+{historicalPeriods.length > 0 ? (
+  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+    <div>
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+        Budget history
+      </p>
+
+      <h2 className="mt-2 text-2xl font-black">
+        Historical periods
+      </h2>
+
+      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+        These Budget periods are part of your financial history.
+        Financial allocation corrections are closed, but the recorded
+        history remains available to review.
+      </p>
+    </div>
+
+    <div className="mt-6 grid gap-4">
+      {historicalPeriods.map((period) => (
+        <article
+          key={period.id}
+          className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-black text-slate-950">
+                {formatDate(period.period_start)} to{" "}
+                {formatDate(period.period_end)}
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                This Budget period is historical. Its financial
+                allocations are read-only.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">
+              Historical
+            </span>
+          </div>
+
+          <p className="mt-4 text-sm font-bold text-slate-700">
+            Financial corrections for this period are closed.
+          </p>
+        </article>
+      ))}
     </div>
   </section>
 ) : null}
