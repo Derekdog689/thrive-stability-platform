@@ -65,6 +65,10 @@ const [sendingRequestId, setSendingRequestId] = useState<string | null>(null);
 const [responseNotice, setResponseNotice] = useState<Record<string, string>>(
   {},
 );
+
+const [updatingRequestId, setUpdatingRequestId] = useState<string | null>(null);
+const [statusNotice, setStatusNotice] = useState<Record<string, string>>({});
+
   useEffect(() => {
     let mounted = true;
 
@@ -184,6 +188,56 @@ const [responseNotice, setResponseNotice] = useState<Record<string, string>>(
   setResponseNotice((current) => ({
     ...current,
     [request.id]: "Participant-visible response sent.",
+  }));
+}
+
+async function acknowledgeRequest(request: SupportRequestRow) {
+  if (request.status !== "submitted") {
+    setStatusNotice((current) => ({
+      ...current,
+      [request.id]: "Only a newly submitted request can be acknowledged.",
+    }));
+    return;
+  }
+
+  setUpdatingRequestId(request.id);
+
+  setStatusNotice((current) => ({
+    ...current,
+    [request.id]: "",
+  }));
+
+  const { data, error } = await supabase
+    .from("support_requests")
+    .update({
+      status: "acknowledged",
+    })
+    .eq("id", request.id)
+    .eq("workspace_id", request.workspace_id)
+    .eq("status", "submitted")
+    .select(supportRequestSelect)
+    .single();
+
+  setUpdatingRequestId(null);
+
+  if (error) {
+    setStatusNotice((current) => ({
+      ...current,
+      [request.id]:
+        error.message || "The Support request could not be acknowledged.",
+    }));
+    return;
+  }
+
+  setRequests((current) =>
+    current.map((item) =>
+      item.id === request.id ? (data as SupportRequestRow) : item,
+    ),
+  );
+
+  setStatusNotice((current) => ({
+    ...current,
+    [request.id]: "Support request acknowledged.",
   }));
 }
 
@@ -340,6 +394,32 @@ const [responseNotice, setResponseNotice] = useState<Record<string, string>>(
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black capitalize text-emerald-900">
                   {labelStatus(request.status)}
                 </span>
+
+                {request.status === "submitted" ? (
+  <div className="mt-4 flex flex-wrap items-center gap-3">
+    <button
+      type="button"
+      disabled={updatingRequestId === request.id}
+      onClick={() => acknowledgeRequest(request)}
+      className="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {updatingRequestId === request.id
+        ? "Acknowledging..."
+        : "Acknowledge request"}
+    </button>
+
+    {statusNotice[request.id] ? (
+      <p
+        role="status"
+        aria-live="polite"
+        className="text-sm font-semibold text-slate-600"
+      >
+        {statusNotice[request.id]}
+      </p>
+    ) : null}
+  </div>
+) : null}
+
               </div>
 
               <div className="mt-5 rounded-2xl bg-slate-50 p-5">

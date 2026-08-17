@@ -1595,3 +1595,141 @@ Reconcile the current executive handoff and full-spectrum product-readiness matr
 After those control documents are reconciled, reconcile `README.md`.
 
 Do not resume Budget feature wiring until the documentation spine accurately reflects the current participant product model and Budget lifecycle semantics.
+
+## Checkpoint 066: THRIVE Support Human Loop and Reviewer Acknowledgment Proven
+
+Date: 2026-08-17
+
+Current branch:
+
+`budget-builder-category-v0-1`
+
+Current pushed checkpoint before this lifecycle slice:
+
+`e1abe03 Add THRIVE admin support review loop`
+
+### Verified Support state
+
+THRIVE Support now has a working participant and reviewer human loop through ordinary authenticated UI paths.
+
+Verified participant-facing behavior:
+
+- participant can create a Support request;
+- newly created requests begin as `submitted`;
+- participant-facing `submitted` label renders as `Received`;
+- participant can withdraw only their own newly submitted request;
+- withdrawn requests move into request history;
+- participant sees status-event history as Request progress;
+- participant sees active `participant_response` entries;
+- archived participant responses remain hidden;
+- participant withdrawal control disappears after the request leaves `submitted`.
+
+Verified reviewer/admin behavior:
+
+- `/admin` exists as the THRIVE Review home;
+- `/admin/support` exists as the reviewer Support queue;
+- active `admin` and `support` workspace members may access reviewer tools;
+- participant and unauthorized accounts are denied reviewer access;
+- reviewer queue reads through installed reviewer RLS;
+- reviewer can send a participant-visible response through ordinary UI;
+- reviewer can acknowledge a newly submitted Support request through ordinary UI;
+- participant-authored request content and scope remain immutable.
+
+### Verified participant-visible response proof
+
+A synthetic reviewer response was created through `/admin/support`.
+
+Verified:
+
+- `entry_type = participant_response`;
+- response remained scoped to the existing workspace, program, supported person, and Support request;
+- `created_by` recorded the authenticated reviewer;
+- `archived_at = null`;
+- participant subsequently saw the response on `/support`;
+- an older archived synthetic response remained hidden.
+
+### Verified reviewer acknowledgment proof
+
+Synthetic request:
+
+`SYNTHETIC SUPPORT ACKNOWLEDGE TEST ONLY`
+
+Participant created the request through `/support`.
+
+Initial participant-facing state:
+
+`Received`
+
+Database lifecycle:
+
+```text
+submitted
+→ acknowledged
+## Checkpoint 066: THRIVE Support Human Loop and Reviewer Acknowledgment Proven
+
+Date: 2026-08-17
+
+Current branch:
+
+`budget-builder-category-v0-1`
+
+Current pushed checkpoint before this lifecycle slice:
+
+`e1abe03 Add THRIVE admin support review loop`
+
+### Verified Support state
+
+THRIVE Support now has a working participant and reviewer human loop through ordinary authenticated UI paths.
+
+Verified participant-facing behavior:
+
+- participant can create a Support request;
+- newly created requests begin as `submitted`;
+- participant-facing `submitted` label renders as `Received`;
+- participant can withdraw only their own newly submitted request;
+- withdrawn requests move into request history;
+- participant sees status-event history as Request progress;
+- participant sees active `participant_response` entries;
+- archived participant responses remain hidden;
+- participant withdrawal control disappears after the request leaves `submitted`.
+
+Verified reviewer/admin behavior:
+
+- `/admin` exists as the THRIVE Review home;
+- `/admin/support` exists as the reviewer Support queue;
+- active `admin` and `support` workspace members may access reviewer tools;
+- participant and unauthorized accounts are denied reviewer access;
+- reviewer queue reads through installed reviewer RLS;
+- reviewer can send a participant-visible response through ordinary UI;
+- reviewer can acknowledge a newly submitted Support request through ordinary UI;
+- participant-authored request content and scope remain immutable.
+
+### Verified participant-visible response proof
+
+A synthetic reviewer response was created through `/admin/support`.
+
+Verified:
+
+- `entry_type = participant_response`;
+- response remained scoped to the existing workspace, program, supported person, and Support request;
+- `created_by` recorded the authenticated reviewer;
+- `archived_at = null`;
+- participant subsequently saw the response on `/support`;
+- an older archived synthetic response remained hidden.
+
+### Verified reviewer acknowledgment proof
+
+Synthetic request:
+
+`SYNTHETIC SUPPORT ACKNOWLEDGE TEST ONLY`
+
+Participant created the request through `/support`.
+
+Initial participant-facing state:
+
+`Received`
+
+Database lifecycle:
+
+```text
+submitted
