@@ -54,6 +54,18 @@ export type ParticipantSupportStatusEvent = {
   change_note: string | null;
 };
 
+export type ParticipantSupportResponse = {
+  id: string;
+  workspace_id: string;
+  program_id: string;
+  supported_person_id: string;
+  support_request_id: string;
+  entry_type: "participant_response";
+  title: string | null;
+  content: string;
+  created_at: string;
+};
+
 export type SupportRequestDraft = {
   participantCategory: ParticipantSupportCategory;
   participantMessage: string;
@@ -86,6 +98,9 @@ const requestSelect =
 const statusEventSelect =
   "id, workspace_id, program_id, supported_person_id, support_request_id, event_type, from_status, to_status, changed_at, change_note";
 
+  const participantResponseSelect =
+  "id, workspace_id, program_id, supported_person_id, support_request_id, entry_type, title, content, created_at";
+
 export function useParticipantSupport() {
   const [participant, setParticipant] = useState<SupportedPerson | null>(null);
   const [participation, setParticipation] =
@@ -94,6 +109,9 @@ export function useParticipantSupport() {
   const [requests, setRequests] = useState<ParticipantSupportRequest[]>([]);
   const [statusEvents, setStatusEvents] = useState<
   ParticipantSupportStatusEvent[]
+>([]);
+const [participantResponses, setParticipantResponses] = useState<
+  ParticipantSupportResponse[]
 >([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -138,6 +156,27 @@ const loadStatusEvents = useCallback(
 
     return (
       (result.data as ParticipantSupportStatusEvent[] | null) ?? []
+    );
+  },
+  [],
+);
+
+const loadParticipantResponses = useCallback(
+  async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
+    const result = await supabase
+      .from("support_request_entries")
+      .select(participantResponseSelect)
+      .eq("supported_person_id", person.id)
+      .eq("workspace_id", person.workspace_id)
+      .eq("program_id", activeParticipation.program_id)
+      .eq("entry_type", "participant_response")
+      .is("archived_at", null)
+      .order("created_at", { ascending: true });
+
+    if (result.error) throw result.error;
+
+    return (
+      (result.data as ParticipantSupportResponse[] | null) ?? []
     );
   },
   [],
@@ -215,15 +254,17 @@ const loadStatusEvents = useCallback(
       }
 
       try {
-  const [requestRows, eventRows] = await Promise.all([
-    loadRequests(person, activeParticipation),
-    loadStatusEvents(person, activeParticipation),
-  ]);
+ const [requestRows, eventRows, responseRows] = await Promise.all([
+  loadRequests(person, activeParticipation),
+  loadStatusEvents(person, activeParticipation),
+  loadParticipantResponses(person, activeParticipation),
+]);
 
-  if (!mounted) return;
+if (!mounted) return;
 
-  setRequests(requestRows);
-  setStatusEvents(eventRows);
+setRequests(requestRows);
+setStatusEvents(eventRows);
+setParticipantResponses(responseRows);
 } catch (error) {
         if (!mounted) return;
         setErrorMessage(
@@ -241,7 +282,7 @@ const loadStatusEvents = useCallback(
     return () => {
       mounted = false;
     };
-  }, [loadRequests, loadStatusEvents]);
+  }, [loadRequests, loadStatusEvents, loadParticipantResponses]);
 
   async function refreshRequests() {
     if (!participant || !participation) {
@@ -250,15 +291,17 @@ const loadStatusEvents = useCallback(
     }
 
    try {
-  const [requestRows, eventRows] = await Promise.all([
-    loadRequests(participant, participation),
-    loadStatusEvents(participant, participation),
-  ]);
+  const [requestRows, eventRows, responseRows] = await Promise.all([
+  loadRequests(participant, participation),
+  loadStatusEvents(participant, participation),
+  loadParticipantResponses(participant, participation),
+]);
 
-  setRequests(requestRows);
-  setStatusEvents(eventRows);
+setRequests(requestRows);
+setStatusEvents(eventRows);
+setParticipantResponses(responseRows);
 
-  return requestRows;
+return requestRows;
 } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -411,6 +454,7 @@ async function withdrawRequest(request: ParticipantSupportRequest) {
   participantName,
   requests,
   statusEvents,
+  participantResponses,
   loading,
   working,
   errorMessage,

@@ -7,6 +7,7 @@ import {
   ContactPreference,
   ParticipantSupportCategory,
   ParticipantSupportRequest,
+  ParticipantSupportResponse,
   ParticipantSupportStatusEvent,
   SupportRequestDraft,
   SupportRequestStatus,
@@ -109,11 +110,13 @@ function formatDate(value: string) {
 function SupportRequestCard({
   request,
   statusEvents,
+  participantResponses,
   working,
   onWithdraw,
 }: {
   request: ParticipantSupportRequest;
   statusEvents: ParticipantSupportStatusEvent[];
+  participantResponses: ParticipantSupportResponse[];
   working: boolean;
   onWithdraw: (
     request: ParticipantSupportRequest,
@@ -122,6 +125,10 @@ function SupportRequestCard({
   const requestStatusEvents = statusEvents.filter(
     (event) => event.support_request_id === request.id,
   );
+
+  const requestParticipantResponses = participantResponses.filter(
+  (response) => response.support_request_id === request.id,
+);
 
 const [withdrawNotice, setWithdrawNotice] = useState("");
 
@@ -213,7 +220,34 @@ async function handleWithdraw() {
           </div>
         </section>
       ) : null}
-            {request.status === "submitted" ? (
+            {requestParticipantResponses.length > 0 ? (
+  <section className="mt-5 rounded-2xl border border-slate-100 bg-white p-5">
+    <p className="text-sm font-black text-slate-800">
+      Support response
+    </p>
+
+    <div className="mt-4 space-y-4">
+      {requestParticipantResponses.map((response) => (
+        <div key={response.id}>
+          {response.title ? (
+            <p className="font-bold text-slate-800">
+              {response.title}
+            </p>
+          ) : null}
+
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {response.content}
+          </p>
+
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            {formatDate(response.created_at)}
+          </p>
+        </div>
+      ))}
+    </div>
+  </section>
+) : null}
+{request.status === "submitted" ? (
         <div className="mt-5">
           <button
             type="button"
@@ -244,6 +278,7 @@ const {
   participantName,
   requests,
   statusEvents,
+  participantResponses,
   loading,
   working,
   errorMessage,
@@ -385,16 +420,17 @@ const {
                       </p>
                     </div>
                   ) : (
-                    activeRequests.map((request) => (
-                     <SupportRequestCard
-  key={request.id}
-  request={request}
-  statusEvents={statusEvents}
-  working={working}
-  onWithdraw={withdrawRequest}
-/>
-                    ))
-                  )}
+                 activeRequests.map((request) => (
+  <SupportRequestCard
+    key={request.id}
+    request={request}
+    statusEvents={statusEvents}
+    participantResponses={participantResponses}
+    working={working}
+    onWithdraw={withdrawRequest}
+  />
+))
+)}
                 </section>
 
                 {shouldShowCreate ? (
@@ -626,6 +662,7 @@ const {
   key={request.id}
   request={request}
   statusEvents={statusEvents}
+  participantResponses={participantResponses}
   working={working}
   onWithdraw={withdrawRequest}
 />
