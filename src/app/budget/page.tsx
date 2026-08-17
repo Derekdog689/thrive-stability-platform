@@ -108,6 +108,7 @@ function TransactionContextPanel({
   working,
   onCreate,
   onUpdate,
+  onSubmit,
 }: {
   transactionId: string;
   explanation: ParticipantTransactionExplanation | undefined;
@@ -120,6 +121,9 @@ function TransactionContextPanel({
   onUpdate: (
     explanation: ParticipantTransactionExplanation,
     draft: TransactionExplanationDraft,
+  ) => Promise<{ ok: boolean; message: string }>;
+  onSubmit: (
+  explanation: ParticipantTransactionExplanation,
   ) => Promise<{ ok: boolean; message: string }>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -157,6 +161,21 @@ function TransactionContextPanel({
     }
   }
 
+  async function handleSubmit() {
+  if (!explanation) return;
+
+  setNotice("");
+
+  const confirmed = window.confirm(
+    "Submit this transaction context? You will no longer be able to edit it here.",
+  );
+
+  if (!confirmed) return;
+
+  const result = await onSubmit(explanation);
+  setNotice(result.message);
+}
+
   if (explanation && !editing) {
     return (
       <section className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
@@ -186,20 +205,31 @@ function TransactionContextPanel({
         )}
 
         {editable && canWrite ? (
-          <button
-            type="button"
-            disabled={working}
-            onClick={() => {
-              resetDraft();
-              setNotice("");
-              setEditing(true);
-            }}
-            className="mt-4 rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-black text-emerald-900 disabled:opacity-60"
-          >
-            Edit context
-          </button>
-        ) : null}
-      </section>
+        <div className="mt-4 flex flex-wrap gap-3">
+         <button
+         type="button"
+         disabled={working}
+         onClick={() => {
+         resetDraft();
+         setNotice("");
+         setEditing(true);
+         }}
+        className="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-black text-emerald-900 disabled:opacity-60"
+        >
+         Edit context
+        </button>
+
+        <button
+        type="button"
+        disabled={working}
+        onClick={() => void handleSubmit()}
+        className="rounded-2xl bg-emerald-700 px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+        >
+        {working ? "Submitting..." : "Submit context"}
+       </button>
+       </div>
+       ) : null}
+        </section>
     );
   }
 
@@ -807,6 +837,7 @@ export default function BudgetPage() {
     canWrite,
     createDraft,
     updateDraft,
+    submitDraft,
   } = useParticipantTransactionExplanations();
 
   const {
@@ -1219,6 +1250,7 @@ export default function BudgetPage() {
                             working={workingTransactionId === transaction.id}
                             onCreate={createDraft}
                             onUpdate={updateDraft}
+                            onSubmit={submitDraft}
                           />
 
                           <BudgetRelationshipPanel

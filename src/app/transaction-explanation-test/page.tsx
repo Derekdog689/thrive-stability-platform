@@ -173,6 +173,8 @@ export default function TransactionExplanationTestPage() {
     "Read back only that participant-owned draft explanation.",
     "Edit only the draft explanation category and text.",
     "Re-read the explanation to confirm the edit persisted.",
+    "Submit the participant-owned draft explanation.",
+    "Confirm the explanation reaches submitted status with submitted_at populated.",
     "Re-read the staged transaction and prove its baseline did not change.",
   ];
 
@@ -448,6 +450,56 @@ export default function TransactionExplanationTestPage() {
       returned: data,
     };
   }
+
+  async function submitDraftExplanation() {
+  const user = await requireParticipantD();
+
+  const current = await readDraftExplanation();
+
+  if (current.submitted_by !== user.id) {
+    throw new Error(
+      "Execution stopped. The explanation is not owned by the authenticated Participant D user.",
+    );
+  }
+
+  if (current.status !== "draft") {
+    throw new Error(
+      "Execution stopped. Only the participant-owned draft may be submitted.",
+    );
+  }
+
+  const submittedAt = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("participant_transaction_explanations")
+    .update({
+      status: "submitted",
+      submitted_at: submittedAt,
+    })
+    .eq("id", current.id)
+    .eq("status", "draft")
+    .eq("submitted_by", user.id)
+    .select(
+      "id, workspace_id, program_id, supported_person_id, staged_transaction_id, explanation_category, explanation_text, status, submitted_by, submitted_at, archived_at, created_at, updated_at",
+    )
+    .single();
+
+  if (error) throw error;
+
+  if (data.status !== "submitted" || data.submitted_at === null) {
+    throw new Error(
+      "Execution stopped. The explanation did not reach the submitted state correctly.",
+    );
+  }
+
+  setExplanationId(data.id);
+
+  return {
+    previousStatus: current.status,
+    submittedAt,
+    returned: data,
+  };
+}
 
   async function verifyTransactionUnchanged() {
     await requireParticipantD();
@@ -742,6 +794,20 @@ export default function TransactionExplanationTestPage() {
             </button>
 
             <button
+  type="button"
+  disabled={disabled}
+  onClick={() =>
+    runAction(
+      "submit draft explanation",
+      submitDraftExplanation,
+    )
+  }
+  className="rounded-xl bg-emerald-800 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+>
+  Submit draft explanation
+</button>
+
+            <button
               type="button"
               disabled={disabled}
               onClick={() =>
@@ -847,13 +913,13 @@ export default function TransactionExplanationTestPage() {
             Controls are installed, but execution remains locked.
           </p>
 
-          <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-200">
-            This page contains the narrow browser-authenticated candidate path
-            for create, read, draft edit, re-read, and transaction
-            immutability verification. No submission, resolution, archival,
-            administrative action, service-role access, Trust Engine action,
-            Johnny activation, or hard delete is included.
-          </p>
+         <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-200">
+          This page contains the narrow browser-authenticated candidate path
+          for create, read, draft edit, submission, re-read, and transaction
+          immutability verification. Resolution, archival, administrative
+          action, service-role access, Trust Engine action, Johnny activation,
+          and hard delete remain outside this test boundary.
+        </p>
         </section>
       </section>
     </main>

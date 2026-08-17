@@ -298,7 +298,7 @@ export function useParticipantTransactionExplanations() {
   async function updateDraft(
     explanation: ParticipantTransactionExplanation,
     draft: TransactionExplanationDraft,
-  ): Promise<TransactionExplanationWriteResult> {
+   ): Promise<TransactionExplanationWriteResult> {
     setErrorMessage("");
 
     if (!authenticatedUserId || !participant || !participation) {
@@ -358,6 +358,66 @@ export function useParticipantTransactionExplanations() {
     };
   }
 
+  async function submitDraft(
+  explanation: ParticipantTransactionExplanation,
+): Promise<TransactionExplanationWriteResult> {
+  setErrorMessage("");
+
+  if (!authenticatedUserId || !participant || !participation) {
+    return {
+      ok: false,
+      message: "Your participant and program connection is not ready.",
+    };
+  }
+
+  if (
+    explanation.status !== "draft" ||
+    explanation.submitted_by !== authenticatedUserId
+  ) {
+    return {
+      ok: false,
+      message: "Only your own draft transaction context can be submitted here.",
+    };
+  }
+
+  setWorkingTransactionId(explanation.staged_transaction_id);
+
+  const result = await supabase
+    .from("participant_transaction_explanations")
+    .update({
+      status: "submitted",
+      submitted_at: new Date().toISOString(),
+    })
+    .eq("id", explanation.id)
+    .eq("status", "draft")
+    .eq("submitted_by", authenticatedUserId)
+    .select(explanationSelect)
+    .single();
+
+  setWorkingTransactionId(null);
+
+  if (result.error) {
+    return {
+      ok: false,
+      message:
+        result.error.message ||
+        "Your transaction context could not be submitted.",
+    };
+  }
+
+  const row = result.data as ParticipantTransactionExplanation;
+
+  setExplanations((current) =>
+    current.map((item) => (item.id === row.id ? row : item)),
+  );
+
+  return {
+    ok: true,
+    row,
+    message: "Your transaction context was submitted.",
+  };
+}
+
   return {
     participant,
     participation,
@@ -370,5 +430,6 @@ export function useParticipantTransactionExplanations() {
     refreshExplanations,
     createDraft,
     updateDraft,
+    submitDraft,
   };
 }
