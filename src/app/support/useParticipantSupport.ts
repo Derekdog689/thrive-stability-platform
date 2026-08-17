@@ -41,6 +41,19 @@ export type ParticipantSupportRequest = {
   updated_at: string;
 };
 
+export type ParticipantSupportStatusEvent = {
+  id: string;
+  workspace_id: string;
+  program_id: string;
+  supported_person_id: string;
+  support_request_id: string;
+  event_type: "status_changed";
+  from_status: SupportRequestStatus | null;
+  to_status: SupportRequestStatus | null;
+  changed_at: string;
+  change_note: string | null;
+};
+
 export type SupportRequestDraft = {
   participantCategory: ParticipantSupportCategory;
   participantMessage: string;
@@ -70,12 +83,18 @@ export type SupportCreateResult =
 const requestSelect =
   "id, workspace_id, program_id, supported_person_id, participant_category, participant_message, requested_support, contact_preference, status, created_at, updated_at";
 
+const statusEventSelect =
+  "id, workspace_id, program_id, supported_person_id, support_request_id, event_type, from_status, to_status, changed_at, change_note";
+
 export function useParticipantSupport() {
   const [participant, setParticipant] = useState<SupportedPerson | null>(null);
   const [participation, setParticipation] =
     useState<ProgramParticipation | null>(null);
   const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(null);
   const [requests, setRequests] = useState<ParticipantSupportRequest[]>([]);
+  const [statusEvents, setStatusEvents] = useState<
+  ParticipantSupportStatusEvent[]
+>([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -103,6 +122,26 @@ export function useParticipantSupport() {
     },
     [],
   );
+
+const loadStatusEvents = useCallback(
+  async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
+    const result = await supabase
+      .from("support_request_status_events")
+      .select(statusEventSelect)
+      .eq("supported_person_id", person.id)
+      .eq("workspace_id", person.workspace_id)
+      .eq("program_id", activeParticipation.program_id)
+      .eq("event_type", "status_changed")
+      .order("changed_at", { ascending: true });
+
+    if (result.error) throw result.error;
+
+    return (
+      (result.data as ParticipantSupportStatusEvent[] | null) ?? []
+    );
+  },
+  [],
+);
 
   useEffect(() => {
     let mounted = true;
@@ -176,10 +215,16 @@ export function useParticipantSupport() {
       }
 
       try {
-        const rows = await loadRequests(person, activeParticipation);
-        if (!mounted) return;
-        setRequests(rows);
-      } catch (error) {
+  const [requestRows, eventRows] = await Promise.all([
+    loadRequests(person, activeParticipation),
+    loadStatusEvents(person, activeParticipation),
+  ]);
+
+  if (!mounted) return;
+
+  setRequests(requestRows);
+  setStatusEvents(eventRows);
+} catch (error) {
         if (!mounted) return;
         setErrorMessage(
           error instanceof Error
@@ -196,7 +241,7 @@ export function useParticipantSupport() {
     return () => {
       mounted = false;
     };
-  }, [loadRequests]);
+  }, [loadRequests, loadStatusEvents]);
 
   async function refreshRequests() {
     if (!participant || !participation) {
@@ -204,11 +249,17 @@ export function useParticipantSupport() {
       return [];
     }
 
-    try {
-      const rows = await loadRequests(participant, participation);
-      setRequests(rows);
-      return rows;
-    } catch (error) {
+   try {
+  const [requestRows, eventRows] = await Promise.all([
+    loadRequests(participant, participation),
+    loadStatusEvents(participant, participation),
+  ]);
+
+  setRequests(requestRows);
+  setStatusEvents(eventRows);
+
+  return requestRows;
+} catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -299,16 +350,73 @@ export function useParticipantSupport() {
     };
   }
 
+async function withdrawRequest(request: ParticipantSupportRequest) {
+  setErrorMessage("");
+
+  if (!authenticatedUserId || !participant || !participation) {
+    return {
+      ok: false,
+      message: "Your participant and program connection is not ready.",
+    };
+  }
+
+  if (request.status !== "submitted") {
+    return {
+      ok: false,
+      message: "Only a newly submitted Support request can be withdrawn.",
+    };
+  }
+
+  setWorking(true);
+
+  const withdrawnAt = new Date().toISOString();
+
+  const result = await supabase
+    .from("support_requests")
+    .update({
+      status: "withdrawn",
+      withdrawn_at: withdrawnAt,
+    })
+    .eq("id", request.id)
+    .eq("supported_person_id", participant.id)
+    .eq("workspace_id", participant.workspace_id)
+    .eq("program_id", participation.program_id)
+    .eq("status", "submitted")
+    .select(requestSelect)
+    .single();
+
+  setWorking(false);
+
+  if (result.error) {
+    return {
+      ok: false,
+      message:
+        result.error.message ||
+        "Your Support request could not be withdrawn.",
+    };
+  }
+
+  await refreshRequests();
+
   return {
-    participant,
-    participation,
-    participantName,
-    requests,
-    loading,
-    working,
-    errorMessage,
-    canCreate: Boolean(authenticatedUserId && participant && participation),
-    refreshRequests,
-    createRequest,
+    ok: true,
+    row: result.data as ParticipantSupportRequest,
+    message: "Your Support request was withdrawn.",
   };
+}
+
+ return {
+  participant,
+  participation,
+  participantName,
+  requests,
+  statusEvents,
+  loading,
+  working,
+  errorMessage,
+  canCreate: Boolean(authenticatedUserId && participant && participation),
+  refreshRequests,
+  createRequest,
+  withdrawRequest,
+};
 }

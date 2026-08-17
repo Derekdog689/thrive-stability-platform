@@ -7,6 +7,7 @@ import {
   ContactPreference,
   ParticipantSupportCategory,
   ParticipantSupportRequest,
+  ParticipantSupportStatusEvent,
   SupportRequestDraft,
   SupportRequestStatus,
   useParticipantSupport,
@@ -107,9 +108,36 @@ function formatDate(value: string) {
 
 function SupportRequestCard({
   request,
+  statusEvents,
+  working,
+  onWithdraw,
 }: {
   request: ParticipantSupportRequest;
+  statusEvents: ParticipantSupportStatusEvent[];
+  working: boolean;
+  onWithdraw: (
+    request: ParticipantSupportRequest,
+  ) => Promise<{ ok: boolean; message: string }>;
 }) {
+  const requestStatusEvents = statusEvents.filter(
+    (event) => event.support_request_id === request.id,
+  );
+
+const [withdrawNotice, setWithdrawNotice] = useState("");
+
+async function handleWithdraw() {
+  setWithdrawNotice("");
+
+  const confirmed = window.confirm(
+    "Withdraw this Support request? This request will move to your request history.",
+  );
+
+  if (!confirmed) return;
+
+  const result = await onWithdraw(request);
+  setWithdrawNotice(result.message);
+}
+
   return (
     <article className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -151,20 +179,78 @@ function SupportRequestCard({
           </dd>
         </div>
       </dl>
+            {requestStatusEvents.length > 0 ? (
+        <section className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+          <p className="text-sm font-black text-slate-800">
+            Request progress
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {requestStatusEvents.map((event) => (
+              <div
+                key={event.id}
+                className="flex items-start justify-between gap-4 text-sm"
+              >
+                <div>
+                  <p className="font-bold text-slate-800">
+                    {event.to_status
+                      ? labelStatus(event.to_status)
+                      : "Status updated"}
+                  </p>
+
+                  {event.change_note ? (
+                    <p className="mt-1 text-slate-600">
+                      {event.change_note}
+                    </p>
+                  ) : null}
+                </div>
+
+                <p className="shrink-0 text-xs font-semibold text-slate-500">
+                  {formatDate(event.changed_at)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+            {request.status === "submitted" ? (
+        <div className="mt-5">
+          <button
+            type="button"
+            disabled={working}
+            onClick={handleWithdraw}
+            className="rounded-2xl border border-slate-300 bg-white px-5 py-3 font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {working ? "Withdrawing..." : "Withdraw request"}
+          </button>
+
+          {withdrawNotice ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className="mt-3 text-sm font-semibold text-slate-600"
+            >
+              {withdrawNotice}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }
 
 export default function SupportPage() {
-  const {
-    participantName,
-    requests,
-    loading,
-    working,
-    errorMessage,
-    canCreate,
-    createRequest,
-  } = useParticipantSupport();
+const {
+  participantName,
+  requests,
+  statusEvents,
+  loading,
+  working,
+  errorMessage,
+  canCreate,
+  createRequest,
+  withdrawRequest,
+} = useParticipantSupport();
 
   const [draft, setDraft] = useState<SupportRequestDraft>(emptyDraft);
   const [notice, setNotice] = useState("");
@@ -300,7 +386,13 @@ export default function SupportPage() {
                     </div>
                   ) : (
                     activeRequests.map((request) => (
-                      <SupportRequestCard key={request.id} request={request} />
+                     <SupportRequestCard
+  key={request.id}
+  request={request}
+  statusEvents={statusEvents}
+  working={working}
+  onWithdraw={withdrawRequest}
+/>
                     ))
                   )}
                 </section>
@@ -530,7 +622,13 @@ export default function SupportPage() {
                     </div>
 
                     {historicalRequests.map((request) => (
-                      <SupportRequestCard key={request.id} request={request} />
+                    <SupportRequestCard
+  key={request.id}
+  request={request}
+  statusEvents={statusEvents}
+  working={working}
+  onWithdraw={withdrawRequest}
+/>
                     ))}
                   </section>
                 ) : null}
