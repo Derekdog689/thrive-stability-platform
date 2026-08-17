@@ -241,6 +241,56 @@ async function acknowledgeRequest(request: SupportRequestRow) {
   }));
 }
 
+async function startWorkRequest(request: SupportRequestRow) {
+  if (request.status !== "acknowledged") {
+    setStatusNotice((current) => ({
+      ...current,
+      [request.id]: "Only an acknowledged request can be started.",
+    }));
+    return;
+  }
+
+  setUpdatingRequestId(request.id);
+
+  setStatusNotice((current) => ({
+    ...current,
+    [request.id]: "",
+  }));
+
+  const { data, error } = await supabase
+    .from("support_requests")
+    .update({
+      status: "in_progress",
+    })
+    .eq("id", request.id)
+    .eq("workspace_id", request.workspace_id)
+    .eq("status", "acknowledged")
+    .select(supportRequestSelect)
+    .single();
+
+  setUpdatingRequestId(null);
+
+  if (error) {
+    setStatusNotice((current) => ({
+      ...current,
+      [request.id]:
+        error.message || "The Support request could not be started.",
+    }));
+    return;
+  }
+
+  setRequests((current) =>
+    current.map((item) =>
+      item.id === request.id ? (data as SupportRequestRow) : item,
+    ),
+  );
+
+  setStatusNotice((current) => ({
+    ...current,
+    [request.id]: "Support work started.",
+  }));
+}
+
   if (state === "checking") {
     return (
       <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
@@ -395,18 +445,33 @@ async function acknowledgeRequest(request: SupportRequestRow) {
                   {labelStatus(request.status)}
                 </span>
 
-                {request.status === "submitted" ? (
+              {["submitted", "acknowledged"].includes(request.status) ? (
   <div className="mt-4 flex flex-wrap items-center gap-3">
-    <button
-      type="button"
-      disabled={updatingRequestId === request.id}
-      onClick={() => acknowledgeRequest(request)}
-      className="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {updatingRequestId === request.id
-        ? "Acknowledging..."
-        : "Acknowledge request"}
-    </button>
+    {request.status === "submitted" ? (
+      <button
+        type="button"
+        disabled={updatingRequestId === request.id}
+        onClick={() => acknowledgeRequest(request)}
+        className="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {updatingRequestId === request.id
+          ? "Acknowledging..."
+          : "Acknowledge request"}
+      </button>
+    ) : null}
+
+    {request.status === "acknowledged" ? (
+      <button
+        type="button"
+        disabled={updatingRequestId === request.id}
+        onClick={() => startWorkRequest(request)}
+        className="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-bold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {updatingRequestId === request.id
+          ? "Starting..."
+          : "Start work"}
+      </button>
+    ) : null}
 
     {statusNotice[request.id] ? (
       <p

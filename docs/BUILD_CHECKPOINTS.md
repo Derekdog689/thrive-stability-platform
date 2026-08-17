@@ -1666,3 +1666,96 @@ Database lifecycle:
 submitted
 → acknowledged
 ```
+## Checkpoint 067: Reviewer Start Work Lifecycle Proven
+
+Date: 2026-08-17
+
+Current branch:
+
+`budget-builder-category-v0-1`
+
+Current pushed checkpoint before this lifecycle slice:
+
+`c06f8d6 Repair duplicated Support checkpoint`
+
+### Verified reviewer lifecycle
+
+The existing acknowledged Support request was advanced through the ordinary authenticated reviewer UI.
+
+Synthetic request:
+
+`SYNTHETIC SUPPORT ACKNOWLEDGE TEST ONLY`
+
+Authorized reviewer account:
+
+`dstein561+thrive-rls-support@gmail.com`
+
+Pre-transition state:
+
+`acknowledged`
+
+Reviewer action:
+
+`Start work`
+
+Resulting database state:
+
+`in_progress`
+
+Verified lifecycle:
+
+```text
+submitted
+→ acknowledged
+→ in_progress
+```
+
+### Verified controls
+
+The reviewer transition was constrained to:
+
+* the existing Support request ID;
+* the existing workspace ID;
+* a current request status of `acknowledged`;
+* an authenticated active Support reviewer.
+
+No participant-authored request content, scope, routing, or authority was modified.
+
+No schema, trigger, RLS, or service-role change was required.
+
+### Verified participant presentation
+
+After the reviewer started work:
+
+* `/support` displayed the request as `In review`;
+* Request progress retained the earlier `Received` and `Acknowledged` states and added the new active-work state;
+* the participant Today view displayed the Support summary as `In progress`;
+* the request remained active and participant-visible.
+
+### Verified audit evidence
+
+The live database showed the request in `in_progress`.
+
+The status-event history contained:
+
+```text
+submitted
+→ acknowledged
+→ in_progress
+```
+
+The latest transition created one `status_changed` event from `acknowledged` to `in_progress`.
+
+### Frozen boundaries
+
+This lifecycle slice did not:
+
+* activate Johnny;
+* synchronize THRIVE with the Trust Engine;
+* create or modify authority;
+* alter participant-authored Support content;
+* change schema or RLS;
+* use service-role access;
+* complete or archive the request;
+* delete records;
+* broaden the Support workflow beyond the tested transition.
