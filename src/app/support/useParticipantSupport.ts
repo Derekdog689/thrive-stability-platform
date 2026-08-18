@@ -66,6 +66,22 @@ export type ParticipantSupportResponse = {
   created_at: string;
 };
 
+export type ParticipantSupportReply = {
+  id: string;
+  workspace_id: string;
+  program_id: string;
+  supported_person_id: string;
+  support_request_id: string;
+  entry_type: "participant_reply";
+  title: string | null;
+  content: string;
+  created_at: string;
+};
+
+export type ParticipantReplyResult =
+  | { ok: true; row: ParticipantSupportReply; message: string }
+  | { ok: false; message: string };
+
 export type SupportRequestDraft = {
   participantCategory: ParticipantSupportCategory;
   participantMessage: string;
@@ -101,6 +117,9 @@ const statusEventSelect =
   const participantResponseSelect =
   "id, workspace_id, program_id, supported_person_id, support_request_id, entry_type, title, content, created_at";
 
+const participantReplySelect =
+  "id, workspace_id, program_id, supported_person_id, support_request_id, entry_type, title, content, created_at";
+
 export function useParticipantSupport() {
   const [participant, setParticipant] = useState<SupportedPerson | null>(null);
   const [participation, setParticipation] =
@@ -112,6 +131,9 @@ export function useParticipantSupport() {
 >([]);
 const [participantResponses, setParticipantResponses] = useState<
   ParticipantSupportResponse[]
+>([]);
+const [participantReplies, setParticipantReplies] = useState<
+  ParticipantSupportReply[]
 >([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -177,6 +199,27 @@ const loadParticipantResponses = useCallback(
 
     return (
       (result.data as ParticipantSupportResponse[] | null) ?? []
+    );
+  },
+  [],
+);
+
+const loadParticipantReplies = useCallback(
+  async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
+    const result = await supabase
+      .from("support_request_entries")
+      .select(participantReplySelect)
+      .eq("supported_person_id", person.id)
+      .eq("workspace_id", person.workspace_id)
+      .eq("program_id", activeParticipation.program_id)
+      .eq("entry_type", "participant_reply")
+      .is("archived_at", null)
+      .order("created_at", { ascending: true });
+
+    if (result.error) throw result.error;
+
+    return (
+      (result.data as ParticipantSupportReply[] | null) ?? []
     );
   },
   [],
@@ -254,10 +297,11 @@ const loadParticipantResponses = useCallback(
       }
 
       try {
- const [requestRows, eventRows, responseRows] = await Promise.all([
+ const [requestRows, eventRows, responseRows, replyRows] = await Promise.all([
   loadRequests(person, activeParticipation),
   loadStatusEvents(person, activeParticipation),
   loadParticipantResponses(person, activeParticipation),
+  loadParticipantReplies(person, activeParticipation),
 ]);
 
 if (!mounted) return;
@@ -265,6 +309,7 @@ if (!mounted) return;
 setRequests(requestRows);
 setStatusEvents(eventRows);
 setParticipantResponses(responseRows);
+setParticipantReplies(replyRows);
 } catch (error) {
         if (!mounted) return;
         setErrorMessage(
@@ -282,7 +327,12 @@ setParticipantResponses(responseRows);
     return () => {
       mounted = false;
     };
-  }, [loadRequests, loadStatusEvents, loadParticipantResponses]);
+  }, [
+    loadRequests,
+    loadStatusEvents,
+    loadParticipantResponses,
+    loadParticipantReplies,
+  ]);
 
   async function refreshRequests() {
     if (!participant || !participation) {
@@ -291,15 +341,17 @@ setParticipantResponses(responseRows);
     }
 
    try {
-  const [requestRows, eventRows, responseRows] = await Promise.all([
+  const [requestRows, eventRows, responseRows, replyRows] = await Promise.all([
   loadRequests(participant, participation),
   loadStatusEvents(participant, participation),
   loadParticipantResponses(participant, participation),
+  loadParticipantReplies(participant, participation),
 ]);
 
 setRequests(requestRows);
 setStatusEvents(eventRows);
 setParticipantResponses(responseRows);
+setParticipantReplies(replyRows);
 
 return requestRows;
 } catch (error) {
@@ -448,6 +500,96 @@ async function withdrawRequest(request: ParticipantSupportRequest) {
   };
 }
 
+async function submitParticipantReply(
+  request: ParticipantSupportRequest,
+  contentValue: string,
+): Promise<ParticipantReplyResult> {
+  setErrorMessage("");
+
+  if (!authenticatedUserId || !participant || !participation) {
+    return {
+      ok: false,
+      message: "Your participant and program connection is not ready.",
+    };
+  }
+
+  if (request.status !== "waiting_for_participant") {
+    return {
+      ok: false,
+      message:
+        "A response can only be sent while Support is waiting for information from you.",
+    };
+  }
+
+  if (
+    request.supported_person_id !== participant.id ||
+    request.workspace_id !== participant.workspace_id ||
+    request.program_id !== participation.program_id
+  ) {
+    return {
+      ok: false,
+      message: "This Support request does not match your active participation.",
+    };
+  }
+
+  const content = contentValue.trim();
+
+  if (!content) {
+    return {
+      ok: false,
+      message: "Write your response before sending it.",
+    };
+  }
+
+  if (content.length > 4000) {
+    return {
+      ok: false,
+      message: "Keep your response to 4,000 characters or fewer.",
+    };
+  }
+
+  setWorking(true);
+
+  const result = await supabase
+    .from("support_request_entries")
+    .insert({
+      workspace_id: request.workspace_id,
+      program_id: request.program_id,
+      supported_person_id: request.supported_person_id,
+      support_request_id: request.id,
+      entry_type: "participant_reply",
+      title: null,
+      content,
+      created_by: authenticatedUserId,
+    })
+    .select(participantReplySelect)
+    .single();
+
+  setWorking(false);
+
+  if (result.error) {
+    return {
+      ok: false,
+      message:
+        result.error.message ||
+        "Your response could not be sent. Please try again.",
+    };
+  }
+
+  const row = result.data as ParticipantSupportReply;
+
+  setParticipantReplies((current) => [
+    ...current.filter((reply) => reply.id !== row.id),
+    row,
+  ]);
+
+  return {
+    ok: true,
+    row,
+    message: "Your response was sent to Support.",
+  };
+}
+
  return {
   participant,
   participation,
@@ -455,6 +597,7 @@ async function withdrawRequest(request: ParticipantSupportRequest) {
   requests,
   statusEvents,
   participantResponses,
+  participantReplies,
   loading,
   working,
   errorMessage,
@@ -462,5 +605,6 @@ async function withdrawRequest(request: ParticipantSupportRequest) {
   refreshRequests,
   createRequest,
   withdrawRequest,
+  submitParticipantReply,
 };
 }
