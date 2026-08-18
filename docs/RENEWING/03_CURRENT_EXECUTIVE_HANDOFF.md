@@ -1,11 +1,11 @@
 # Renewing THRIVE Current Executive Handoff
 
-**Checkpoint date:** August 14, 2026
+**Checkpoint date:** August 18, 2026
 **Repository:** `thrive-stability-platform`  
 **Branch:** `budget-builder-category-v0-1`
-**Current safe checkpoint:** `d1a3ad9 Preserve historical Budget allocation visibility`
+**Current safe checkpoint:** `fd3acb1 Complete THRIVE Support participant reply workflow`
 **Checkpoint continuity:** formal `BUILD_CHECKPOINTS.md` logging resumed at Checkpoint 065 after the post-064 usability and Budget sequence.
-**Remote status:** `budget-builder-category-v0-1` is synchronized through `d1a3ad9`; do not push additional work without explicit approval.
+**Remote status:** `budget-builder-category-v0-1` is synchronized through `fd3acb1`; do not push additional work without explicit approval.
 
 ## Project Purpose
 
@@ -183,7 +183,7 @@ No staff-assigned Goal workflow, automatic Wellness-to-Goal creation, or Trust E
 
 ### Support
 
-Support is working as an ordinary participant request module with a validated reviewer and lifecycle foundation behind it.
+Support is working as an ordinary participant request module with a complete authenticated participant and reviewer communication loop for its currently approved scope.
 
 Verified infrastructure includes:
 
@@ -201,15 +201,61 @@ Verified infrastructure includes:
 - archived-link preservation;
 - routing;
 - reviewer assignment;
-- audit events for lifecycle, routing, assignment, and link archival.
+- audit events for lifecycle, routing, assignment, and link archival;
+- participant reply support through the existing request-entry ledger;
+- reviewer timing guidance;
+- reviewer action grouping;
+- read-only closed-request history.
 
-Support lets the participant ask an authorized human for help.
+Verified human lifecycle:
+
+submitted -> acknowledged -> in_progress -> waiting_for_participant -> in_progress -> completed
+
+Participant-facing status language:
+
+Received -> Acknowledged -> In review -> Waiting for you -> In review -> Resolved
+
+The participant can:
+
+- create a Support request;
+- follow request progress;
+- read reviewer participant-visible messages;
+- reply only while Support is waiting for participant information;
+- retain submitted replies in request history;
+- see completed requests as Resolved;
+- retain completed and withdrawn requests in history.
+
+The reviewer can:
+
+- acknowledge a request;
+- start work;
+- send participant-visible updates without changing lifecycle status;
+- request information;
+- send follow-up questions while waiting for the participant;
+- read participant replies;
+- resume work;
+- complete the request;
+- review completed, withdrawn, and archived requests as read-only history.
+
+Reviewer presentation is organized into:
+
+- `Needs Support action`;
+- `Waiting on participant`;
+- `Closed requests`.
+
+Passive communication guidance is displayed for acknowledgement and follow-up timing. It does not automatically change status, create reminders, infer urgency, or create clinical, legal, fiduciary, or behavioral conclusions.
+
+Participant reply submission does not automatically change reviewer-controlled lifecycle status.
+
+Support lets the participant ask an authorized human for help while preserving the distinction between participant-authored request content and reviewer-controlled workflow.
 
 A Support request does not itself create external sharing consent, clinical escalation, emergency-response capability, Trust Engine action, or expanded authority.
 
-Support lifecycle behavior should remain understandable in the participant view. Reviewer-side lifecycle, routing, and assignment controls remain separate from participant-owned request content.
+The previously validated synthetic Support Path B evidence remains preserved as regression and authorization history.
 
-The previously validated synthetic Support Path B evidence remains preserved as regression and authorization history. No additional Support expansion is approved during the current documentation reconciliation.
+Support should now be treated as working infrastructure rather than an incomplete participant/reviewer communication slice.
+
+Further Support expansion requires a separately approved product gate or a verified defect.
 
 ### Reports
 

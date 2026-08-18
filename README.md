@@ -175,11 +175,27 @@ The current lifecycle still requires semantic review because ordinary participan
 
 ### Support
 
-Let the participant directly ask an authorized human for assistance.
+Let the participant directly ask an authorized human for assistance through a complete participant and reviewer communication loop.
 
-Current synthetic-participant proof supports viewing participant-owned Support requests, creating an ordinary Support request, and persistent readback after refresh.
+The currently approved human lifecycle is:
+
+submitted -> acknowledged -> in_progress -> waiting_for_participant -> in_progress -> completed
+
+Participant-facing language remains:
+
+Received -> Acknowledged -> In review -> Waiting for you -> In review -> Resolved
+
+The participant can create a Support request, follow progress, read participant-visible reviewer messages, reply when Support is waiting for information, and retain completed or withdrawn requests in history.
+
+The authorized reviewer can acknowledge the request, start work, send updates, request information, read participant replies, resume work, complete the request, and review closed requests as read-only history.
+
+Participant reply submission does not automatically change reviewer-controlled lifecycle status.
+
+Reviewer timing guidance is informational only. It does not automatically change status, create reminders, infer urgency, or create clinical, legal, fiduciary, or behavioral conclusions.
 
 A Support request does not itself create external sharing consent, expanded authority, clinical intervention, emergency escalation, or Trust Engine action.
+
+Support is working infrastructure for its currently approved human loop. Further expansion requires a separately approved product gate or a verified defect.
 
 ### Resources
 
@@ -241,7 +257,32 @@ Verified ordinary participant behavior includes:
 - ordinary request creation;
 - participant-friendly status display;
 - persistent readback;
-- separation between participant-owned request content and reviewer lifecycle, routing, and assignment.
+- reviewer participant-visible messages;
+- participant reply while the request is `waiting_for_participant`;
+- participant reply history preserved after refresh;
+- completed requests displayed as `Resolved`;
+- withdrawn and completed requests preserved in history;
+- separation between participant-owned request content and reviewer-controlled lifecycle, routing, assignment, and completion.
+
+Verified reviewer behavior includes:
+
+- acknowledgement;
+- start work;
+- participant-visible updates;
+- information requests;
+- follow-up questions while waiting for the participant;
+- participant reply review;
+- resume work;
+- completion;
+- read-only closed-request history.
+
+The verified human lifecycle is:
+
+submitted -> acknowledged -> in_progress -> waiting_for_participant -> in_progress -> completed
+
+Participant reply submission does not automatically change reviewer-controlled lifecycle status.
+
+Reviewer timing guidance remains informational only and does not create reminders, automatic escalation, or clinical, legal, fiduciary, or behavioral conclusions.
 
 ### Transaction Context
 
@@ -291,12 +332,22 @@ After the current Budget layer is closed, that tester should be retired from ord
 
 Future ordinary usability testing should use current-time periods, realistic workflows, and application-created data wherever the intended UI path exists.
 
-Current limitation:
-- participant Budget creation and editing authority has not yet been installed
-- existing synthetic Budget rows were created for controlled validation
-- automatic transaction-to-budget category calculation has not yet been proven
+Current Budget state:
 
-The next Budget phase is **Participant Budget Builder UX and authority design**, not cosmetic expansion.
+- participant Budget creation is installed and working;
+- participant expected-income entry is working;
+- participant category creation and editing are working;
+- Budget activation is working;
+- active-plan editing is working;
+- participant transaction allocation controls are connected;
+- derived allocation reads are connected;
+- Budget lifecycle history and historical allocation visibility are working.
+
+The remaining Budget gap is human lifecycle semantics at the Budget-period level.
+
+A participant-facing `archive allocation` action is not approved.
+
+The next Budget phase is to reconcile complete/archive behavior for the Budget itself while preserving the historical plan, allocations, totals, and transaction relationships.
 
 ---
 
@@ -387,32 +438,40 @@ Current application stack includes:
 ---
 
 ## Current Checkpoint
-```markdown id="currchk"
-## Current Checkpoint
 
 Current safe code checkpoint:
 
-```text
-d1a3ad9
-Preserve historical Budget allocation visibility
-```
+`fd3acb1 Complete THRIVE Support participant reply workflow`
+
 Current documentation continuity checkpoint:
 
-Checkpoint 065
-Product Recenter and Checkpoint Continuity Restored
+Checkpoint 068
+
+Support Participant Reply and Resolution Loop Complete
 
 Last verified production build:
 
 PASS
-28 / 28 routes generated
+
+30 / 30 routes generated
 
 Current working gate:
 
 Documentation and product-control reconciliation
 
+Support is now working infrastructure for its currently approved participant/reviewer human loop.
+
+The current remaining participant-product gaps are centered on:
+
+- Budget-level complete/archive semantics;
+- operational Financial Ingestion;
+- Admin / onboarding;
+- Transaction Context lifecycle beyond persistent draft status;
+- future Feedback Layer, Today, Reports, Resources, real-device, security, and deployment-readiness work.
+
 The most recent participant-facing Budget archive-allocation experiment failed human-usability review and was not committed.
 
-The current Budget source has been restored to the safe d1a3ad9 state.
+Budget-level lifecycle semantics remain the next planned product gate after documentation reconciliation is complete.
 
 No Johnny activation, Trust Engine synchronization, new production SQL, deployment, merge, or push is implied by this checkpoint.
 

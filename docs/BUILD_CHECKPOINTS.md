@@ -1759,3 +1759,153 @@ This lifecycle slice did not:
 * complete or archive the request;
 * delete records;
 * broaden the Support workflow beyond the tested transition.
+
+## Checkpoint 068: Support Participant Reply and Resolution Loop Complete
+
+Date: 2026-08-18
+
+Current branch:
+
+`budget-builder-category-v0-1`
+
+Current pushed checkpoint:
+
+`fd3acb1 Complete THRIVE Support participant reply workflow`
+
+### Verified Support state
+
+THRIVE Support now has a complete ordinary participant and reviewer communication loop through authenticated application paths.
+
+Verified lifecycle:
+
+submitted -> acknowledged -> in_progress -> waiting_for_participant -> in_progress -> completed
+
+Participant-facing status language:
+
+Received -> Acknowledged -> In review -> Waiting for you -> In review -> Resolved
+
+### Verified participant behavior
+
+- Participant can create a Support request.
+- Participant can see request progress.
+- Participant can see reviewer participant-visible messages.
+- Participant can reply only while the request is `waiting_for_participant`.
+- Submitted participant replies remain visible in request history.
+- Conversation history persists after refresh.
+- Completed requests display as `Resolved`.
+- Withdrawn and completed requests remain available in history.
+- Participant reply submission does not automatically change reviewer-controlled lifecycle status.
+
+### Verified reviewer behavior
+
+- Reviewer can acknowledge a submitted request.
+- Reviewer can start work.
+- Reviewer can send a participant-visible update without changing status.
+- Reviewer can request information and move the request to `waiting_for_participant`.
+- Reviewer can send a follow-up while remaining in `waiting_for_participant`.
+- Reviewer can read participant replies.
+- Reviewer can resume work and return the request to `in_progress`.
+- Reviewer can complete the request.
+- Completed, withdrawn, and archived requests remain available as read-only history.
+
+Reviewer presentation is organized into:
+
+- `Needs Support action`
+- `Waiting on participant`
+- `Closed requests`
+
+Closed requests may be collapsed or expanded without changing stored request state.
+
+### Verified timing presentation
+
+The reviewer interface includes passive communication guidance:
+
+- one-hour acknowledgment target for newly submitted requests;
+- twenty-four-hour communication guidance while Support owns the next move;
+- no reviewer timer while the participant owns the next move;
+- twenty-four-hour reviewer follow-up guidance after a participant reply.
+
+This timing layer is display-only. It does not automatically change status, create reminders, escalate requests, infer urgency, or create clinical, legal, fiduciary, or behavioral conclusions.
+
+### Verified database boundary
+
+The participant reply layer uses the existing `support_request_entries` ledger.
+
+Entry semantics:
+
+- `participant_response` = reviewer-to-participant communication
+- `participant_reply` = participant-to-reviewer reply
+- `internal_note` = reviewer-only internal content
+
+Participant reply authority remains limited to the authenticated supported person and exact Support request scope.
+
+Participant replies remain append-only within the validated path.
+
+The participant does not gain reviewer lifecycle authority.
+
+No hard-delete path was introduced.
+
+### Verified application state
+
+Changed application files:
+
+- `src/app/admin/support/page.tsx`
+- `src/app/support/page.tsx`
+- `src/app/support/useParticipantSupport.ts`
+
+Committed Support documentation:
+
+- `docs/THRIVE_SUPPORT_PARTICIPANT_REPLY_LAYER_CANDIDATE_v0_1.md`
+- `docs/supabase/THRIVE_SUPPORT_PARTICIPANT_REPLY_LAYER_SQL_CANDIDATE_v0_1.sql`
+- `docs/supabase/THRIVE_SUPPORT_PARTICIPANT_REPLY_LAYER_ROLLBACK_v0_1.sql`
+
+Final verification before push:
+
+- `npm run build` passed.
+- TypeScript passed.
+- 30 of 30 routes generated.
+- `git diff --check` passed.
+- Intended Support files were isolated from unrelated working-tree changes.
+- Local and remote branch both resolved to `fd3acb1`.
+
+### Frozen boundaries
+
+This checkpoint does not:
+
+- activate Johnny;
+- synchronize THRIVE with the Trust Engine;
+- merge personal and trust authority;
+- create clinical or emergency-response capability;
+- infer intent, relapse, incapacity, irresponsibility, or trust misuse;
+- broaden external sharing authority;
+- introduce service-role shortcuts;
+- introduce hard delete;
+- deploy;
+- merge to `main`.
+
+### Product interpretation
+
+Support is now a complete human request loop for its currently approved scope.
+
+Working human model:
+
+Participant asks -> Support receives -> Support reviews -> Support may ask for information -> Participant replies -> Support resumes work -> Support resolves -> History remains visible
+
+Support should now be treated as working infrastructure rather than an incomplete participant/reviewer communication slice.
+
+Further Support expansion requires a separately approved product gate or a verified defect.
+
+### Exact next gate
+
+Reconcile:
+
+- `docs/RENEWING/03_CURRENT_EXECUTIVE_HANDOFF.md`
+- `docs/RENEWING/05_FULL_SPECTRUM_PRODUCT_READINESS_MATRIX.md`
+
+against current pushed checkpoint:
+
+`fd3acb1 Complete THRIVE Support participant reply workflow`
+
+Do not resume Support feature expansion during this documentation gate.
+
+Keep Johnny activation, Trust Engine synchronization, service-role use, hard delete, deployment, merge, and additional push frozen.

@@ -3,7 +3,7 @@
 **Status:** Living product control document
 **Repository:** `thrive-stability-platform`
 **Branch:** `budget-builder-category-v0-1`
-**Reconciled checkpoint:** `d1a3ad9 Preserve historical Budget allocation visibility`
+**Reconciled checkpoint:** `fd3acb1 Complete THRIVE Support participant reply workflow`
 **Checkpoint continuity:** `BUILD_CHECKPOINTS.md` resumed at Checkpoint 065 after the post-064 usability and Budget sequence.
 **Framework:** Next.js 16.2.12
 
@@ -38,7 +38,7 @@ state and the smallest approved next step for each module.
 | Transaction Context | PARTIALLY CONNECTED | Participant transaction explanation table, RLS, and ordinary participant write path are installed | Participant can view existing context, create draft context, edit their own draft, and confirm persistent readback without changing the imported bank record | Participant-owned draft create/update is connected; complete participant submit/finalize semantics are not yet defined | Controlled proof plus ordinary participant-path validation completed | Define and verify the intended human lifecycle beyond persistent `draft` status before treating Transaction Context as fully complete |
 | Wellness | WORKING | Wellness table, constraints, business-date handling, trigger, RLS, participant save path, and recent-history support are installed | Ordinary participant check-in, persistent readback, voluntary reflection, and recent history are connected | Ordinary participant save is enabled within the validated participant path | Controlled create/update, duplicate prevention, archived-history behavior, ordinary save, and recent-history behavior have been validated | Preserve Wellness as a voluntary non-clinical reflection module and review lifecycle semantics only if a human-flow defect appears |
 | Goals | WORKING | `participant_goals` v0.2 installed with constraints, trigger, RLS, and no DELETE policy | Guided participant creation, editing, progress, archive, and read-only history are connected | Participant-owned create and update paths validated | Participant A, Participant D, outsider, and admin RLS tests plus guided UI lifecycle validation passed | Preserve the current participant-owned Goal scope unless a defect or separately approved refinement appears |
-| Support | WORKING | Persistent Support requests, entries, links, immutable status-event history, routing, assignment, RLS, privilege hardening, and lifecycle controls are installed | Ordinary participant request creation and request history are connected; reviewer lifecycle, routing, and assignment remain separate from participant-owned content | Participant request writes are connected within validated scope; reviewer writes remain guarded; no DELETE privilege | Synthetic participant/reviewer validation plus ordinary participant request flow have been verified | Preserve the current Support scope and only expand through a separately approved refinement or defect correction |
+| Support | WORKING | Persistent Support requests, entries, links, immutable status-event history, routing, assignment, RLS, privilege hardening, participant replies, and guarded lifecycle controls are installed | Ordinary participant request creation, request history, participant-visible reviewer messages, participant replies, human-readable lifecycle status, reviewer action buckets, timing guidance, and read-only closed-request history are connected | Participant request and reply writes are connected within validated scope; reviewer lifecycle and participant-visible communication writes remain guarded; participant reply submission does not automatically change reviewer-controlled status; no DELETE privilege | Synthetic participant/reviewer validation plus ordinary participant request, clarification, reply, resume, completion, and history flow have been verified | Treat Support as working infrastructure for its currently approved human loop; expand only through a separately approved refinement or verified defect |
 | Reports | WORKING | Aggregates approved participant financial read models and current-plan comparison data | Statement periods, connected sources, transaction totals, category summaries, recorded outflow, source boundaries, and current-plan comparison are visible | Read-only | Desktop/mobile participant review plus connected synthetic financial data and current-plan comparison verified | Preserve Reports as a read-only history and pattern layer while future Feedback Layer work remains separate |
 | PWA / mobile | WORKING | Manifest and application metadata installed | Shared navigation and mobile shell exist | Not applicable | Build and route generation passed | Test installation and navigation on an actual phone |
 | Trust Engine comparison | BLOCKED | Independent system; no synchronization approved | No merged participant workflow | No writes or synchronization | Not applicable | Keep frozen until separate authority and comparison design are approved |
@@ -49,7 +49,7 @@ state and the smallest approved next step for each module.
 - Next.js 16.2.12
 - React 19.2.4
 - Local development environment working
-- Last verified production build generated 28 of 28 routes
+- Last verified production build generated 30 of 30 routes
 - Supabase environment connected
 - GitHub remains the authoritative source repository
 - SSD clone is the primary daily development workspace
