@@ -61,7 +61,11 @@ export default function FinancialActivityPage() {
     useState("other");
   const [editExplanationText, setEditExplanationText] = useState("");
   const [explanationSaving, setExplanationSaving] = useState(false);
-  const [explanationNotice, setExplanationNotice] = useState("");
+const [explanationNotice, setExplanationNotice] = useState("");
+const [
+  creatingExplanationForTransactionId,
+  setCreatingExplanationForTransactionId,
+] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -267,6 +271,114 @@ export default function FinancialActivityPage() {
     );
     setRemovingActivityId(null);
   }
+  function startCreatingExplanation(stagedTransactionId: string) {
+  setCreatingExplanationForTransactionId(stagedTransactionId);
+  setEditingExplanationId(null);
+  setEditExplanationCategory("other");
+  setEditExplanationText("");
+  setExplanationNotice("");
+}
+
+function cancelCreatingExplanation() {
+  setCreatingExplanationForTransactionId(null);
+  setEditExplanationCategory("other");
+  setEditExplanationText("");
+  setExplanationNotice("");
+}
+
+async function handleCreateExplanationDraft(
+  event: FormEvent<HTMLFormElement>,
+  activity: {
+    activity_id: string;
+    workspace_id: string;
+    program_id: string;
+    supported_person_id: string;
+  },
+) {
+  event.preventDefault();
+
+  if (!editExplanationText.trim()) {
+    setExplanationNotice("Add a short explanation before saving.");
+    return;
+  }
+
+  setExplanationSaving(true);
+  setExplanationNotice("");
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    setExplanationNotice(userError.message);
+    setExplanationSaving(false);
+    return;
+  }
+
+  if (!user) {
+    setExplanationNotice("You must be signed in to add context.");
+    setExplanationSaving(false);
+    return;
+  }
+
+  const existingResult = await supabase
+    .from("participant_transaction_explanations")
+    .select("id")
+    .eq("workspace_id", activity.workspace_id)
+    .eq("program_id", activity.program_id)
+    .eq("supported_person_id", activity.supported_person_id)
+    .eq("staged_transaction_id", activity.activity_id)
+    .eq("submitted_by", user.id);
+
+  if (existingResult.error) {
+    setExplanationNotice(existingResult.error.message);
+    setExplanationSaving(false);
+    return;
+  }
+
+  if ((existingResult.data ?? []).length > 0) {
+    setExplanationNotice(
+      "Context already exists for this activity. Refresh the page before adding another.",
+    );
+    setExplanationSaving(false);
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("participant_transaction_explanations")
+    .insert({
+      workspace_id: activity.workspace_id,
+      program_id: activity.program_id,
+      supported_person_id: activity.supported_person_id,
+      staged_transaction_id: activity.activity_id,
+      explanation_category: editExplanationCategory,
+      explanation_text: editExplanationText.trim(),
+      status: "draft",
+      submitted_by: user.id,
+      submitted_at: null,
+    })
+    .select(
+      "id, staged_transaction_id, explanation_category, explanation_text, status, submitted_at",
+    )
+    .single();
+
+  if (error) {
+    setExplanationNotice(error.message);
+    setExplanationSaving(false);
+    return;
+  }
+
+  setTransactionExplanations((current) => [
+    ...current,
+    data as TransactionExplanation,
+  ]);
+
+  setCreatingExplanationForTransactionId(null);
+  setEditExplanationCategory("other");
+  setEditExplanationText("");
+  setExplanationSaving(false);
+}
 
   function startEditingExplanation(explanation: TransactionExplanation) {
     if (explanation.status !== "draft") {
@@ -642,8 +754,8 @@ export default function FinancialActivityPage() {
                                 {activity.lifecycle.replaceAll("_", " ")}
                               </span>
                             ) : null}
-                            {activity.activity_record_type === "imported" &&
-                            matchingExplanation ? (
+                            {activity.activity_record_type === "imported" ? (
+  matchingExplanation ? (
                               <div className="mt-4 w-full rounded-2xl border border-blue-100 bg-blue-50 p-4">
                                 <p className="text-xs font-black uppercase tracking-wide text-blue-800">
                                   {matchingExplanation.status === "draft"
@@ -797,8 +909,142 @@ export default function FinancialActivityPage() {
                                     ) : null}
                                   </>
                                 )}
+                                                           </div>
+                            ) : (
+                              <div className="mt-4 w-full rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                                {creatingExplanationForTransactionId ===
+                                activity.activity_id ? (
+                                  <form
+                                    onSubmit={(event) =>
+                                      void handleCreateExplanationDraft(
+                                        event,
+                                        activity,
+                                      )
+                                    }
+                                    className="space-y-4"
+                                  >
+                                    <p className="text-xs font-black uppercase tracking-wide text-blue-800">
+                                      Add your context
+                                    </p>
+
+                                    <p className="text-sm leading-6 text-slate-700">
+                                      Add your own note about this activity.
+                                      This does not change the imported account
+                                      record.
+                                    </p>
+
+                                    <label className="block text-sm font-black">
+                                      What best describes this?
+                                      <select
+                                        value={editExplanationCategory}
+                                        onChange={(event) => {
+                                          setEditExplanationCategory(
+                                            event.target.value,
+                                          );
+                                          setExplanationNotice("");
+                                        }}
+                                        disabled={explanationSaving}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+                                      >
+                                        <option value="recognized_purchase">
+                                          Recognized purchase
+                                        </option>
+                                        <option value="bill_or_essential">
+                                          Bill or essential
+                                        </option>
+                                        <option value="transfer">
+                                          Transfer
+                                        </option>
+                                        <option value="refund_or_reversal">
+                                          Refund or reversal
+                                        </option>
+                                        <option value="shared_expense">
+                                          Shared expense
+                                        </option>
+                                        <option value="medical_expense">
+                                          Medical expense
+                                        </option>
+                                        <option value="cash_withdrawal_context">
+                                          Cash withdrawal context
+                                        </option>
+                                        <option value="incorrect_or_unrecognized">
+                                          Incorrect or unrecognized
+                                        </option>
+                                        <option value="other">Other</option>
+                                      </select>
+                                    </label>
+
+                                    <label className="block text-sm font-black">
+                                      Your note
+                                      <textarea
+                                        value={editExplanationText}
+                                        onChange={(event) => {
+                                          setEditExplanationText(
+                                            event.target.value,
+                                          );
+                                          setExplanationNotice("");
+                                        }}
+                                        disabled={explanationSaving}
+                                        rows={4}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+                                      />
+                                    </label>
+
+                                    <div className="flex flex-wrap gap-3">
+                                      <button
+                                        type="submit"
+                                        disabled={explanationSaving}
+                                        className="rounded-2xl bg-blue-700 px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+                                      >
+                                        {explanationSaving
+                                          ? "Saving..."
+                                          : "Save draft"}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        disabled={explanationSaving}
+                                        onClick={cancelCreatingExplanation}
+                                        className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 disabled:opacity-60"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+
+                                    {explanationNotice ? (
+                                      <p className="text-sm font-semibold text-slate-700">
+                                        {explanationNotice}
+                                      </p>
+                                    ) : null}
+                                  </form>
+                                ) : (
+                                  <>
+                                    <p className="text-xs font-black uppercase tracking-wide text-blue-800">
+                                      Your context
+                                    </p>
+
+                                    <p className="mt-2 text-sm leading-6 text-slate-700">
+                                      You have not added context to this
+                                      imported activity yet.
+                                    </p>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        startCreatingExplanation(
+                                          activity.activity_id,
+                                        )
+                                      }
+                                      disabled={explanationSaving}
+                                      className="mt-4 rounded-2xl border border-blue-300 bg-white px-4 py-2 text-sm font-black text-blue-900 hover:bg-blue-50 disabled:opacity-60"
+                                    >
+                                      Add context
+                                    </button>
+                                  </>
+                                )}
                               </div>
-                            ) : null}
+                            )
+                          ) : null}
 
                             {activity.provenance_type ===
                             "participant_manual" ? (
