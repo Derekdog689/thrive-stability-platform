@@ -15,6 +15,7 @@ const {
   sources,
   batches,
   transactions,
+  financialActivity,
   budgetPeriods,
   budgetLines,
   totalOutflow,
@@ -52,6 +53,14 @@ const expectedIncome = activeBudgetPeriod
 
 const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
 
+const importedActivityCount = financialActivity.filter(
+  (activity) => activity.activity_record_type === "imported",
+).length;
+
+const participantAddedActivityCount = financialActivity.filter(
+  (activity) => activity.activity_record_type === "manual",
+).length;
+
   const categoryTotals = transactions.reduce<Record<string, number>>(
     (summary, transaction) => {
       const amount = toNumber(transaction.amount);
@@ -83,9 +92,10 @@ const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
                 Your financial history, with its source visible.
               </h1>
               <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                These summaries are calculated from participant-owned imported
-                records. They remain separate from participant explanations,
-                staff notes, and any future separately authorized Trust facts.
+                These summaries keep imported account evidence and activity you add
+  yourself visible as separate sources. Participant explanations,
+  staff notes, and any future separately authorized Trust facts remain
+  separate.
               </p>
             </header>
 
@@ -104,30 +114,64 @@ const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
 
             {!loading && !errorMessage && (
               <>
-                <section className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-3xl bg-emerald-700 p-6 text-white shadow-sm">
-                    <p className="text-sm font-bold text-emerald-100">
-                      Statement periods
-                    </p>
-                    <p className="mt-3 text-4xl font-black">{batches.length}</p>
-                  </div>
-                  <div className="rounded-3xl bg-white p-6 shadow-sm">
-                    <p className="text-sm font-bold text-slate-500">
-                      Imported transactions
-                    </p>
-                    <p className="mt-3 text-4xl font-black">
-                      {transactions.length}
-                    </p>
-                  </div>
-                  <div className="rounded-3xl bg-white p-6 shadow-sm">
-                    <p className="text-sm font-bold text-slate-500">
-                      Recorded outflow
-                    </p>
-                    <p className="mt-3 text-4xl font-black">
-                      {formatMoney(totalOutflow)}
-                    </p>
-                  </div>
-                </section>
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+  <div className="rounded-3xl bg-emerald-700 p-6 text-white shadow-sm">
+    <p className="text-sm font-bold text-emerald-100">
+      Statement periods
+    </p>
+    <p className="mt-3 text-4xl font-black">
+      {batches.length}
+    </p>
+  </div>
+
+  <div className="rounded-3xl bg-white p-6 shadow-sm">
+    <p className="text-sm font-bold text-slate-500">
+      Financial Activity
+    </p>
+    <p className="mt-3 text-4xl font-black">
+      {financialActivity.length}
+    </p>
+    <p className="mt-2 text-sm text-slate-500">
+      All currently available activity
+    </p>
+  </div>
+
+  <div className="rounded-3xl bg-white p-6 shadow-sm">
+    <p className="text-sm font-bold text-slate-500">
+      Imported activity
+    </p>
+    <p className="mt-3 text-4xl font-black">
+      {importedActivityCount}
+    </p>
+    <p className="mt-2 text-sm text-slate-500">
+      Activity from imported account evidence
+    </p>
+  </div>
+
+  <div className="rounded-3xl bg-white p-6 shadow-sm">
+    <p className="text-sm font-bold text-slate-500">
+      Added by you
+    </p>
+    <p className="mt-3 text-4xl font-black">
+      {participantAddedActivityCount}
+    </p>
+    <p className="mt-2 text-sm text-slate-500">
+      Participant-entered Financial Activity
+    </p>
+  </div>
+
+  <div className="rounded-3xl bg-white p-6 shadow-sm">
+    <p className="text-sm font-bold text-slate-500">
+      Imported outflow
+    </p>
+    <p className="mt-3 text-4xl font-black">
+      {formatMoney(totalOutflow)}
+    </p>
+    <p className="mt-2 text-sm text-slate-500">
+      Money out from imported account evidence
+    </p>
+  </div>
+</section>
 
                 <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
   <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
@@ -202,11 +246,12 @@ const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
                 <section className="grid gap-6 lg:grid-cols-2">
                   <div className="rounded-3xl bg-white p-6 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      Connected accounts
-                    </p>
-                    <h2 className="mt-2 text-2xl font-black">
-                      Connected financial sources
-                    </h2>
+  Financial sources
+</p>
+
+<h2 className="mt-2 text-2xl font-black">
+  Sources available to THRIVE
+</h2>
                     <div className="mt-5 space-y-3">
                       {sources.map((source) => (
                         <div
@@ -224,7 +269,7 @@ const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
                       ))}
                       {sources.length === 0 && (
                         <p className="rounded-2xl bg-slate-50 p-5 text-slate-600">
-                          No financial source is connected to this participant.
+                          No financial source is available for this participant.
                         </p>
                       )}
                     </div>
@@ -232,11 +277,12 @@ const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
 
                   <div className="rounded-3xl bg-white p-6 shadow-sm">
                     <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      Category summary
-                    </p>
-                    <h2 className="mt-2 text-2xl font-black">
-                      Money out by category
-                    </h2>
+  Imported category summary
+</p>
+
+<h2 className="mt-2 text-2xl font-black">
+  Imported money out by category
+</h2>
                     <div className="mt-5 space-y-3">
                       {sortedCategories.map(([category, total]) => (
                         <div
@@ -300,11 +346,12 @@ const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
                 <section className="rounded-3xl bg-slate-950 p-6 text-white">
                   <p className="font-black text-emerald-300">About this information</p>
                   <p className="mt-3 text-sm leading-6 text-slate-200">
-                    Bank evidence, THRIVE calculations, participant
-                    explanations, staff notes, and future Trust-reported facts
-                    remain distinct. This shell displays only bank evidence and
-                    transparent THRIVE calculations.
-                  </p>
+  Imported account evidence and participant-entered Financial Activity
+  remain distinct even when they appear in the same summary. Category
+  summaries and statement history shown here currently come from imported
+  account evidence. Participant explanations, staff notes, and future
+  separately authorized Trust facts remain separate.
+</p>
                 </section>
               </>
             )}

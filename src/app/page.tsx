@@ -49,15 +49,15 @@ function formatLabel(value: string | null | undefined) {
 
 export default function TodayPage() {
   const {
-    participantName,
-    sources,
-    transactions,
-    budgetPeriods,
-    latestBatch,
-    totalOutflow,
-    loading,
-    errorMessage,
-  } = useParticipantFinancial();
+  participantName,
+  sources,
+  transactions,
+  financialActivity,
+  budgetPeriods,
+  latestBatch,
+  loading,
+  errorMessage,
+} = useParticipantFinancial();
 
   const {
     todayCheckin,
@@ -93,6 +93,19 @@ const unresolvedSupportRequest =
     (request) =>
       !["completed", "withdrawn", "archived"].includes(request.status),
   ) ?? null;
+
+  const totalFinancialActivity = financialActivity.length;
+
+const recordedFinancialOutflow = financialActivity.reduce(
+  (sum, activity) => {
+    const amount = Number(activity.signed_amount ?? 0);
+
+    return Number.isFinite(amount) && amount < 0
+      ? sum + Math.abs(amount)
+      : sum;
+  },
+  0,
+);
 
   return (
     <AuthGate>
@@ -281,36 +294,40 @@ const unresolvedSupportRequest =
                   <div className="mt-6 grid gap-4 md:grid-cols-3">
                     <div className="rounded-2xl bg-emerald-50 p-5">
                       <p className="text-sm font-bold text-emerald-800">
-                        Connected sources
+                        Financial sources
                       </p>
                       <p className="mt-2 text-3xl font-black">{sources.length}</p>
                       <p className="mt-2 text-sm text-emerald-900">
-                        Accounts currently connected to THRIVE
+                        Financial sources available to THRIVE
                       </p>
                     </div>
 
                     <div className="rounded-2xl bg-slate-50 p-5">
                       <p className="text-sm font-bold text-slate-500">
-                        Recent transactions
-                      </p>
-                      <p className="mt-2 text-3xl font-black">
-                        {transactions.length}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Imported activity available for review
-                      </p>
+  Recent financial activity
+</p>
+
+<p className="mt-2 text-3xl font-black">
+  {totalFinancialActivity}
+</p>
+
+<p className="mt-2 text-sm text-slate-500">
+  Imported and participant-added activity available for review
+</p>
                     </div>
 
                     <div className="rounded-2xl bg-slate-50 p-5">
                       <p className="text-sm font-bold text-slate-500">
-                        Recorded outflow
-                      </p>
-                      <p className="mt-2 text-3xl font-black">
-                        {formatMoney(totalOutflow)}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Money out in the connected period
-                      </p>
+  Money out recorded
+</p>
+
+<p className="mt-2 text-3xl font-black">
+  {formatMoney(recordedFinancialOutflow)}
+</p>
+
+<p className="mt-2 text-sm text-slate-500">
+  Money out across available Financial Activity
+</p>
                     </div>
                   </div>
 

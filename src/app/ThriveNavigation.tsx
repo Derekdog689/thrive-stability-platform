@@ -7,6 +7,7 @@ const navItems = [
   { label: "Today", href: "/" },
   { label: "My Program", href: "/my-program" },
   { label: "Budget", href: "/budget" },
+  { label: "Financial Activity", href: "/financial-activity" },
   { label: "Wellness", href: "/wellness" },
   { label: "Goals", href: "/goals" },
   { label: "Support", href: "/support" },
@@ -20,27 +21,11 @@ export default function ThriveNavigation() {
     <nav aria-label="THRIVE navigation">
       <div className="flex gap-2 overflow-x-auto pb-2 text-sm font-semibold lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
         {navItems.map((item) => {
-          if (!item.href) {
-            return (
-              <div
-                key={item.label}
-                className="shrink-0 rounded-2xl bg-slate-50 px-4 py-3 text-slate-500 lg:bg-transparent"
-                aria-disabled="true"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span>{item.label}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
-                    Soon
-                  </span>
-                </div>
-              </div>
-            );
-          }
-
           const isActive =
             item.href === "/"
               ? pathname === "/"
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              : pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
 
           return (
             <Link

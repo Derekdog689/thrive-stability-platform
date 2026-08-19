@@ -40,6 +40,29 @@ export type FinancialTransaction = {
   parse_status: string;
 };
 
+export type FinancialActivity = {
+  activity_id: string;
+  activity_record_type: "imported" | "manual";
+  workspace_id: string;
+  program_id: string;
+  supported_person_id: string;
+  financial_source_id: string;
+  source_name: string;
+  institution_name: string | null;
+  activity_date: string;
+  posted_date: string | null;
+  description: string;
+  merchant_name: string | null;
+  signed_amount: number | string;
+  activity_direction: "inflow" | "outflow" | null;
+  lifecycle: string | null;
+  provenance_type:
+    | "bank_file_import"
+    | "participant_manual"
+    | string;
+  created_at: string;
+};
+
 export type BudgetPeriod = {
   id: string;
   period_start: string;
@@ -236,6 +259,8 @@ export function useParticipantFinancial() {
   const [transactions, setTransactions] =
     useState<FinancialTransaction[]>([]);
 
+  const [financialActivity, setFinancialActivity] =
+  useState<FinancialActivity[]>([]);
   const [budgetPeriods, setBudgetPeriods] =
     useState<BudgetPeriod[]>([]);
 
@@ -292,12 +317,13 @@ export function useParticipantFinancial() {
     setParticipant(person);
 
     const [
-      sourceResult,
-      batchResult,
-      transactionResult,
-      periodResult,
-      programParticipantResult,
-    ] = await Promise.all([
+  sourceResult,
+  batchResult,
+  transactionResult,
+  financialActivityResult,
+  periodResult,
+  programParticipantResult,
+] = await Promise.all([
       supabase.rpc(
         "get_my_financial_sources_v1",
       ),
@@ -308,6 +334,10 @@ export function useParticipantFinancial() {
 
       supabase.rpc(
         "get_my_financial_transactions_v2",
+      ),
+
+      supabase.rpc(
+        "get_my_financial_activity_v1",
       ),
 
       supabase
@@ -331,6 +361,7 @@ export function useParticipantFinancial() {
       sourceResult.error ??
       batchResult.error ??
       transactionResult.error ??
+      financialActivityResult.error ??
       periodResult.error ??
       programParticipantResult.error;
 
@@ -381,6 +412,11 @@ export function useParticipantFinancial() {
     setTransactions(
       (transactionResult.data ??
         []) as FinancialTransaction[],
+    );
+
+    setFinancialActivity(
+      (financialActivityResult.data ??
+        []) as FinancialActivity[],
     );
 
     setBudgetPeriods(orderedPeriods);
@@ -467,7 +503,8 @@ setBudgetLines(
     sources,
     batches,
     transactions,
-    budgetPeriods,
+financialActivity,
+budgetPeriods,
     budgetLines,
     totalOutflow,
     latestBatch,
