@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import AuthGate from "../AuthGate";
 import ThriveSidebar from "../ThriveSidebar";
 import {
@@ -9,6 +9,15 @@ import {
   useParticipantFinancial,
 } from "../useParticipantFinancial";
 import { supabase } from "@/lib/supabaseClient";
+
+type TransactionExplanation = {
+  id: string;
+  staged_transaction_id: string;
+  explanation_category: string;
+  explanation_text: string | null;
+  status: string;
+  submitted_at: string | null;
+};
 
 export default function FinancialActivityPage() {
   const {
@@ -29,9 +38,74 @@ export default function FinancialActivityPage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
 
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(
+  null,
+);
+const [editActivityDate, setEditActivityDate] = useState("");
+const [editActivityDirection, setEditActivityDirection] =
+  useState<"outflow" | "inflow">("outflow");
+const [editAmount, setEditAmount] = useState("");
+const [editDescription, setEditDescription] = useState("");
+const [editSaving, setEditSaving] = useState(false);
+const [editNotice, setEditNotice] = useState("");
+const [removingActivityId, setRemovingActivityId] = useState<string | null>(
+  null,
+);
+
+const [transactionExplanations, setTransactionExplanations] = useState<
+  TransactionExplanation[]
+>([]);
+const [explanationsLoading, setExplanationsLoading] = useState(true);
+const [explanationsError, setExplanationsError] = useState("");
+const [editingExplanationId, setEditingExplanationId] = useState<string | null>(
+  null,
+);
+const [editExplanationCategory, setEditExplanationCategory] = useState("other");
+const [editExplanationText, setEditExplanationText] = useState("");
+const [explanationSaving, setExplanationSaving] = useState(false);
+const [explanationNotice, setExplanationNotice] = useState("");
+
+useEffect(() => {
+  let cancelled = false;
+
+  async function loadTransactionExplanations() {
+    setExplanationsLoading(true);
+    setExplanationsError("");
+
+    const { data, error } = await supabase
+      .from("participant_transaction_explanations")
+      .select(
+        "id, staged_transaction_id, explanation_category, explanation_text, status, submitted_at",
+      )
+      .is("archived_at", null);
+
+    if (cancelled) {
+      return;
+    }
+
+    if (error) {
+      setExplanationsError(error.message);
+      setTransactionExplanations([]);
+      setExplanationsLoading(false);
+      return;
+    }
+
+    setTransactionExplanations(
+      (data ?? []) as TransactionExplanation[],
+    );
+    setExplanationsLoading(false);
+  }
+
+  void loadTransactionExplanations();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
   async function handleManualSave(
     event: FormEvent<HTMLFormElement>,
-  ) {
+   ) {
     event.preventDefault();
     setNotice("");
 
@@ -89,6 +163,234 @@ export default function FinancialActivityPage() {
     setNotice("Financial activity saved.");
     setSaving(false);
   }
+
+  function startEditingActivity(activity: {
+  activity_id: string;
+  activity_date: string;
+  activity_direction: "inflow" | "outflow" | null;
+  signed_amount: number | string;
+  description: string;
+}) {
+  setEditingActivityId(activity.activity_id);
+  setEditActivityDate(activity.activity_date);
+  setEditActivityDirection(
+    activity.activity_direction === "inflow" ? "inflow" : "outflow",
+  );
+  setEditAmount(
+    String(Math.abs(Number(activity.signed_amount ?? 0))),
+  );
+  setEditDescription(activity.description);
+  setEditNotice("");
+}
+
+function cancelEditingActivity() {
+  setEditingActivityId(null);
+  setEditActivityDate("");
+  setEditActivityDirection("outflow");
+  setEditAmount("");
+  setEditDescription("");
+  setEditNotice("");
+}
+
+async function handleEditSave(
+  event: FormEvent<HTMLFormElement>,
+) {
+  event.preventDefault();
+  setEditNotice("");
+
+  if (!editingActivityId) {
+    return;
+  }
+
+  if (!editActivityDate) {
+    setEditNotice("Choose the activity date.");
+    return;
+  }
+
+  const numericAmount = Number(editAmount);
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    setEditNotice("Enter an amount greater than zero.");
+    return;
+  }
+
+  if (!editDescription.trim()) {
+    setEditNotice("Add a short description.");
+    return;
+  }
+
+  setEditSaving(true);
+
+  const { error } = await supabase.rpc(
+    "update_my_manual_financial_activity_v1",
+    {
+      p_activity_id: editingActivityId,
+      p_activity_date: editActivityDate,
+      p_activity_direction: editActivityDirection,
+      p_amount: numericAmount,
+      p_description: editDescription.trim(),
+    },
+  );
+
+  if (error) {
+    setEditNotice(error.message);
+    setEditSaving(false);
+    return;
+  }
+
+  await refresh();
+
+  cancelEditingActivity();
+  setNotice("Financial activity updated.");
+  setEditSaving(false);
+}
+
+async function handleRemoveActivity(activityId: string) {
+  const confirmed = window.confirm(
+    "Remove this activity from your current Financial Activity? The record will remain in history.",
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setNotice("");
+  setRemovingActivityId(activityId);
+
+  const { error } = await supabase.rpc(
+    "archive_my_manual_financial_activity_v1",
+    {
+      p_activity_id: activityId,
+    },
+  );
+
+  if (error) {
+    setNotice(error.message);
+    setRemovingActivityId(null);
+    return;
+  }
+
+  await refresh();
+
+  setNotice(
+    "Financial activity removed from your current activity. The record remains preserved in history.",
+  );
+  setRemovingActivityId(null);
+}
+
+function startEditingExplanation(explanation: TransactionExplanation) {
+  if (explanation.status !== "draft") {
+    return;
+  }
+
+  setEditingExplanationId(explanation.id);
+  setEditExplanationCategory(explanation.explanation_category);
+  setEditExplanationText(explanation.explanation_text ?? "");
+  setExplanationNotice("");
+}
+
+function cancelEditingExplanation() {
+  setEditingExplanationId(null);
+  setEditExplanationCategory("other");
+  setEditExplanationText("");
+  setExplanationNotice("");
+}
+
+async function handleExplanationDraftSave(
+  event: FormEvent<HTMLFormElement>,
+) {
+  event.preventDefault();
+
+  if (!editingExplanationId) {
+    return;
+  }
+
+  if (!editExplanationText.trim()) {
+    setExplanationNotice("Add a short explanation before saving.");
+    return;
+  }
+
+  setExplanationSaving(true);
+  setExplanationNotice("");
+
+  const { data, error } = await supabase
+    .from("participant_transaction_explanations")
+    .update({
+      explanation_category: editExplanationCategory,
+      explanation_text: editExplanationText.trim(),
+    })
+    .eq("id", editingExplanationId)
+    .eq("status", "draft")
+    .select(
+      "id, staged_transaction_id, explanation_category, explanation_text, status, submitted_at",
+    )
+    .single();
+
+  if (error) {
+    setExplanationNotice(error.message);
+    setExplanationSaving(false);
+    return;
+  }
+
+  setTransactionExplanations((current) =>
+    current.map((explanation) =>
+      explanation.id === data.id
+        ? (data as TransactionExplanation)
+        : explanation,
+    ),
+  );
+
+  cancelEditingExplanation();
+  setExplanationSaving(false);
+}
+
+async function handleSubmitExplanation(explanationId: string) {
+  const confirmed = window.confirm(
+    "Submit this context? After submission, you will no longer be able to edit it from this participant screen.",
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setExplanationSaving(true);
+  setExplanationNotice("");
+
+  const submittedAt = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("participant_transaction_explanations")
+    .update({
+      status: "submitted",
+      submitted_at: submittedAt,
+    })
+    .eq("id", explanationId)
+    .eq("status", "draft")
+    .select(
+      "id, staged_transaction_id, explanation_category, explanation_text, status, submitted_at",
+    )
+    .single();
+
+  if (error) {
+    setExplanationNotice(error.message);
+    setExplanationSaving(false);
+    return;
+  }
+
+  setTransactionExplanations((current) =>
+    current.map((explanation) =>
+      explanation.id === data.id
+        ? (data as TransactionExplanation)
+        : explanation,
+    ),
+  );
+
+  if (editingExplanationId === explanationId) {
+    cancelEditingExplanation();
+  }
+
+  setExplanationSaving(false);
+}
 
   return (
     <AuthGate>
@@ -288,13 +590,32 @@ export default function FinancialActivityPage() {
                     Imported evidence and activity you add yourself appear
                     together here, while their source remains visible.
                   </p>
+                  {explanationsLoading ? (
+  <p className="mt-4 text-sm text-slate-500">
+    Loading your saved activity context.
+  </p>
+) : null}
 
+{explanationsError ? (
+  <p className="mt-4 text-sm font-semibold text-rose-700">
+    Saved activity context could not be loaded.
+  </p>
+) : null}
                   <div className="mt-6 space-y-3">
-                    {financialActivity.map((activity) => (
+                    {financialActivity.map((activity) => {
+  const matchingExplanation =
+    activity.activity_record_type === "imported"
+      ? transactionExplanations.find(
+          (explanation) =>
+            explanation.staged_transaction_id === activity.activity_id,
+        )
+      : undefined;
+
+  return (
                       <article
                         key={`${activity.activity_record_type}:${activity.activity_id}`}
                         className="rounded-2xl border border-slate-100 p-5"
-                      >
+                       >
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <p className="font-black">
@@ -348,9 +669,267 @@ export default function FinancialActivityPage() {
                               )}
                             </span>
                           ) : null}
+                          {activity.activity_record_type === "imported" &&
+matchingExplanation ? (
+  <div className="mt-4 w-full rounded-2xl border border-blue-100 bg-blue-50 p-4">
+    <p className="text-xs font-black uppercase tracking-wide text-blue-800">
+      {matchingExplanation.status === "draft"
+        ? "Your draft context"
+        : "Your context"}
+    </p>
+
+    {matchingExplanation.status === "draft" &&
+    editingExplanationId === matchingExplanation.id ? (
+      <form
+        onSubmit={handleExplanationDraftSave}
+        className="mt-4 space-y-4"
+      >
+        <label className="block text-sm font-black">
+          What best describes this?
+          <select
+            value={editExplanationCategory}
+            onChange={(event) => {
+              setEditExplanationCategory(event.target.value);
+              setExplanationNotice("");
+            }}
+            disabled={explanationSaving}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+          >
+            <option value="recognized_purchase">Recognized purchase</option>
+            <option value="bill_or_essential">Bill or essential</option>
+            <option value="transfer">Transfer</option>
+            <option value="refund_or_reversal">Refund or reversal</option>
+            <option value="shared_expense">Shared expense</option>
+            <option value="medical_expense">Medical expense</option>
+            <option value="cash_withdrawal_context">
+              Cash withdrawal context
+            </option>
+            <option value="incorrect_or_unrecognized">
+              Incorrect or unrecognized
+            </option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+
+        <label className="block text-sm font-black">
+          Your note
+          <textarea
+            value={editExplanationText}
+            onChange={(event) => {
+              setEditExplanationText(event.target.value);
+              setExplanationNotice("");
+            }}
+            disabled={explanationSaving}
+            rows={4}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+          />
+        </label>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            disabled={explanationSaving}
+            className="rounded-2xl bg-blue-700 px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+          >
+            {explanationSaving ? "Saving..." : "Save draft"}
+          </button>
+
+          <button
+            type="button"
+            disabled={explanationSaving}
+            onClick={cancelEditingExplanation}
+            className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 disabled:opacity-60"
+          >
+            Cancel
+          </button>
+        </div>
+
+        {explanationNotice ? (
+          <p className="text-sm font-semibold text-slate-700">
+            {explanationNotice}
+          </p>
+        ) : null}
+      </form>
+    ) : (
+      <>
+        <p className="mt-2 font-black capitalize text-slate-900">
+          {matchingExplanation.explanation_category.replaceAll("_", " ")}
+        </p>
+
+        {matchingExplanation.explanation_text ? (
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            {matchingExplanation.explanation_text}
+          </p>
+        ) : null}
+
+        <span className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-xs font-black capitalize text-slate-700">
+          {matchingExplanation.status.replaceAll("_", " ")}
+        </span>
+
+        {matchingExplanation.status === "draft" ? (
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => startEditingExplanation(matchingExplanation)}
+              disabled={explanationSaving}
+              className="rounded-2xl border border-blue-300 bg-white px-4 py-2 text-sm font-black text-blue-900 hover:bg-blue-50 disabled:opacity-60"
+            >
+              Edit context
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                void handleSubmitExplanation(matchingExplanation.id)
+              }
+              disabled={explanationSaving}
+              className="rounded-2xl bg-blue-700 px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+            >
+              {explanationSaving ? "Submitting..." : "Submit context"}
+            </button>
+          </div>
+        ) : null}
+      </>
+    )}
+  </div>
+) : null}
+
+{activity.provenance_type === "participant_manual" ? (
+  editingActivityId === activity.activity_id ? (
+    <form
+      onSubmit={handleEditSave}
+      className="mt-4 w-full rounded-2xl border border-emerald-100 bg-emerald-50 p-4"
+    >
+      <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
+        Correct this activity
+      </p>
+
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        Update something you entered incorrectly. This does not change
+        imported account evidence.
+      </p>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <label className="block text-sm font-black">
+          Date
+          <input
+            type="date"
+            value={editActivityDate}
+            onChange={(event) => {
+              setEditActivityDate(event.target.value);
+              setEditNotice("");
+            }}
+            disabled={editSaving}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+          />
+        </label>
+
+        <label className="block text-sm font-black">
+          What happened?
+          <select
+            value={editActivityDirection}
+            onChange={(event) => {
+              setEditActivityDirection(
+                event.target.value as "outflow" | "inflow",
+              );
+              setEditNotice("");
+            }}
+            disabled={editSaving}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+          >
+            <option value="outflow">Money spent</option>
+            <option value="inflow">Money received</option>
+          </select>
+        </label>
+
+        <label className="block text-sm font-black">
+          Amount
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={editAmount}
+            onChange={(event) => {
+              setEditAmount(event.target.value);
+              setEditNotice("");
+            }}
+            disabled={editSaving}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+          />
+        </label>
+
+        <label className="block text-sm font-black">
+          Description
+          <input
+            type="text"
+            value={editDescription}
+            onChange={(event) => {
+              setEditDescription(event.target.value);
+              setEditNotice("");
+            }}
+            disabled={editSaving}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+          />
+        </label>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={editSaving}
+          className="rounded-2xl bg-emerald-700 px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+        >
+          {editSaving ? "Saving..." : "Save correction"}
+        </button>
+
+        <button
+          type="button"
+          disabled={editSaving}
+          onClick={cancelEditingActivity}
+          className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+
+      {editNotice ? (
+        <p
+          role="alert"
+          className="mt-3 text-sm font-semibold text-slate-700"
+        >
+          {editNotice}
+        </p>
+      ) : null}
+    </form>
+  ) : (
+    <div className="mt-4 flex w-full flex-wrap gap-3">
+      <button
+        type="button"
+        onClick={() => startEditingActivity(activity)}
+        disabled={removingActivityId === activity.activity_id}
+        className="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-black text-emerald-900 hover:bg-emerald-50 disabled:opacity-60"
+      >
+        Edit
+      </button>
+
+      <button
+        type="button"
+        onClick={() => void handleRemoveActivity(activity.activity_id)}
+        disabled={removingActivityId === activity.activity_id}
+        className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+      >
+        {removingActivityId === activity.activity_id
+          ? "Removing..."
+          : "Remove activity"}
+      </button>
+    </div>
+  )
+) : null}
                         </div>
-                      </article>
-                    ))}
+
+                     </article>
+  );
+})}
 
                     {financialActivity.length === 0 ? (
                       <div className="rounded-2xl bg-slate-50 p-5 text-slate-600">
