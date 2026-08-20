@@ -51,6 +51,25 @@ const expectedIncome = activeBudgetPeriod
   ? toNumber(activeBudgetPeriod.expected_income)
   : 0;
 
+const receivedIncome = activeBudgetPeriod
+  ? financialActivity
+      .filter(
+        (activity) =>
+          activity.activity_direction === "inflow" &&
+          activity.activity_date >= activeBudgetPeriod.period_start &&
+          activity.activity_date <= activeBudgetPeriod.period_end,
+      )
+      .reduce(
+        (sum, activity) =>
+          sum + Math.abs(toNumber(activity.signed_amount)),
+        0,
+      )
+  : 0;
+
+const stillExpectedIncome = Math.max(
+  expectedIncome - receivedIncome,
+  0,
+);
 const unplannedAmount = Math.max(expectedIncome - plannedTotal, 0);
 
 const importedActivityCount = financialActivity.filter(
@@ -191,13 +210,33 @@ const participantAddedActivityCount = financialActivity.filter(
     <>
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl bg-emerald-700 p-5 text-white">
-          <p className="text-sm font-bold text-emerald-100">
-            Expected income
-          </p>
-          <p className="mt-3 text-3xl font-black">
-            {formatMoney(expectedIncome)}
-          </p>
-        </div>
+  <p className="text-sm font-bold text-emerald-100">Income</p>
+
+  <div className="mt-3">
+    <p className="text-xs font-bold uppercase tracking-wide text-emerald-100">
+      Expected
+    </p>
+    <p className="mt-1 text-3xl font-black">
+      {formatMoney(expectedIncome)}
+    </p>
+  </div>
+
+  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+    <div>
+      <p className="font-bold text-emerald-100">Received</p>
+      <p className="mt-1 font-black">
+        {formatMoney(receivedIncome)}
+      </p>
+    </div>
+
+    <div>
+      <p className="font-bold text-emerald-100">Still expected</p>
+      <p className="mt-1 font-black">
+        {formatMoney(stillExpectedIncome)}
+      </p>
+    </div>
+  </div>
+</div>
 
         <div className="rounded-2xl bg-slate-50 p-5">
           <p className="text-sm font-bold text-slate-500">
