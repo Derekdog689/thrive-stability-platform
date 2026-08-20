@@ -462,9 +462,9 @@ const [budgetPeriods, setBudgetPeriods] =
 
     const lineResults = await Promise.all(
   periodIds.map((budgetPeriodId) =>
-    supabase.rpc("get_my_budget_lines_v2", {
-      p_budget_period_id: budgetPeriodId,
-    }),
+    supabase.rpc("get_my_budget_lines_v3", {
+  p_budget_period_id: budgetPeriodId,
+}),
   ),
 );
 

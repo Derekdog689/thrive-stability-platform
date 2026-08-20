@@ -20,8 +20,16 @@ type TransactionExplanation = {
 };
 
 export default function FinancialActivityPage() {
-  const { activeProgramId, financialActivity, loading, errorMessage, refresh } =
-    useParticipantFinancial();
+  const {
+  activeProgramId,
+  financialActivity,
+  financialActivityAllocations,
+  budgetPeriods,
+  budgetLines,
+  loading,
+  errorMessage,
+  refresh,
+} = useParticipantFinancial();
 
   const [showManualForm, setShowManualForm] = useState(false);
   const [activityDate, setActivityDate] = useState("");
@@ -33,6 +41,18 @@ export default function FinancialActivityPage() {
 
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+
+  const [connectingActivityId, setConnectingActivityId] = useState<string | null>(
+  null,
+);
+
+const [selectedBudgetLineId, setSelectedBudgetLineId] = useState("");
+
+const [connectionAmount, setConnectionAmount] = useState("");
+
+const [connectionSaving, setConnectionSaving] = useState(false);
+
+const [connectionNotice, setConnectionNotice] = useState("");
 
   const [editingActivityId, setEditingActivityId] = useState<string | null>(
     null,
@@ -492,6 +512,87 @@ async function handleCreateExplanationDraft(
     setExplanationSaving(false);
   }
 
+  function startConnectingActivity(activity: {
+  activity_id: string;
+  signed_amount: number | string;
+}) {
+  setConnectingActivityId(activity.activity_id);
+  setSelectedBudgetLineId("");
+  setConnectionAmount(
+    String(Math.abs(Number(activity.signed_amount ?? 0))),
+  );
+  setConnectionNotice("");
+}
+
+function cancelConnectingActivity() {
+  setConnectingActivityId(null);
+  setSelectedBudgetLineId("");
+  setConnectionAmount("");
+  setConnectionNotice("");
+}
+
+async function handleConnectActivity(
+  event: FormEvent<HTMLFormElement>,
+  activity: {
+    activity_id: string;
+    activity_record_type: "imported" | "manual";
+  },
+) {
+  event.preventDefault();
+  setConnectionNotice("");
+
+  if (!selectedBudgetLineId) {
+    setConnectionNotice("Choose a Budget category.");
+    return;
+  }
+
+  const numericAmount = Number(connectionAmount);
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    setConnectionNotice("Enter an amount greater than zero.");
+    return;
+  }
+
+  setConnectionSaving(true);
+
+  const { error } = await supabase.rpc(
+    "allocate_my_financial_activity_v1",
+    {
+      p_activity_record_type: activity.activity_record_type,
+      p_activity_id: activity.activity_id,
+      p_budget_line_id: selectedBudgetLineId,
+      p_allocated_amount: numericAmount,
+    },
+  );
+
+  if (error) {
+    setConnectionNotice(error.message);
+    setConnectionSaving(false);
+    return;
+  }
+
+  await refresh();
+
+  setConnectingActivityId(null);
+  setSelectedBudgetLineId("");
+  setConnectionAmount("");
+  setConnectionNotice("Connected to your Budget.");
+  setConnectionSaving(false);
+}
+
+const activeBudgetPeriod =
+  budgetPeriods.find(
+    (period) => period.status === "active",
+  ) ?? null;
+
+const activeBudgetLines = activeBudgetPeriod
+  ? budgetLines.filter(
+      (line) =>
+        line.budget_period_id === activeBudgetPeriod.id &&
+        line.is_active,
+    )
+  : [];
+
   return (
     <AuthGate>
       <main className="min-h-screen bg-[#eef4ef] px-4 py-5 text-slate-950 sm:px-6">
@@ -703,6 +804,19 @@ async function handleCreateExplanationDraft(
                                 activity.activity_id,
                             )
                           : undefined;
+                        const matchingAllocations =
+  financialActivityAllocations.filter(
+    (allocation) =>
+      allocation.activity_record_type === activity.activity_record_type &&
+      allocation.activity_id === activity.activity_id &&
+      allocation.status === "active",
+  );
+
+const connectedAmount = matchingAllocations.reduce(
+  (sum, allocation) =>
+    sum + Number(allocation.allocated_amount ?? 0),
+  0,
+);
 
                       return (
                         <article
@@ -754,6 +868,135 @@ async function handleCreateExplanationDraft(
                                 {activity.lifecycle.replaceAll("_", " ")}
                               </span>
                             ) : null}
+                            {activity.activity_direction === "outflow" ? (
+  <div className="mt-4 w-full rounded-2xl border border-amber-100 bg-amber-50 p-4">
+    <p className="text-xs font-black uppercase tracking-wide text-amber-800">
+      Budget connection
+    </p>
+
+    {matchingAllocations.length > 0 ? (
+      <div className="mt-3 space-y-2">
+        {matchingAllocations.map((allocation) => (
+          <div
+            key={allocation.allocation_id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-4 py-3"
+          >
+            <span className="font-black text-slate-900">
+              {allocation.budget_category_name}
+            </span>
+
+            <span className="font-black text-slate-900">
+              {formatMoney(allocation.allocated_amount)}
+            </span>
+          </div>
+        ))}
+
+        <p className="text-sm font-semibold text-slate-700">
+          Connected total: {formatMoney(connectedAmount)}
+        </p>
+      </div>
+    ) : connectingActivityId === activity.activity_id ? (
+  <form
+    onSubmit={(event) =>
+      void handleConnectActivity(event, activity)
+    }
+    className="mt-3 space-y-4"
+  >
+    <p className="text-sm leading-6 text-slate-700">
+      Choose where this spending fits in your current Budget.
+    </p>
+
+    <label className="block text-sm font-black text-slate-900">
+      Budget category
+      <select
+        value={selectedBudgetLineId}
+        onChange={(event) => {
+          setSelectedBudgetLineId(event.target.value);
+          setConnectionNotice("");
+        }}
+        disabled={connectionSaving}
+        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+      >
+        <option value="">Choose a category</option>
+
+        {activeBudgetLines.map((line) => (
+          <option key={line.id} value={line.id}>
+            {line.category_name}
+          </option>
+        ))}
+      </select>
+    </label>
+
+    <label className="block text-sm font-black text-slate-900">
+      Amount to connect
+      <input
+        type="number"
+        min="0.01"
+        step="0.01"
+        value={connectionAmount}
+        onChange={(event) => {
+          setConnectionAmount(event.target.value);
+          setConnectionNotice("");
+        }}
+        disabled={connectionSaving}
+        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+      />
+    </label>
+
+    <div className="flex flex-wrap gap-3">
+      <button
+        type="submit"
+        disabled={
+          connectionSaving ||
+          !activeBudgetPeriod ||
+          activeBudgetLines.length === 0
+        }
+        className="rounded-2xl bg-amber-700 px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+      >
+        {connectionSaving
+          ? "Connecting..."
+          : "Connect to Budget"}
+      </button>
+
+      <button
+        type="button"
+        onClick={cancelConnectingActivity}
+        disabled={connectionSaving}
+        className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 disabled:opacity-60"
+      >
+        Cancel
+      </button>
+    </div>
+
+    {connectionNotice ? (
+      <p className="text-sm font-semibold text-slate-700">
+        {connectionNotice}
+      </p>
+    ) : null}
+  </form>
+) : (
+  <div className="mt-2">
+    <p className="text-sm leading-6 text-slate-700">
+      This activity is not connected to your Budget yet.
+    </p>
+
+    {activeBudgetPeriod && activeBudgetLines.length > 0 ? (
+      <button
+        type="button"
+        onClick={() => startConnectingActivity(activity)}
+        className="mt-3 rounded-2xl border border-amber-300 bg-white px-4 py-2 text-sm font-black text-amber-900 hover:bg-amber-100"
+      >
+        Connect to Budget
+      </button>
+    ) : (
+      <p className="mt-3 text-sm font-semibold text-slate-600">
+        An active Budget with an active category is needed before this activity can be connected.
+      </p>
+    )}
+  </div>
+)}
+  </div>
+) : null}
                             {activity.activity_record_type === "imported" ? (
   matchingExplanation ? (
                               <div className="mt-4 w-full rounded-2xl border border-blue-100 bg-blue-50 p-4">
