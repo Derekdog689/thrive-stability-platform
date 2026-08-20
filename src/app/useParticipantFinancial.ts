@@ -63,6 +63,24 @@ export type FinancialActivity = {
   created_at: string;
 };
 
+export type FinancialActivityAllocation = {
+  allocation_id: string;
+  workspace_id: string;
+  program_id: string;
+  supported_person_id: string;
+  activity_record_type: "imported" | "manual";
+  activity_id: string;
+  budget_period_id: string;
+  budget_line_id: string;
+  budget_category_name: string;
+  budget_category_type: string;
+  allocated_amount: number | string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+};
+
 export type BudgetPeriod = {
   id: string;
   period_start: string;
@@ -261,8 +279,14 @@ export function useParticipantFinancial() {
 
   const [financialActivity, setFinancialActivity] =
   useState<FinancialActivity[]>([]);
-  const [budgetPeriods, setBudgetPeriods] =
-    useState<BudgetPeriod[]>([]);
+
+const [
+  financialActivityAllocations,
+  setFinancialActivityAllocations,
+] = useState<FinancialActivityAllocation[]>([]);
+
+const [budgetPeriods, setBudgetPeriods] =
+  useState<BudgetPeriod[]>([]);
 
   const [budgetLines, setBudgetLines] =
     useState<BudgetLine[]>([]);
@@ -316,11 +340,12 @@ export function useParticipantFinancial() {
 
     setParticipant(person);
 
-    const [
+   const [
   sourceResult,
   batchResult,
   transactionResult,
   financialActivityResult,
+  financialActivityAllocationResult,
   periodResult,
   programParticipantResult,
 ] = await Promise.all([
@@ -338,6 +363,9 @@ export function useParticipantFinancial() {
 
       supabase.rpc(
         "get_my_financial_activity_v1",
+        ),
+      supabase.rpc(
+        "get_my_financial_activity_allocations_v1",
       ),
 
       supabase
@@ -362,6 +390,7 @@ export function useParticipantFinancial() {
       batchResult.error ??
       transactionResult.error ??
       financialActivityResult.error ??
+      financialActivityAllocationResult.error ??
       periodResult.error ??
       programParticipantResult.error;
 
@@ -418,6 +447,11 @@ export function useParticipantFinancial() {
       (financialActivityResult.data ??
         []) as FinancialActivity[],
     );
+
+    setFinancialActivityAllocations(
+  (financialActivityAllocationResult.data ??
+    []) as FinancialActivityAllocation[],
+);
 
     setBudgetPeriods(orderedPeriods);
 
@@ -504,8 +538,9 @@ setBudgetLines(
     batches,
     transactions,
 financialActivity,
+financialActivityAllocations,
 budgetPeriods,
-    budgetLines,
+budgetLines,
     totalOutflow,
     latestBatch,
     loading,
