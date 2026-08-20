@@ -6,6 +6,7 @@ import ThriveSidebar from "../ThriveSidebar";
 import {
   BudgetLine,
   BudgetPeriod,
+  FinancialActivity,
   FinancialTransaction,
   formatDate,
   formatMoney,
@@ -546,11 +547,13 @@ function BudgetRelationshipPanel({
 function BudgetSummary({
   period,
   lines,
+  financialActivity,
   latestBalanceTransaction,
   latestBalanceSource,
 }: {
   period: BudgetPeriod;
   lines: BudgetLine[];
+  financialActivity: FinancialActivity[];
   latestBalanceTransaction: FinancialTransaction | null;
   latestBalanceSource: {
     source_name: string | null;
@@ -570,6 +573,23 @@ function BudgetSummary({
     (sum, line) => sum + toNumber(line.derived_remaining_amount),
     0,
   );
+
+  const receivedIncome = financialActivity
+  .filter(
+    (activity) =>
+      activity.activity_direction === "inflow" &&
+      activity.activity_date >= period.period_start &&
+      activity.activity_date <= period.period_end,
+  )
+  .reduce(
+    (sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)),
+    0,
+  );
+
+const stillExpectedIncome = Math.max(
+  toNumber(period.expected_income) - receivedIncome,
+  0,
+);
   const status = getBudgetStatus(plannedTotal, actualTotal, remainingTotal);
 
   return (
@@ -599,14 +619,33 @@ function BudgetSummary({
         </div>
 
         <div className="rounded-2xl bg-slate-50 p-6">
-          <p className="text-sm font-bold text-slate-500">Expected income</p>
-          <p className="mt-3 text-4xl font-black">
-            {formatMoney(period.expected_income)}
-          </p>
-          <p className="mt-2 text-sm text-slate-500">
-            Amount you expect to have available during this plan
-          </p>
-        </div>
+  <p className="text-sm font-bold text-slate-500">Income</p>
+
+  <div className="mt-3">
+    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+      Expected
+    </p>
+    <p className="mt-1 text-3xl font-black">
+      {formatMoney(period.expected_income)}
+    </p>
+  </div>
+
+  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+    <div>
+      <p className="font-bold text-slate-500">Received</p>
+      <p className="mt-1 font-black">
+        {formatMoney(receivedIncome)}
+      </p>
+    </div>
+
+    <div>
+      <p className="font-bold text-slate-500">Still expected</p>
+      <p className="mt-1 font-black">
+        {formatMoney(stillExpectedIncome)}
+      </p>
+    </div>
+  </div>
+</div>
 
         <div className="rounded-2xl bg-slate-50 p-6">
           <p className="text-sm font-bold text-slate-500">Recorded activity</p>
@@ -819,15 +858,16 @@ function BudgetHistorySection({ periods }: { periods: BudgetPeriod[] }) {
 
 export default function BudgetPage() {
   const {
-    activeProgramId,
-    sources,
-    budgetPeriods,
-    budgetLines,
-    transactions,
-    loading,
-    errorMessage,
-    refresh,
-  } = useParticipantFinancial();
+  activeProgramId,
+  sources,
+  budgetPeriods,
+  budgetLines,
+  transactions,
+  financialActivity,
+  loading,
+  errorMessage,
+  refresh,
+} = useParticipantFinancial();
 
   const {
     explanationByTransactionId,
@@ -878,9 +918,9 @@ export default function BudgetPage() {
     ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id)
     : [];
 
-  const completedPeriods = budgetPeriods.filter(
-    (period) => period.status === "completed" || period.status === "archived",
-  );
+ const completedPeriods = budgetPeriods.filter(
+  (period) => period.status === "completed",
+);
 
   const currentBudgetTransactions = activePeriod
   ? transactions.filter(
@@ -1168,11 +1208,12 @@ export default function BudgetPage() {
                       refresh={refresh}
                     />
                     <BudgetSummary
-                      period={activePeriod}
-                      lines={activeLines}
-                      latestBalanceTransaction={latestBalanceTransaction}
-                      latestBalanceSource={latestBalanceSource}
-                    />
+  period={activePeriod}
+  lines={activeLines}
+  financialActivity={financialActivity}
+  latestBalanceTransaction={latestBalanceTransaction}
+  latestBalanceSource={latestBalanceSource}
+/>
                     <BudgetCategorySummary lines={activeLines} />
                   </>
                 ) : null}
