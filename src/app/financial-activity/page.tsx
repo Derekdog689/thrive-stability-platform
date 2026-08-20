@@ -53,6 +53,19 @@ const [connectionAmount, setConnectionAmount] = useState("");
 const [connectionSaving, setConnectionSaving] = useState(false);
 
 const [connectionNotice, setConnectionNotice] = useState("");
+const [
+  editingAllocationId,
+  setEditingAllocationId,
+] = useState<string | null>(null);
+
+const [editAllocationAmount, setEditAllocationAmount] =
+  useState("");
+
+const [allocationSaving, setAllocationSaving] =
+  useState(false);
+
+const [allocationNotice, setAllocationNotice] =
+  useState("");
 
   const [editingActivityId, setEditingActivityId] = useState<string | null>(
     null,
@@ -593,6 +606,60 @@ const activeBudgetLines = activeBudgetPeriod
     )
   : [];
 
+function startEditingAllocation(allocation: {
+  allocation_id: string;
+  allocated_amount: number | string;
+}) {
+  setEditingAllocationId(allocation.allocation_id);
+  setEditAllocationAmount(String(allocation.allocated_amount));
+  setAllocationNotice("");
+}
+
+function cancelEditingAllocation() {
+  setEditingAllocationId(null);
+  setEditAllocationAmount("");
+  setAllocationNotice("");
+}
+
+async function handleAllocationSave(
+  event: FormEvent<HTMLFormElement>,
+) {
+  event.preventDefault();
+  setAllocationNotice("");
+
+  if (!editingAllocationId) {
+    return;
+  }
+
+  const numericAmount = Number(editAllocationAmount);
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    setAllocationNotice("Enter an amount greater than zero.");
+    return;
+  }
+
+  setAllocationSaving(true);
+
+  const { error } = await supabase.rpc(
+    "update_my_financial_activity_allocation_v1",
+    {
+      p_allocation_id: editingAllocationId,
+      p_allocated_amount: numericAmount,
+    },
+  );
+
+  if (error) {
+    setAllocationNotice(error.message);
+    setAllocationSaving(false);
+    return;
+  }
+
+  await refresh();
+
+  cancelEditingAllocation();
+  setAllocationSaving(false);
+}
+
   return (
     <AuthGate>
       <main className="min-h-screen bg-[#eef4ef] px-4 py-5 text-slate-950 sm:px-6">
@@ -818,6 +885,36 @@ const connectedAmount = matchingAllocations.reduce(
   0,
 );
 
+async function handleArchiveAllocation(allocationId: string) {
+  const confirmed = window.confirm(
+    "Remove this Budget connection? The Financial Activity itself will remain unchanged.",
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setAllocationSaving(true);
+  setAllocationNotice("");
+
+  const { error } = await supabase.rpc(
+    "archive_my_financial_activity_allocation_v1",
+    {
+      p_allocation_id: allocationId,
+    },
+  );
+
+  if (error) {
+    setAllocationNotice(error.message);
+    setAllocationSaving(false);
+    return;
+  }
+
+  await refresh();
+
+  setAllocationSaving(false);
+}
+
                       return (
                         <article
                           key={`${activity.activity_record_type}:${activity.activity_id}`}
@@ -878,17 +975,91 @@ const connectedAmount = matchingAllocations.reduce(
       <div className="mt-3 space-y-2">
         {matchingAllocations.map((allocation) => (
           <div
-            key={allocation.allocation_id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-4 py-3"
-          >
-            <span className="font-black text-slate-900">
-              {allocation.budget_category_name}
-            </span>
+  key={allocation.allocation_id}
+  className="rounded-xl bg-white px-4 py-3"
+>
+  {editingAllocationId === allocation.allocation_id ? (
+    <form
+      onSubmit={handleAllocationSave}
+      className="space-y-3"
+    >
+      <p className="font-black text-slate-900">
+        {allocation.budget_category_name}
+      </p>
 
-            <span className="font-black text-slate-900">
-              {formatMoney(allocation.allocated_amount)}
-            </span>
-          </div>
+      <label className="block text-sm font-black text-slate-900">
+        Connected amount
+        <input
+          type="number"
+          min="0.01"
+          step="0.01"
+          value={editAllocationAmount}
+          onChange={(event) => {
+            setEditAllocationAmount(event.target.value);
+            setAllocationNotice("");
+          }}
+          disabled={allocationSaving}
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal disabled:opacity-60"
+        />
+      </label>
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={allocationSaving}
+          className="rounded-2xl bg-amber-700 px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+        >
+          {allocationSaving ? "Saving..." : "Save amount"}
+        </button>
+
+        <button
+          type="button"
+          onClick={cancelEditingAllocation}
+          disabled={allocationSaving}
+          className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+
+      {allocationNotice ? (
+        <p className="text-sm font-semibold text-slate-700">
+          {allocationNotice}
+        </p>
+      ) : null}
+    </form>
+  ) : (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p className="font-black text-slate-900">
+          {allocation.budget_category_name}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => startEditingAllocation(allocation)}
+          className="mt-2 text-sm font-black text-amber-800 hover:text-amber-950"
+        >
+          Edit amount
+        </button>
+        <button
+  type="button"
+  onClick={() =>
+    void handleArchiveAllocation(allocation.allocation_id)
+  }
+  disabled={allocationSaving}
+  className="ml-3 mt-2 text-sm font-black text-slate-600 hover:text-slate-900 disabled:opacity-60"
+>
+  Remove connection
+</button>
+      </div>
+
+      <span className="font-black text-slate-900">
+        {formatMoney(allocation.allocated_amount)}
+      </span>
+    </div>
+  )}
+</div>
         ))}
 
         <p className="text-sm font-semibold text-slate-700">
