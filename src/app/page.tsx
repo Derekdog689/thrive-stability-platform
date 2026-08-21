@@ -7,37 +7,10 @@ import { useParticipantGoals } from "./goals/useParticipantGoals";
 import { useParticipantSupport } from "./support/useParticipantSupport";
 import { useWellnessCheckinCandidate } from "./wellness/useWellnessCheckinCandidate";
 import {
-  formatDate,
   formatMoney,
+  toNumber,
   useParticipantFinancial,
 } from "./useParticipantFinancial";
-
-const dailyPathCards = [
-  {
-    href: "/wellness",
-    eyebrow: "Wellness",
-    title: "Check in with yourself",
-    description:
-      "Take a quiet moment to notice how today is going and what may help next.",
-    action: "Open Wellness",
-  },
-  {
-    href: "/goals",
-    eyebrow: "Goals",
-    title: "Choose one meaningful step",
-    description:
-      "Keep your attention on one small action connected to the life you are building.",
-    action: "View Goals",
-  },
-  {
-    href: "/support",
-    eyebrow: "Support",
-    title: "You do not have to carry everything alone",
-    description:
-      "Review the support space when you want help thinking through what comes next.",
-    action: "Open Support",
-  },
-];
 
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Not available";
@@ -47,17 +20,69 @@ function formatLabel(value: string | null | undefined) {
     .replace(/^./, (letter) => letter.toUpperCase());
 }
 
+function getGoalProgressLabel(value: string | null | undefined) {
+  switch (value) {
+    case "active":
+    case "in_progress":
+      return "Moving forward";
+    case "paused":
+      return "Paused for now";
+    case "completed":
+      return "Completed";
+    default:
+      return formatLabel(value);
+  }
+}
+
+function getSupportMeaning(status: string | null | undefined) {
+  switch (status) {
+    case "submitted":
+      return {
+        title: "Your request is with the team",
+        detail: "Nothing is needed from you right now.",
+      };
+
+    case "acknowledged":
+      return {
+        title: "Your request was received",
+        detail: "Nothing is needed from you right now.",
+      };
+
+    case "in_progress":
+      return {
+        title: "Support is working on it",
+        detail: "Nothing is needed from you right now.",
+      };
+
+    case "waiting_for_participant":
+      return {
+        title: "Your response is needed",
+        detail: "Review your support request when you are ready.",
+      };
+
+    case "participant_reply":
+      return {
+        title: "Your response was sent",
+        detail: "The request is back with the team.",
+      };
+
+    default:
+      return {
+        title: formatLabel(status),
+        detail: "Your support activity is still open.",
+      };
+  }
+}
+
 export default function TodayPage() {
   const {
-  participantName,
-  sources,
-  transactions,
-  financialActivity,
-  budgetPeriods,
-  latestBatch,
-  loading,
-  errorMessage,
-} = useParticipantFinancial();
+    participantName,
+    financialActivity,
+    budgetPeriods,
+    budgetLines,
+    loading,
+    errorMessage,
+  } = useParticipantFinancial();
 
   const {
     todayCheckin,
@@ -78,34 +103,139 @@ export default function TodayPage() {
   } = useParticipantSupport();
 
   const activeBudgetPeriod =
-    budgetPeriods.find((period) => period.status === "active") ??
-    budgetPeriods[0] ??
+    budgetPeriods.find((period) => period.status === "active") ?? null;
+
+  const activeBudgetLines = activeBudgetPeriod
+    ? budgetLines.filter(
+        (line) =>
+          line.budget_period_id === activeBudgetPeriod.id &&
+          line.is_active,
+      )
+    : [];
+
+  const currentPeriodFinancialActivity = activeBudgetPeriod
+    ? financialActivity.filter(
+        (activity) =>
+          activity.activity_date >= activeBudgetPeriod.period_start &&
+          activity.activity_date <= activeBudgetPeriod.period_end,
+      )
+    : [];
+
+  const expectedIncome = activeBudgetPeriod
+    ? toNumber(activeBudgetPeriod.expected_income)
+    : 0;
+
+  const receivedIncome = currentPeriodFinancialActivity
+    .filter((activity) => activity.activity_direction === "inflow")
+    .reduce(
+      (sum, activity) =>
+        sum + Math.abs(toNumber(activity.signed_amount)),
+      0,
+    );
+
+  const moneyOutThisPeriod = currentPeriodFinancialActivity
+    .filter((activity) => activity.activity_direction === "outflow")
+    .reduce(
+      (sum, activity) =>
+        sum + Math.abs(toNumber(activity.signed_amount)),
+      0,
+    );
+
+  const budgetRemaining = activeBudgetLines.reduce(
+    (sum, line) =>
+      sum + toNumber(line.derived_remaining_amount),
+    0,
+  );
+
+  const latestWellness = todayCheckin ?? null;
+
+  const currentGoal =
+    activeGoals.find(
+      (goal) => goal.progress_status !== "completed",
+    ) ??
+    activeGoals[0] ??
     null;
- const latestWellness = todayCheckin ?? null;
 
-const currentGoal =
-  activeGoals.find((goal) => goal.progress_status !== "completed") ??
-  activeGoals[0] ??
-  null;
+  const unresolvedSupportRequest =
+    requests.find(
+      (request) =>
+        !["completed", "withdrawn", "archived"].includes(
+          request.status,
+        ),
+    ) ?? null;
 
-const unresolvedSupportRequest =
-  requests.find(
-    (request) =>
-      !["completed", "withdrawn", "archived"].includes(request.status),
-  ) ?? null;
+    const supportMeaning = unresolvedSupportRequest
+  ? getSupportMeaning(unresolvedSupportRequest.status)
+  : null;
 
-  const totalFinancialActivity = financialActivity.length;
+  const supportNeedsParticipant =
+    unresolvedSupportRequest?.status ===
+    "waiting_for_participant";
 
-const recordedFinancialOutflow = financialActivity.reduce(
-  (sum, activity) => {
-    const amount = Number(activity.signed_amount ?? 0);
+  const primaryAction = (() => {
+    if (!wellnessLoading && !wellnessErrorMessage && !latestWellness) {
+      return {
+        eyebrow: "Check in",
+        title: "How are you doing today?",
+        detail:
+          "A short check-in can help you decide what would be useful next.",
+        href: "/wellness",
+        action: "Check in now",
+      };
+    }
 
-    return Number.isFinite(amount) && amount < 0
-      ? sum + Math.abs(amount)
-      : sum;
-  },
-  0,
-);
+    if (supportNeedsParticipant) {
+      return {
+        eyebrow: "Support",
+        title: "Your support request needs you",
+        detail:
+          "There is a support request waiting for your response.",
+        href: "/support",
+        action: "Review support",
+      };
+    }
+
+    if (
+      latestWellness?.chosen_next_step === "ask_for_help" &&
+      !unresolvedSupportRequest
+    ) {
+      return {
+        eyebrow: "Your next step",
+        title: "Ask for help",
+        detail:
+          "You chose asking for help as your next step today.",
+        href: "/support",
+        action: "Open Support",
+      };
+    }
+
+    if (currentGoal?.next_step) {
+      return {
+        eyebrow: "Your next step",
+        title: currentGoal.next_step,
+        detail: `Connected to your goal: ${currentGoal.title}`,
+        href: "/goals",
+        action: "Continue goal",
+      };
+    }
+
+    return {
+      eyebrow: "Today",
+      title: "Nothing urgent needs your attention",
+      detail:
+        "You can check in, review your plan, or continue when you are ready.",
+      href: "/wellness",
+      action: "Check in",
+    };
+  })();
+
+  const orientationReady =
+    !wellnessLoading &&
+    !goalsLoading &&
+    !supportLoading &&
+    !wellnessErrorMessage &&
+    !goalsErrorMessage &&
+    !supportErrorMessage;
 
   return (
     <AuthGate>
@@ -118,287 +248,283 @@ const recordedFinancialOutflow = financialActivity.reduce(
               <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
                 Today
               </p>
+
               <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
-                Welcome, {participantName}.
+                Welcome back, {participantName}.
               </h1>
-              <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-                Start with what matters today. Check in, review your plan, and
-                choose one useful next step.
+
+              <p className="mt-4 text-lg leading-7 text-slate-600">
+                What would make today feel a little more manageable?
               </p>
             </header>
 
-            <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
-  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-    What matters right now
-  </p>
-
-  <h2 className="mt-2 text-2xl font-black text-slate-950">
-    A quick look at what is active today
-  </h2>
-
-  <div className="mt-6 grid gap-4 lg:grid-cols-3">
-    <div className="rounded-2xl bg-emerald-50 p-5">
-      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-        Wellness
-      </p>
-
-      {wellnessLoading ? (
-        <p className="mt-3 text-sm text-emerald-900">
-          Loading your latest reflection.
-        </p>
-      ) : wellnessErrorMessage ? (
-        <p className="mt-3 text-sm text-emerald-900">
-          Your latest Wellness reflection is not available right now.
-        </p>
-      ) : latestWellness ? (
-        <>
-          <p className="mt-3 font-black text-slate-950">
-            Latest reflection: {formatLabel(latestWellness.overall_day)}
-          </p>
-
-          {latestWellness.chosen_next_step ? (
-            <p className="mt-2 text-sm leading-6 text-slate-700">
-              Next step: {formatLabel(latestWellness.chosen_next_step)}
-            </p>
-          ) : null}
-        </>
-      ) : (
-        <p className="mt-3 text-sm text-slate-700">
-          No Wellness reflection has been saved for today yet.
-        </p>
-      )}
-    </div>
-
-    <div className="rounded-2xl bg-slate-50 p-5">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-        Goal
-      </p>
-
-      {goalsLoading ? (
-        <p className="mt-3 text-sm text-slate-600">
-          Loading your current goal.
-        </p>
-      ) : goalsErrorMessage ? (
-        <p className="mt-3 text-sm text-slate-600">
-          Your current goal is not available right now.
-        </p>
-      ) : currentGoal ? (
-        <>
-          <p className="mt-3 font-black text-slate-950">
-            {currentGoal.title}
-          </p>
-
-          <p className="mt-2 text-sm leading-6 text-slate-700">
-            Next step: {currentGoal.next_step}
-          </p>
-        </>
-      ) : (
-        <p className="mt-3 text-sm text-slate-700">
-          No active goal is available yet.
-        </p>
-      )}
-    </div>
-
-    <div className="rounded-2xl bg-slate-50 p-5">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-        Support
-      </p>
-
-      {supportLoading ? (
-        <p className="mt-3 text-sm text-slate-600">
-          Loading your support status.
-        </p>
-      ) : supportErrorMessage ? (
-        <p className="mt-3 text-sm text-slate-600">
-          Your support status is not available right now.
-        </p>
-      ) : unresolvedSupportRequest ? (
-        <>
-          <p className="mt-3 font-black text-slate-950">
-            {formatLabel(unresolvedSupportRequest.status)}
-          </p>
-
-          <p className="mt-2 text-sm leading-6 text-slate-700">
-            {unresolvedSupportRequest.participant_message}
-          </p>
-        </>
-      ) : (
-        <p className="mt-3 text-sm text-slate-700">
-          No open support request is currently active.
-        </p>
-      )}
-    </div>
-  </div>
-</section>
-
-            {loading && (
+            {loading ? (
               <section className="rounded-3xl bg-white p-6 shadow-sm">
-                Loading your THRIVE summary.
+                Loading your Today.
               </section>
-            )}
+            ) : null}
 
-            {errorMessage && (
+            {errorMessage ? (
               <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-950">
-                <p className="font-black">Your Today summary could not be loaded.</p>
+                <p className="font-black">
+                  Your Today information could not be loaded.
+                </p>
                 <p className="mt-2 text-sm">{errorMessage}</p>
               </section>
-            )}
+            ) : null}
 
-            {!loading && !errorMessage && (
+            {!loading && !errorMessage ? (
               <>
-                <section className="grid gap-4 lg:grid-cols-3">
-                  {dailyPathCards.map((card) => (
-                    <Link
-                      key={card.href}
-                      href={card.href}
-                      className="group rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                        {card.eyebrow}
-                      </p>
-                      <h2 className="mt-2 text-2xl font-black">{card.title}</h2>
-                      <p className="mt-3 leading-7 text-slate-600">
-                        {card.description}
-                      </p>
-                      <p className="mt-5 font-black text-emerald-800 group-hover:text-emerald-950">
-                        {card.action}
-                      </p>
-                    </Link>
-                  ))}
-                </section>
-
-                <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+                <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                        Your financial picture
+                        Your money
                       </p>
+
                       <h2 className="mt-2 text-2xl font-black">
-                        A quick look at your current information
+                        Your current plan
                       </h2>
-                      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-                        These numbers summarize connected records. They do not
-                        assign intent, responsibility, or a conclusion about
-                        your choices.
-                      </p>
                     </div>
 
-                    <Link
-                      href="/budget"
-                      className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
-                    >
-                      Review Budget
-                    </Link>
-                  </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href="/budget"
+                        className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
+                      >
+                        Review Budget
+                      </Link>
 
-                  <div className="mt-6 grid gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl bg-emerald-50 p-5">
-                      <p className="text-sm font-bold text-emerald-800">
-                        Financial sources
-                      </p>
-                      <p className="mt-2 text-3xl font-black">{sources.length}</p>
-                      <p className="mt-2 text-sm text-emerald-900">
-                        Financial sources available to THRIVE
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-slate-50 p-5">
-                      <p className="text-sm font-bold text-slate-500">
-  Recent financial activity
-</p>
-
-<p className="mt-2 text-3xl font-black">
-  {totalFinancialActivity}
-</p>
-
-<p className="mt-2 text-sm text-slate-500">
-  Imported and participant-added activity available for review
-</p>
-                    </div>
-
-                    <div className="rounded-2xl bg-slate-50 p-5">
-                      <p className="text-sm font-bold text-slate-500">
-  Money out recorded
-</p>
-
-<p className="mt-2 text-3xl font-black">
-  {formatMoney(recordedFinancialOutflow)}
-</p>
-
-<p className="mt-2 text-sm text-slate-500">
-  Money out across available Financial Activity
-</p>
+                      <Link
+                        href="/financial-activity"
+                        className="rounded-2xl border border-emerald-200 bg-white px-5 py-3 font-black text-emerald-900 hover:bg-emerald-50"
+                      >
+                        View Activity
+                      </Link>
                     </div>
                   </div>
 
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-slate-100 p-5">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                        Budget period
-                      </p>
-                      <p className="mt-2 font-black">
-                        {activeBudgetPeriod
-                          ? `${formatDate(activeBudgetPeriod.period_start)} to ${formatDate(
-                              activeBudgetPeriod.period_end,
-                            )}`
-                          : "No current budget period is available yet"}
-                      </p>
-                    </div>
+                  {activeBudgetPeriod ? (
+                    <div className="mt-6 grid gap-4 md:grid-cols-3">
+                      <div className="rounded-2xl bg-emerald-700 p-5 text-white">
+                        <p className="text-sm font-bold text-emerald-100">
+                          Plan remaining
+                        </p>
+                        <p className="mt-2 text-3xl font-black">
+                          {formatMoney(budgetRemaining)}
+                        </p>
+                      </div>
 
-                    <div className="rounded-2xl border border-slate-100 p-5">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                        Latest statement
+                      <div className="rounded-2xl bg-slate-50 p-5">
+                        <p className="text-sm font-bold text-slate-500">
+                          Income received
+                        </p>
+
+                        <p className="mt-2 text-3xl font-black">
+                          {formatMoney(receivedIncome)}
+                        </p>
+
+                        <p className="mt-2 text-sm text-slate-500">
+                          of {formatMoney(expectedIncome)} expected
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-slate-50 p-5">
+                        <p className="text-sm font-bold text-slate-500">
+                          Money out
+                        </p>
+
+                        <p className="mt-2 text-3xl font-black">
+                          {formatMoney(moneyOutThisPeriod)}
+                        </p>
+
+                        <p className="mt-2 text-sm text-slate-500">
+                          recorded this plan period
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-6 rounded-2xl bg-slate-50 p-5">
+                      <p className="font-black">
+                        No current Budget is open.
                       </p>
-                      <p className="mt-2 font-black">
-                        {latestBatch
-                          ? `${formatDate(latestBatch.statement_period_start)} to ${formatDate(
-                              latestBatch.statement_period_end,
-                            )}`
-                          : "No statement period is connected yet"}
+
+                      <p className="mt-2 text-sm text-slate-600">
+                        Start a plan when you are ready.
                       </p>
                     </div>
-                  </div>
+                  )}
                 </section>
 
-                <section className="grid gap-4 md:grid-cols-3">
-                  <Link
-                    href="/my-program"
-                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:bg-slate-50"
-                  >
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      My Program
+                <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                    Your Today
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-black">
+                    Where things stand
+                  </h2>
+
+                  {!orientationReady ? (
+                    <p className="mt-5 text-slate-600">
+                      Pulling together today&apos;s information.
                     </p>
-                    <h2 className="mt-2 text-xl font-black">
-                      Review what THRIVE currently supports
-                    </h2>
-                  </Link>
+                  ) : (
+                    <div className="mt-6 grid gap-3">
+                      <div className="rounded-2xl bg-emerald-50 p-5">
+                        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                          Wellness
+                        </p>
+
+                        <p className="mt-2 text-lg font-black">
+                          {latestWellness
+                            ? `You’re doing ${formatLabel(
+                                latestWellness.overall_day,
+                              ).toLowerCase()} today.`
+                            : "You haven’t checked in today."}
+                        </p>
+
+                        {latestWellness?.chosen_next_step ? (
+                          <p className="mt-2 text-sm text-slate-700">
+                            You chose{" "}
+                            <span className="font-black">
+                              {formatLabel(
+                                latestWellness.chosen_next_step,
+                              ).toLowerCase()}
+                            </span>{" "}
+                            as your next step.
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-2xl bg-slate-50 p-5">
+                          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                            Goal
+                          </p>
+
+                          {currentGoal ? (
+  <>
+    <p className="mt-2 font-black">
+      {currentGoal.title}
+    </p>
+
+    <p className="mt-2 text-sm font-semibold text-slate-700">
+      {getGoalProgressLabel(currentGoal.progress_status)}
+    </p>
+
+    {currentGoal.next_step ? (
+      <p className="mt-2 text-sm text-slate-600">
+        Next:{" "}
+        <span className="font-black">
+          {currentGoal.next_step}
+        </span>
+      </p>
+    ) : null}
+  </>
+) : (
+  <p className="mt-2 text-sm text-slate-600">
+    No active goal right now.
+  </p>
+)}
+                        </div>
+
+                        <div className="rounded-2xl bg-slate-50 p-5">
+                          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                            Support
+                          </p>
+
+                          {unresolvedSupportRequest && supportMeaning ? (
+  <>
+    <p className="mt-2 font-black">
+      {supportMeaning.title}
+    </p>
+
+    <p className="mt-2 text-sm text-slate-600">
+      {supportMeaning.detail}
+    </p>
+  </>
+) : (
+  <>
+    <p className="mt-2 font-black">
+      Nothing is waiting on you
+    </p>
+
+    <p className="mt-2 text-sm text-slate-600">
+      No current support request needs your attention.
+    </p>
+  </>
+)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-300">
+                    {primaryAction.eyebrow}
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+                    {primaryAction.title}
+                  </h2>
+
+                  <p className="mt-3 max-w-2xl leading-7 text-slate-300">
+                    {primaryAction.detail}
+                  </p>
 
                   <Link
-                    href="/reports"
-                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:bg-slate-50"
+                    href={primaryAction.href}
+                    className="mt-6 inline-block rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
                   >
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      Reports
-                    </p>
-                    <h2 className="mt-2 text-xl font-black">
-                      See connected summaries
-                    </h2>
+                    {primaryAction.action}
                   </Link>
+                </section>
 
-                  <Link
-                    href="/budget"
-                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:bg-slate-50"
-                  >
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                      Budget
-                    </p>
-                    <h2 className="mt-2 text-xl font-black">
-                      Review your current plan
-                    </h2>
-                  </Link>
+                <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                    Moving forward
+                  </p>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="font-black">
+                        {latestWellness
+                          ? "Checked in today"
+                          : "Check-in still open"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="font-black">
+                        {activeBudgetPeriod
+                          ? "Current Budget active"
+                          : "No current Budget"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="font-black">
+                        {currentGoal
+                          ? "Goal in progress"
+                          : "No active goal"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="font-black">
+                        {unresolvedSupportRequest
+                          ? `Support ${formatLabel(
+                              unresolvedSupportRequest.status,
+                            ).toLowerCase()}`
+                          : "No open support request"}
+                      </p>
+                    </div>
+                  </div>
                 </section>
               </>
-            )}
+            ) : null}
           </section>
         </section>
       </main>
