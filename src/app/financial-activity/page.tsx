@@ -100,6 +100,23 @@ const [
   setCreatingExplanationForTransactionId,
 ] = useState<string | null>(null);
 
+type UploadPreviewRow = {
+  row_number: number;
+  raw_date: string;
+  raw_description: string;
+  raw_amount: string;
+  activity_date: string;
+  description: string;
+  amount: string;
+};
+
+const [showUploadForm, setShowUploadForm] = useState(false);
+const [uploadFileName, setUploadFileName] = useState("");
+const [uploadFileHash, setUploadFileHash] = useState("");
+const [uploadRows, setUploadRows] = useState<UploadPreviewRow[]>([]);
+const [uploadNotice, setUploadNotice] = useState("");
+const [uploadSaving, setUploadSaving] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -135,6 +152,182 @@ const [
       cancelled = true;
     };
   }, []);
+
+  function parseSimpleCsv(text: string): UploadPreviewRow[] {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) {
+    throw new Error("The CSV does not contain any activity rows.");
+  }
+
+  const headers = lines[0]
+  .split(",")
+  .map((header) =>
+    header
+      .trim()
+      .replace(/^"|"$/g, "")
+      .toLowerCase(),
+  );
+
+  const dateIndex = headers.indexOf("date");
+  const descriptionIndex = headers.indexOf("description");
+  const amountIndex = headers.indexOf("amount");
+
+  if (
+    dateIndex === -1 ||
+    descriptionIndex === -1 ||
+    amountIndex === -1
+  ) {
+    throw new Error(
+      "The CSV must contain Date, Description, and Amount columns.",
+    );
+  }
+
+  return lines.slice(1).map((line, index) => {
+    const values = line
+  .split(",")
+  .map((value) =>
+    value
+      .trim()
+      .replace(/^"|"$/g, ""),
+  );
+
+    const rawDate = values[dateIndex] ?? "";
+    const rawDescription = values[descriptionIndex] ?? "";
+    const rawAmount = values[amountIndex] ?? "";
+
+    const numericAmount = Number(rawAmount);
+
+    if (!rawDate || !rawDescription || !Number.isFinite(numericAmount)) {
+      throw new Error(`Row ${index + 2} could not be read.`);
+    }
+
+    const parsedDate = new Date(rawDate);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      throw new Error(`Row ${index + 2} has an invalid date.`);
+    }
+
+    return {
+      row_number: index + 1,
+      raw_date: rawDate,
+      raw_description: rawDescription,
+      raw_amount: rawAmount,
+      activity_date: parsedDate.toISOString().slice(0, 10),
+      description: rawDescription,
+      amount: String(numericAmount),
+    };
+  });
+}
+
+async function sha256Hex(file: File) {
+  const buffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function handleUploadFile(file: File | null) {
+  setUploadNotice("");
+  setUploadRows([]);
+  setUploadFileName("");
+  setUploadFileHash("");
+
+  if (!file) {
+    return;
+  }
+
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    setUploadNotice("Choose a CSV file.");
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const rows = parseSimpleCsv(text);
+    const hash = await sha256Hex(file);
+
+    setUploadFileName(file.name);
+    setUploadFileHash(hash);
+    setUploadRows(rows);
+  } catch (error) {
+    setUploadNotice(
+      error instanceof Error
+        ? error.message
+        : "The CSV could not be read.",
+    );
+  }
+}
+
+async function handleUploadConfirm() {
+  setUploadNotice("");
+
+  if (!activeProgramId) {
+    setUploadNotice(
+      "A single active THRIVE program is required before activity can be uploaded.",
+    );
+    return;
+  }
+
+  if (
+    !uploadFileName ||
+    !uploadFileHash ||
+    uploadRows.length === 0
+  ) {
+    setUploadNotice("Choose a CSV file first.");
+    return;
+  }
+
+  setUploadSaving(true);
+
+  const { error } = await supabase.rpc(
+    "import_my_financial_activity_csv_v1",
+    {
+      p_program_id: activeProgramId,
+      p_source_filename: uploadFileName,
+      p_source_file_sha256: uploadFileHash,
+      p_rows: uploadRows,
+    },
+  );
+
+  if (error) {
+    setUploadNotice(error.message);
+    setUploadSaving(false);
+    return;
+  }
+
+  setUploadFileName("");
+  setUploadFileHash("");
+  setUploadRows([]);
+  setShowUploadForm(false);
+
+  await refresh();
+
+  setUploadNotice("Financial activity uploaded.");
+  setUploadSaving(false);
+}
+
+const uploadMoneyIn = uploadRows.reduce((sum, row) => {
+  const value = Number(row.amount);
+  return value > 0 ? sum + value : sum;
+}, 0);
+
+const uploadMoneyOut = uploadRows.reduce((sum, row) => {
+  const value = Number(row.amount);
+  return value < 0 ? sum + Math.abs(value) : sum;
+}, 0);
+
+const uploadDates = uploadRows
+  .map((row) => row.activity_date)
+  .sort();
+
+const uploadDateStart = uploadDates[0] ?? "";
+const uploadDateEnd = uploadDates[uploadDates.length - 1] ?? "";
 
   async function handleManualSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -716,22 +909,169 @@ async function handleAllocationSave(
                         another financial event that is not already available
                         from an imported account record.
                       </p>
-                    </div>
+                      <div className="mt-5 flex flex-wrap gap-3">
+  {!showManualForm && !showUploadForm ? (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setNotice("");
+          setShowManualForm(true);
+        }}
+        className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
+      >
+        Add activity manually
+      </button>
 
-                    {!showManualForm ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNotice("");
-                          setShowManualForm(true);
-                        }}
-                        className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
-                      >
-                        Add activity manually
-                      </button>
-                    ) : null}
-                  </div>
+      <button
+        type="button"
+        onClick={() => {
+          setUploadNotice("");
+          setShowUploadForm(true);
+        }}
+        className="rounded-2xl border border-emerald-300 bg-white px-5 py-3 font-black text-emerald-900 hover:bg-emerald-50"
+      >
+        Upload activity
+      </button>
+    </>
+  ) : null}
+</div>
+</div>
+</div>
+  {showUploadForm ? (
+  <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+    <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
+      Upload activity
+    </p>
 
+    <h3 className="mt-2 text-xl font-black">
+      Add activity from a CSV
+    </h3>
+
+    <p className="mt-2 text-sm leading-6 text-slate-600">
+      Choose a CSV with Date, Description, and Amount columns.
+      You can review everything before it is added.
+    </p>
+
+    <div className="mt-4">
+      <input
+        type="file"
+        accept=".csv,text/csv"
+        onChange={(event) => {
+          void handleUploadFile(
+            event.target.files?.[0] ?? null,
+          );
+        }}
+        className="block w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm"
+      />
+    </div>
+
+    {uploadRows.length > 0 ? (
+      <div className="mt-5">
+        <div>
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    <p className="font-black">Preview</p>
+
+    <p className="text-sm font-semibold text-slate-600">
+      {uploadRows.length}{" "}
+      {uploadRows.length === 1 ? "record" : "records"} found
+    </p>
+  </div>
+
+  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+    <div className="rounded-2xl bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+        Dates
+      </p>
+      <p className="mt-1 font-black">
+        {formatDate(uploadDateStart)} – {formatDate(uploadDateEnd)}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+        Money in
+      </p>
+      <p className="mt-1 font-black">
+        {formatMoney(uploadMoneyIn)}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+        Money out
+      </p>
+      <p className="mt-1 font-black">
+        {formatMoney(uploadMoneyOut)}
+      </p>
+    </div>
+  </div>
+</div>
+
+        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          {uploadRows.map((row) => (
+            <div
+              key={row.row_number}
+              className="grid gap-2 border-b border-slate-100 p-4 last:border-b-0 sm:grid-cols-[140px_1fr_auto]"
+            >
+              <p className="text-sm text-slate-600">
+                {formatDate(row.activity_date)}
+              </p>
+
+              <p className="font-bold">
+                {row.description}
+              </p>
+
+              <p className="font-black">
+                {formatMoney(row.amount)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : null}
+
+    {uploadNotice ? (
+      <p className="mt-4 text-sm font-semibold text-slate-700">
+        {uploadNotice}
+      </p>
+    ) : null}
+
+    <div className="mt-5 flex flex-wrap gap-3">
+  {uploadRows.length > 0 ? (
+    <button
+      type="button"
+      onClick={() => {
+        void handleUploadConfirm();
+      }}
+      disabled={uploadSaving}
+      className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800 disabled:opacity-60"
+    >
+      {uploadSaving
+        ? "Importing..."
+        : `Import ${uploadRows.length} ${
+            uploadRows.length === 1 ? "record" : "records"
+          }`}
+    </button>
+  ) : null}
+
+  <button
+    type="button"
+    onClick={() => {
+      setShowUploadForm(false);
+      setUploadFileName("");
+      setUploadFileHash("");
+      setUploadRows([]);
+      setUploadNotice("");
+    }}
+    disabled={uploadSaving}
+    className="rounded-2xl border border-slate-300 bg-white px-5 py-3 font-black text-slate-800 disabled:opacity-60"
+  >
+    Cancel
+  </button>
+</div>
+  </div>
+) : null}
                   {showManualForm ? (
                     <form
                       onSubmit={handleManualSave}
@@ -949,15 +1289,17 @@ async function handleArchiveAllocation(allocationId: string) {
 
                             <span
                               className={`rounded-full px-3 py-1 text-xs font-black ${
-                                activity.provenance_type ===
-                                "participant_manual"
-                                  ? "bg-emerald-100 text-emerald-900"
-                                  : "bg-blue-100 text-blue-900"
+                              activity.provenance_type === "participant_manual" ||
+                              activity.provenance_type === "participant_csv_upload"
+                                ? "bg-emerald-100 text-emerald-900"
+                              : "bg-blue-100 text-blue-900"
                               }`}
-                            >
+                                  >
                               {activity.provenance_type === "participant_manual"
-                                ? "Added by you"
-                                : "Bank import"}
+                              ? "Added by you"
+                              : activity.provenance_type === "participant_csv_upload"
+                              ? "Uploaded by you"
+                              : "Bank import"}
                             </span>
 
                             {activity.lifecycle ? (
