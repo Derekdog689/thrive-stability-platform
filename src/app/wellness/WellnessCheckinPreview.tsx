@@ -130,41 +130,49 @@ const reflectionGroups: Array<{
   },
 ];
 
-const nextStepChoices: Choice[] = [
+const steadyNextStepChoices: Choice[] = [
   {
-    label: "Take a short break",
-    value: "take_a_break",
-    description: "Step away for a few minutes, breathe, sit somewhere quieter, or give yourself a short reset.",
-  },
-  {
-    label: "Review today's plan",
+    label: "Keep doing what is working",
     value: "review_today_plan",
-    description: "Look at what you already planned and decide what still matters today. You do not have to do everything.",
+    description: "Take a quick look at what helped today and keep the part you want to carry forward.",
   },
   {
-    label: "Choose one small task",
+    label: "Use the momentum on one thing",
     value: "choose_one_task",
-    description: "Pick one thing you can start or finish without solving the whole day at once.",
-  },
-  {
-    label: "Reach out to someone you trust",
-    value: "contact_supportive_person",
-    description: "Call or message a friend, sponsor, family member, peer, or another person you choose.",
-  },
-  {
-    label: "Take care of one basic need",
-    value: "food_water_rest",
-    description: "Choose food, water, rest, medication as prescribed, a shower, or another basic need that would help right now.",
-  },
-  {
-    label: "Ask THRIVE for help",
-    value: "ask_for_help",
-    description: "Open Support if you want help thinking through a next step. Choosing this does not send a request by itself.",
+    description: "Choose one thing you already care about and make a little progress on it.",
   },
   {
     label: "Something else",
     value: "other",
-    description: "Choose this when your next step is yours and none of the suggestions fit.",
+    description: "Choose this when you already know what feels right for you.",
+  },
+];
+
+const supportNextStepChoices: Choice[] = [
+  {
+    label: "Give yourself a little space",
+    value: "take_a_break",
+    description: "Step away for a few minutes, sit somewhere quieter, or give yourself a short reset.",
+  },
+  {
+    label: "Take care of something basic first",
+    value: "food_water_rest",
+    description: "Choose food, water, rest, medication as prescribed, a shower, or another basic need.",
+  },
+  {
+    label: "Talk it out with someone you trust",
+    value: "contact_supportive_person",
+    description: "Call or message a friend, sponsor, family member, peer, or another person you choose.",
+  },
+  {
+    label: "Ask THRIVE to help you think it through",
+    value: "ask_for_help",
+    description: "Open Support for help thinking through a next step. This does not send a request by itself.",
+  },
+  {
+    label: "I already know what I want to do",
+    value: "other",
+    description: "Keep the choice in your own words instead of picking one of these suggestions.",
   },
 ];
 
@@ -174,6 +182,77 @@ function formatValue(value: string | null | undefined) {
   return value
     .replaceAll("_", " ")
     .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function getOverallAcknowledgement(overallDay: string) {
+  switch (overallDay) {
+    case "good":
+      return "Glad to hear today feels pretty good.";
+    case "okay":
+      return "Got it. Today sounds somewhere in the middle.";
+    case "hard":
+      return "Sounds like today has been a tougher one.";
+    case "not_sure":
+      return "That is okay too. You do not have to have the day figured out.";
+    default:
+      return "";
+  }
+}
+
+function isSteadyReflection(key: ReflectionKey, value: string) {
+  const steadyValues: Record<ReflectionKey, string[]> = {
+    stress: ["low", "okay"],
+    sleep: ["good", "okay"],
+    energy: ["good", "okay"],
+    confidence: ["good", "okay"],
+    routine: ["on_track"],
+    recovery_support: ["connected", "not_needed"],
+    support_needed: ["no"],
+  };
+
+  return steadyValues[key].includes(value);
+}
+
+function getReflectionAcknowledgement(
+  key: ReflectionKey,
+  value: string,
+  overallDay: string,
+) {
+  if (!value) return "";
+
+  if (value === "not_sure") {
+    return `Got it. You are not sure how ${key === "support_needed" ? "support" : reflectionGroups.find((group) => group.key === key)?.label.toLowerCase()} feels right now.`;
+  }
+
+  if (isSteadyReflection(key, value)) {
+    const steadyCopy: Record<ReflectionKey, string> = {
+      stress: "Cool, stress seems pretty manageable today.",
+      sleep: "Nice, sleep seems to be in a decent place today.",
+      energy: "Cool, your energy seems fairly steady today.",
+      confidence: "Nice, confidence seems to be holding up today.",
+      routine: "Cool, your routine feels on track today.",
+      recovery_support: "Got it. Recovery support feels where you need it today.",
+      support_needed: "Got it. You are not looking for extra support right now.",
+    };
+
+    return steadyCopy[key];
+  }
+
+  const heavierCopy: Record<ReflectionKey, string> = {
+    stress: "Sounds like stress is taking up more room today.",
+    sleep: "Sounds like sleep has been a little rough.",
+    energy: "Sounds like your energy is running lower today.",
+    confidence: "Sounds like confidence feels lower today.",
+    routine: "Sounds like your routine feels harder to hold onto today.",
+    recovery_support: "Sounds like some extra recovery support could feel useful today.",
+    support_needed: "Got it. You are saying support could help today.",
+  };
+
+  if (overallDay === "good") {
+    return `${heavierCopy[key]} Your overall day can still feel good while one part feels harder.`;
+  }
+
+  return heavierCopy[key];
 }
 
 function ChoiceGroup({
@@ -235,6 +314,7 @@ export default function WellnessCheckinPreview({
 }: WellnessCheckinPreviewProps) {
   const [step, setStep] = useState(1);
   const [reflectionKey, setReflectionKey] = useState<ReflectionKey | null>(null);
+  const [wantsNextAction, setWantsNextAction] = useState<boolean | null>(null);
 
   const reflections = useMemo<Record<ReflectionKey, string>>(
     () => ({
@@ -263,6 +343,22 @@ export default function WellnessCheckinPreview({
   const activeReflection = reflectionGroups.find(
     (group) => group.key === reflectionKey,
   );
+  const activeReflectionValue = reflectionKey ? reflections[reflectionKey] : "";
+  const reflectionAcknowledgement =
+    reflectionKey && activeReflectionValue
+      ? getReflectionAcknowledgement(
+          reflectionKey,
+          activeReflectionValue,
+          overallDay,
+        )
+      : "";
+  const useSteadyChoices =
+    reflectionKey && activeReflectionValue
+      ? isSteadyReflection(reflectionKey, activeReflectionValue)
+      : overallDay === "good" || overallDay === "okay";
+  const contextualNextStepChoices = useSteadyChoices
+    ? steadyNextStepChoices
+    : supportNextStepChoices;
 
   const selectedCount = useMemo(
     () =>
@@ -294,6 +390,7 @@ export default function WellnessCheckinPreview({
     };
 
     setDraftField(fieldMap[key], value || null);
+    setWantsNextAction(null);
   }
 
   async function saveCheckin() {
@@ -329,9 +426,9 @@ export default function WellnessCheckinPreview({
 
       {step === 1 ? (
         <div className="mt-6">
-          <h2 className="text-2xl font-black">How is today going?</h2>
+          <h2 className="text-2xl font-black">How are things feeling today?</h2>
           <p className="mt-3 leading-7 text-slate-600">
-            Start with the closest answer. You can change it before saving.
+            Start with the closest answer. There is no right way to answer this.
           </p>
 
           <div className="mt-6">
@@ -339,10 +436,22 @@ export default function WellnessCheckinPreview({
               label="Overall day"
               value={overallDay}
               choices={overallChoices}
-              onChange={(value) => setDraftField("overallDay", value || null)}
+              onChange={(value) => {
+                setDraftField("overallDay", value || null);
+                setWantsNextAction(null);
+              }}
               optional={false}
             />
           </div>
+
+          {overallDay ? (
+            <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-emerald-950">
+              <p className="font-black">{getOverallAcknowledgement(overallDay)}</p>
+              <p className="mt-1 text-sm leading-6 text-emerald-900">
+                Want to look at anything a little closer?
+              </p>
+            </div>
+          ) : null}
 
           <button
             type="button"
@@ -361,9 +470,11 @@ export default function WellnessCheckinPreview({
 
       {step === 2 ? (
         <div className="mt-6">
-          <h2 className="text-2xl font-black">What feels important right now?</h2>
+          <h2 className="text-2xl font-black">
+            Is there anything you want to look at a little closer?
+          </h2>
           <p className="mt-3 leading-7 text-slate-600">
-            Choose one area if you want to add a little more detail. You can also skip this step.
+            Pick one area if you want. Choosing an area does not mean something is wrong with it.
           </p>
 
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
@@ -375,7 +486,10 @@ export default function WellnessCheckinPreview({
                 <button
                   key={group.key}
                   type="button"
-                  onClick={() => setReflectionKey(group.key)}
+                  onClick={() => {
+                    setReflectionKey(group.key);
+                    setWantsNextAction(null);
+                  }}
                   className={`rounded-2xl border px-4 py-4 text-left transition ${
                     selected
                       ? "border-emerald-600 bg-emerald-100"
@@ -399,10 +513,14 @@ export default function WellnessCheckinPreview({
                 label={activeReflection.prompt}
                 value={reflections[activeReflection.key]}
                 choices={activeReflection.choices}
-                onChange={(value) =>
-                  setReflection(activeReflection.key, value)
-                }
+                onChange={(value) => setReflection(activeReflection.key, value)}
               />
+
+              {reflectionAcknowledgement ? (
+                <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-emerald-950">
+                  <p className="font-black">{reflectionAcknowledgement}</p>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -416,10 +534,15 @@ export default function WellnessCheckinPreview({
             </button>
             <button
               type="button"
-              onClick={() => setStep(3)}
+              onClick={() => {
+                setReflectionKey(null);
+                setWantsNextAction(false);
+                setDraftField("chosenNextStep", null);
+                setStep(4);
+              }}
               className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700 hover:bg-slate-50"
             >
-              Skip details
+              Nothing I want to look at right now
             </button>
           </div>
         </div>
@@ -427,36 +550,95 @@ export default function WellnessCheckinPreview({
 
       {step === 3 ? (
         <div className="mt-6">
-          <h2 className="text-2xl font-black">What might help next?</h2>
+          {reflectionAcknowledgement ? (
+            <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-950">
+              <p className="font-black">{reflectionAcknowledgement}</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-950">
+              <p className="font-black">{getOverallAcknowledgement(overallDay)}</p>
+            </div>
+          )}
+
+          <h2 className="mt-6 text-2xl font-black">
+            Do you want to do anything with that right now?
+          </h2>
           <p className="mt-3 leading-7 text-slate-600">
-            Pick one small next step that feels realistic. These are examples, not instructions. You can choose something else or skip this step.
+            You can choose a next step, simply remember what you noticed, or leave it here for now.
           </p>
 
-          <div className="mt-6">
-            <ChoiceGroup
-              label="Choose what feels useful"
-              value={nextStep}
-              choices={nextStepChoices}
-              onChange={(value) =>
-                setDraftField("chosenNextStep", value || null)
-              }
-            />
+          <div className="mt-6 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              aria-pressed={wantsNextAction === true}
+              onClick={() => setWantsNextAction(true)}
+              className={`rounded-2xl border px-4 py-4 text-left transition ${
+                wantsNextAction === true
+                  ? "border-emerald-600 bg-emerald-100"
+                  : "border-slate-200 bg-white hover:bg-slate-50"
+              }`}
+            >
+              <p className="font-black text-slate-950">Yes, help me think about a next step</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Show me a few choices that fit what I just said.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              aria-pressed={wantsNextAction === false}
+              onClick={() => {
+                setWantsNextAction(false);
+                setDraftField("chosenNextStep", null);
+              }}
+              className={`rounded-2xl border px-4 py-4 text-left transition ${
+                wantsNextAction === false
+                  ? "border-emerald-600 bg-emerald-100"
+                  : "border-slate-200 bg-white hover:bg-slate-50"
+              }`}
+            >
+              <p className="font-black text-slate-950">No, I just want to remember it</p>
+              <p className="mt-1 text-sm text-slate-500">
+                That is enough. You do not have to turn every check-in into a task.
+              </p>
+            </button>
           </div>
+
+          {wantsNextAction === true ? (
+            <div className="mt-6 rounded-2xl bg-slate-50 p-5">
+              <ChoiceGroup
+                label="What feels closest to what you want?"
+                value={nextStep}
+                choices={contextualNextStepChoices}
+                onChange={(value) => setDraftField("chosenNextStep", value || null)}
+              />
+            </div>
+          ) : null}
 
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               type="button"
+              disabled={wantsNextAction === null || (wantsNextAction === true && !nextStep)}
               onClick={() => setStep(4)}
-              className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
+              className={`rounded-2xl px-5 py-3 font-black ${
+                wantsNextAction !== null && (wantsNextAction === false || nextStep)
+                  ? "bg-emerald-700 text-white hover:bg-emerald-800"
+                  : "cursor-not-allowed bg-slate-200 text-slate-500"
+              }`}
             >
               Continue
             </button>
+
             <button
               type="button"
-              onClick={() => setStep(4)}
+              onClick={() => {
+                setWantsNextAction(false);
+                setDraftField("chosenNextStep", null);
+                setStep(4);
+              }}
               className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700 hover:bg-slate-50"
             >
-              Skip next step
+              Leave it here for now
             </button>
           </div>
         </div>
@@ -466,16 +648,14 @@ export default function WellnessCheckinPreview({
         <div className="mt-6">
           <h2 className="text-2xl font-black">Anything you want to remember?</h2>
           <p className="mt-3 text-sm leading-6 text-slate-500">
-            Optional. Keep it as short or detailed as you want.
+            Optional. Put it in your own words, or leave this blank.
           </p>
 
           <textarea
             id="wellness-note"
             value={note}
             maxLength={2000}
-            onChange={(event) =>
-              setDraftField("participantNote", event.target.value)
-            }
+            onChange={(event) => setDraftField("participantNote", event.target.value)}
             rows={5}
             className="mt-5 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
             placeholder="Optional note"
@@ -507,9 +687,9 @@ export default function WellnessCheckinPreview({
       {step === 5 ? (
         <div className="mt-6">
           <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-            Your selections
+            Your reflection
           </p>
-          <h2 className="mt-2 text-2xl font-black">Review your check-in</h2>
+          <h2 className="mt-2 text-2xl font-black">Does this sound like what you meant?</h2>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-slate-50 p-4">
@@ -523,7 +703,9 @@ export default function WellnessCheckinPreview({
               <p className="text-xs font-black uppercase tracking-wide text-slate-500">
                 Next step
               </p>
-              <p className="mt-2 font-black">{formatValue(nextStep)}</p>
+              <p className="mt-2 font-black">
+                {nextStep ? formatValue(nextStep) : "No next step chosen"}
+              </p>
             </div>
           </div>
 
