@@ -154,6 +154,17 @@ export default function GoalsCandidatePage() {
     () => getGoalPreset(draft.areaId, draft.presetId),
     [draft.areaId, draft.presetId],
   );
+  const currentGoals = useMemo(
+    () => activeGoals.filter((goal) => goal.progress_status !== "completed"),
+    [activeGoals],
+  );
+  const pastGoals = useMemo(
+    () => [
+      ...activeGoals.filter((goal) => goal.progress_status === "completed"),
+      ...archivedGoals,
+    ],
+    [activeGoals, archivedGoals],
+  );
 
   function resetCreation() {
     setDraft(emptyDraft);
@@ -221,7 +232,19 @@ export default function GoalsCandidatePage() {
     status: Exclude<GoalProgressStatus, "archived">,
   ) {
     const result = await updateGoal(goal.id, { progress_status: status });
-    setNotice(result.ok ? `Goal updated: ${statusLabels[status]}.` : result.message);
+
+    if (!result.ok) {
+      setNotice(result.message);
+      return;
+    }
+
+    if (status === "completed") {
+      setNotice("Nice. You marked this Goal complete.");
+      setShowHistory(true);
+      return;
+    }
+
+    setNotice(`Goal updated: ${statusLabels[status]}.`);
   }
 
   return (
@@ -264,7 +287,7 @@ export default function GoalsCandidatePage() {
                   </p>
                 </section>
 
-                {activeGoals.length > 0 ? (
+                {currentGoals.length > 0 ? (
                   <section className="space-y-4">
                     <div>
                       <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Right now</p>
@@ -273,7 +296,7 @@ export default function GoalsCandidatePage() {
                         You do not have to work on every Goal today.
                       </p>
                     </div>
-                    {activeGoals.map((goal) => (
+                    {currentGoals.map((goal) => (
                       <ActiveGoalCard
                         key={goal.id}
                         goal={goal}
@@ -300,7 +323,7 @@ export default function GoalsCandidatePage() {
                     }}
                     className="w-full rounded-3xl border border-emerald-200 bg-white p-5 text-left font-black text-emerald-900 shadow-sm"
                   >
-                    {activeGoals.length > 0 ? "Start another Goal" : "Start a Goal"}
+                    {currentGoals.length > 0 ? "Start another Goal" : "Start a Goal"}
                   </button>
                 ) : (
                   <form onSubmit={saveGoal} className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
@@ -507,18 +530,26 @@ export default function GoalsCandidatePage() {
                     onClick={() => setShowHistory((current) => !current)}
                     className="font-black text-emerald-900"
                   >
-                    {showHistory ? "Hide past Goals" : `Look back at past Goals (${archivedGoals.length})`}
+                    {showHistory ? "Hide past Goals" : `Look back at past Goals (${pastGoals.length})`}
                   </button>
 
                   {showHistory ? (
                     <div className="mt-5 space-y-4">
-                      {archivedGoals.length === 0 ? (
+                      {pastGoals.length === 0 ? (
                         <p className="text-sm text-slate-600">No past Goals are recorded.</p>
                       ) : (
-                        archivedGoals.map((goal) => (
+                        pastGoals.map((goal) => (
                           <article key={goal.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-500">{goal.goal_area ?? "Past Goal"}</p>
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <p className="text-xs font-black uppercase tracking-wide text-slate-500">{goal.goal_area ?? "Past Goal"}</p>
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600">
+                                {statusLabels[goal.progress_status]}
+                              </span>
+                            </div>
                             <h3 className="mt-2 text-lg font-black">{goal.title}</h3>
+                            {goal.why_it_matters ? (
+                              <p className="mt-3 text-sm leading-6 text-slate-600"><span className="font-black text-slate-700">What you wanted to be different:</span> {goal.why_it_matters}</p>
+                            ) : null}
                             <p className="mt-3 text-sm text-slate-600"><span className="font-black text-slate-700">Step you had chosen:</span> {goal.next_step}</p>
                           </article>
                         ))
