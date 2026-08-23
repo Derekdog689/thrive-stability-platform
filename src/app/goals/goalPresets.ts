@@ -191,7 +191,7 @@ export const goalAreas: GoalAreaDefinition[] = [
         nextSteps: [
           "Confirm my next appointment",
           "Add the appointment to my calendar",
-          "Gather questions for the provider",
+          "Gather questions for my doctor or medical provider",
           "Arrange transportation",
           otherStep,
         ],
