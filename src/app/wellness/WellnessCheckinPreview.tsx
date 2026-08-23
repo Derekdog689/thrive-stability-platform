@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type {
   WellnessDraft,
   WellnessWriteResult,
@@ -29,6 +29,15 @@ type ChoiceGroupProps = {
   optional?: boolean;
 };
 
+type ReflectionKey =
+  | "stress"
+  | "sleep"
+  | "energy"
+  | "confidence"
+  | "routine"
+  | "recovery_support"
+  | "support_needed";
+
 const overallChoices: Choice[] = [
   { label: "Good", value: "good" },
   { label: "Okay", value: "okay" },
@@ -37,13 +46,15 @@ const overallChoices: Choice[] = [
 ];
 
 const reflectionGroups: Array<{
-  key: string;
+  key: ReflectionKey;
   label: string;
+  prompt: string;
   choices: Choice[];
 }> = [
   {
     key: "stress",
     label: "Stress",
+    prompt: "How does stress feel today?",
     choices: [
       { label: "Low", value: "low" },
       { label: "Okay", value: "okay" },
@@ -54,6 +65,7 @@ const reflectionGroups: Array<{
   {
     key: "sleep",
     label: "Sleep",
+    prompt: "How has sleep been?",
     choices: [
       { label: "Good", value: "good" },
       { label: "Okay", value: "okay" },
@@ -64,6 +76,7 @@ const reflectionGroups: Array<{
   {
     key: "energy",
     label: "Energy",
+    prompt: "How is your energy?",
     choices: [
       { label: "Good", value: "good" },
       { label: "Okay", value: "okay" },
@@ -74,6 +87,7 @@ const reflectionGroups: Array<{
   {
     key: "confidence",
     label: "Confidence",
+    prompt: "How does your confidence feel today?",
     choices: [
       { label: "Good", value: "good" },
       { label: "Okay", value: "okay" },
@@ -84,6 +98,7 @@ const reflectionGroups: Array<{
   {
     key: "routine",
     label: "Routine",
+    prompt: "How does your routine feel today?",
     choices: [
       { label: "On track", value: "on_track" },
       { label: "Mixed", value: "mixed" },
@@ -94,6 +109,7 @@ const reflectionGroups: Array<{
   {
     key: "recovery_support",
     label: "Recovery support",
+    prompt: "How connected do you feel to recovery support today?",
     choices: [
       { label: "Connected", value: "connected" },
       { label: "Could use support", value: "could_use_support" },
@@ -101,12 +117,16 @@ const reflectionGroups: Array<{
       { label: "Not sure", value: "not_sure" },
     ],
   },
-];
-
-const supportChoices: Choice[] = [
-  { label: "Yes", value: "yes" },
-  { label: "No", value: "no" },
-  { label: "Not sure", value: "not_sure" },
+  {
+    key: "support_needed",
+    label: "Support",
+    prompt: "Would support help today?",
+    choices: [
+      { label: "Yes", value: "yes" },
+      { label: "No", value: "no" },
+      { label: "Not sure", value: "not_sure" },
+    ],
+  },
 ];
 
 const nextStepChoices: Choice[] = [
@@ -118,6 +138,14 @@ const nextStepChoices: Choice[] = [
   { label: "Ask for help", value: "ask_for_help" },
   { label: "Something else", value: "other" },
 ];
+
+function formatValue(value: string | null | undefined) {
+  if (!value) return "Not selected";
+
+  return value
+    .replaceAll("_", " ")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
 
 function ChoiceGroup({
   label,
@@ -171,7 +199,10 @@ export default function WellnessCheckinPreview({
   actionMessage,
   writeEnabled,
 }: WellnessCheckinPreviewProps) {
-  const reflections = useMemo<Record<string, string>>(
+  const [step, setStep] = useState(1);
+  const [reflectionKey, setReflectionKey] = useState<ReflectionKey | null>(null);
+
+  const reflections = useMemo<Record<ReflectionKey, string>>(
     () => ({
       stress: draft.stress ?? "",
       sleep: draft.sleep ?? "",
@@ -179,6 +210,7 @@ export default function WellnessCheckinPreview({
       confidence: draft.confidence ?? "",
       routine: draft.routine ?? "",
       recovery_support: draft.recoverySupport ?? "",
+      support_needed: draft.supportNeeded ?? "",
     }),
     [
       draft.stress,
@@ -187,21 +219,23 @@ export default function WellnessCheckinPreview({
       draft.confidence,
       draft.routine,
       draft.recoverySupport,
+      draft.supportNeeded,
     ],
   );
 
   const overallDay = draft.overallDay ?? "";
-  const supportNeeded = draft.supportNeeded ?? "";
   const nextStep = draft.chosenNextStep ?? "";
   const note = draft.participantNote;
+  const activeReflection = reflectionGroups.find(
+    (group) => group.key === reflectionKey,
+  );
 
   const selectedCount = useMemo(
     () =>
       Object.values(reflections).filter(Boolean).length +
-      (supportNeeded ? 1 : 0) +
       (nextStep ? 1 : 0) +
       (note.trim() ? 1 : 0),
-    [reflections, supportNeeded, nextStep, note],
+    [reflections, nextStep, note],
   );
 
   function setDraftField<K extends keyof WellnessDraft>(
@@ -214,172 +248,290 @@ export default function WellnessCheckinPreview({
     });
   }
 
-  function setReflection(key: string, value: string) {
-    const fieldMap: Record<string, keyof WellnessDraft> = {
+  function setReflection(key: ReflectionKey, value: string) {
+    const fieldMap: Record<ReflectionKey, keyof WellnessDraft> = {
       stress: "stress",
       sleep: "sleep",
       energy: "energy",
       confidence: "confidence",
       routine: "routine",
       recovery_support: "recoverySupport",
+      support_needed: "supportNeeded",
     };
 
-    const field = fieldMap[key];
+    setDraftField(fieldMap[key], value || null);
+  }
 
-    if (!field) return;
+  async function saveCheckin() {
+    const result = await (hasSavedCheckin
+      ? onUpdateCandidate()
+      : onSaveCandidate());
 
-    setDraftField(field, value || null);
+    return result;
   }
 
   return (
-    <section className="space-y-6">
-      <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-          Your reflection
-        </p>
-
-        <h2 className="mt-2 text-2xl font-black">How is today going?</h2>
-
-        <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-          Choose what feels useful. You can save one check-in for today.
-        </p>
-
-        <div className="mt-6">
-          <ChoiceGroup
-            label="Overall day"
-            value={overallDay}
-            choices={overallChoices}
-            onChange={(value) => setDraftField("overallDay", value || null)}
-            optional={false}
-          />
-        </div>
-      </section>
-
-      <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-          A little more detail
-        </p>
-
-        <h2 className="mt-2 text-2xl font-black">
-          Choose only what feels useful
-        </h2>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          {reflectionGroups.map((group) => (
-            <ChoiceGroup
-              key={group.key}
-              label={group.label}
-              value={reflections[group.key] ?? ""}
-              choices={group.choices}
-              onChange={(value) => setReflection(group.key, value)}
-            />
-          ))}
-
-          <ChoiceGroup
-            label="Would support help today?"
-            value={supportNeeded}
-            choices={supportChoices}
-            onChange={(value) =>
-              setDraftField("supportNeeded", value || null)
-            }
-          />
-        </div>
-      </section>
-
-      <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-          Next step
-        </p>
-
-        <h2 className="mt-2 text-2xl font-black">Choose something small</h2>
-
-        <div className="mt-6">
-          <ChoiceGroup
-            label="What may help next?"
-            value={nextStep}
-            choices={nextStepChoices}
-            onChange={(value) =>
-              setDraftField("chosenNextStep", value || null)
-            }
-          />
-        </div>
-      </section>
-
-      <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-        <label htmlFor="wellness-note" className="font-black text-slate-950">
-          Anything you want to add?
-          <span className="ml-2 text-xs font-bold uppercase tracking-wide text-slate-400">
-            Optional
-          </span>
-        </label>
-
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          Keep it as short or detailed as you want.
-        </p>
-
-        <textarea
-          id="wellness-note"
-          value={note}
-          maxLength={2000}
-          onChange={(event) =>
-            setDraftField("participantNote", event.target.value)
-          }
-          rows={5}
-          className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-          placeholder="Optional note"
-        />
-
-        <p className="mt-2 text-right text-xs font-semibold text-slate-400">
-          {note.length}/2000
-        </p>
-      </section>
-
-      <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-          Your selections
-        </p>
-
-        <h2 className="mt-2 text-2xl font-black text-amber-950">
-          Review your check-in
-        </h2>
-
-        <p className="mt-3 leading-7 text-amber-900">
-          Overall day:{" "}
-          {overallDay
-            ? overallDay
-                .replaceAll("_", " ")
-                .replace(/^./, (letter) => letter.toUpperCase())
-            : "Not selected"}
-          . Optional items selected: {selectedCount}.
-        </p>
-
-        <button
-          type="button"
-          disabled={!writeEnabled}
-          onClick={() => {
-            void (hasSavedCheckin
-              ? onUpdateCandidate()
-              : onSaveCandidate());
-          }}
-          className={`mt-5 w-full rounded-2xl px-5 py-4 font-black sm:w-auto ${
-            writeEnabled
-              ? "bg-emerald-700 text-white hover:bg-emerald-800"
-              : "cursor-not-allowed bg-slate-300 text-slate-600"
-          }`}
-        >
-          {writeEnabled
-            ? hasSavedCheckin
-              ? "Update check-in"
-              : "Save check-in"
-            : "Save check-in unavailable"}
-        </button>
-
-        {actionMessage ? (
-          <p className="mt-3 text-sm font-bold text-amber-900">
-            {actionMessage}
+    <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+            Guided check-in
           </p>
+          <p className="mt-2 text-sm font-bold text-slate-500">
+            Step {step} of 5
+          </p>
+        </div>
+
+        {step > 1 ? (
+          <button
+            type="button"
+            onClick={() => setStep((current) => Math.max(1, current - 1))}
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-50"
+          >
+            Back
+          </button>
         ) : null}
-      </section>
+      </div>
+
+      {step === 1 ? (
+        <div className="mt-6">
+          <h2 className="text-2xl font-black">How is today going?</h2>
+          <p className="mt-3 leading-7 text-slate-600">
+            Start with the closest answer. You can change it before saving.
+          </p>
+
+          <div className="mt-6">
+            <ChoiceGroup
+              label="Overall day"
+              value={overallDay}
+              choices={overallChoices}
+              onChange={(value) => setDraftField("overallDay", value || null)}
+              optional={false}
+            />
+          </div>
+
+          <button
+            type="button"
+            disabled={!overallDay}
+            onClick={() => setStep(2)}
+            className={`mt-6 rounded-2xl px-5 py-3 font-black ${
+              overallDay
+                ? "bg-emerald-700 text-white hover:bg-emerald-800"
+                : "cursor-not-allowed bg-slate-200 text-slate-500"
+            }`}
+          >
+            Continue
+          </button>
+        </div>
+      ) : null}
+
+      {step === 2 ? (
+        <div className="mt-6">
+          <h2 className="text-2xl font-black">What feels important right now?</h2>
+          <p className="mt-3 leading-7 text-slate-600">
+            Choose one area if you want to add a little more detail. You can also skip this step.
+          </p>
+
+          <div className="mt-6 grid gap-2 sm:grid-cols-2">
+            {reflectionGroups.map((group) => {
+              const selected = reflectionKey === group.key;
+              const hasValue = Boolean(reflections[group.key]);
+
+              return (
+                <button
+                  key={group.key}
+                  type="button"
+                  onClick={() => setReflectionKey(group.key)}
+                  className={`rounded-2xl border px-4 py-4 text-left transition ${
+                    selected
+                      ? "border-emerald-600 bg-emerald-100"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <p className="font-black text-slate-950">{group.label}</p>
+                  {hasValue ? (
+                    <p className="mt-1 text-sm text-emerald-800">
+                      {formatValue(reflections[group.key])}
+                    </p>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {activeReflection ? (
+            <div className="mt-6 rounded-2xl bg-slate-50 p-5">
+              <ChoiceGroup
+                label={activeReflection.prompt}
+                value={reflections[activeReflection.key]}
+                choices={activeReflection.choices}
+                onChange={(value) =>
+                  setReflection(activeReflection.key, value)
+                }
+              />
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
+            >
+              Continue
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700 hover:bg-slate-50"
+            >
+              Skip details
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === 3 ? (
+        <div className="mt-6">
+          <h2 className="text-2xl font-black">What might help next?</h2>
+          <p className="mt-3 leading-7 text-slate-600">
+            Pick one small next step, or skip it if nothing fits today.
+          </p>
+
+          <div className="mt-6">
+            <ChoiceGroup
+              label="Choose what feels useful"
+              value={nextStep}
+              choices={nextStepChoices}
+              onChange={(value) =>
+                setDraftField("chosenNextStep", value || null)
+              }
+            />
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
+            >
+              Continue
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700 hover:bg-slate-50"
+            >
+              Skip next step
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === 4 ? (
+        <div className="mt-6">
+          <h2 className="text-2xl font-black">Anything you want to remember?</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            Optional. Keep it as short or detailed as you want.
+          </p>
+
+          <textarea
+            id="wellness-note"
+            value={note}
+            maxLength={2000}
+            onChange={(event) =>
+              setDraftField("participantNote", event.target.value)
+            }
+            rows={5}
+            className="mt-5 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+            placeholder="Optional note"
+          />
+
+          <p className="mt-2 text-right text-xs font-semibold text-slate-400">
+            {note.length}/2000
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setStep(5)}
+              className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
+            >
+              Review check-in
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(5)}
+              className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700 hover:bg-slate-50"
+            >
+              Skip note
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === 5 ? (
+        <div className="mt-6">
+          <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+            Your selections
+          </p>
+          <h2 className="mt-2 text-2xl font-black">Review your check-in</h2>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Overall day
+              </p>
+              <p className="mt-2 font-black">{formatValue(overallDay)}</p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Next step
+              </p>
+              <p className="mt-2 font-black">{formatValue(nextStep)}</p>
+            </div>
+          </div>
+
+          <p className="mt-4 text-sm leading-6 text-slate-600">
+            Optional details selected: {selectedCount}.
+          </p>
+
+          {note.trim() ? (
+            <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                Your note
+              </p>
+              <p className="mt-2 leading-7 text-slate-700">{note}</p>
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            disabled={!writeEnabled}
+            onClick={() => {
+              void saveCheckin();
+            }}
+            className={`mt-6 w-full rounded-2xl px-5 py-4 font-black sm:w-auto ${
+              writeEnabled
+                ? "bg-emerald-700 text-white hover:bg-emerald-800"
+                : "cursor-not-allowed bg-slate-300 text-slate-600"
+            }`}
+          >
+            {writeEnabled
+              ? hasSavedCheckin
+                ? "Update check-in"
+                : "Save check-in"
+              : "Save check-in unavailable"}
+          </button>
+
+          {actionMessage ? (
+            <p className="mt-3 text-sm font-bold text-amber-900">
+              {actionMessage}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
