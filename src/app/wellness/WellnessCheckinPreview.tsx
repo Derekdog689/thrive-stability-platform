@@ -9,6 +9,7 @@ import type {
 type Choice = {
   label: string;
   value: string;
+  description?: string;
 };
 
 type WellnessCheckinPreviewProps = {
@@ -130,13 +131,41 @@ const reflectionGroups: Array<{
 ];
 
 const nextStepChoices: Choice[] = [
-  { label: "Take a short break", value: "take_a_break" },
-  { label: "Review today's plan", value: "review_today_plan" },
-  { label: "Choose one small task", value: "choose_one_task" },
-  { label: "Contact someone supportive", value: "contact_supportive_person" },
-  { label: "Make time for food, water, or rest", value: "food_water_rest" },
-  { label: "Ask for help", value: "ask_for_help" },
-  { label: "Something else", value: "other" },
+  {
+    label: "Take a short break",
+    value: "take_a_break",
+    description: "Step away for a few minutes, breathe, sit somewhere quieter, or give yourself a short reset.",
+  },
+  {
+    label: "Review today's plan",
+    value: "review_today_plan",
+    description: "Look at what you already planned and decide what still matters today. You do not have to do everything.",
+  },
+  {
+    label: "Choose one small task",
+    value: "choose_one_task",
+    description: "Pick one thing you can start or finish without solving the whole day at once.",
+  },
+  {
+    label: "Reach out to someone you trust",
+    value: "contact_supportive_person",
+    description: "Call or message a friend, sponsor, family member, peer, or another person you choose.",
+  },
+  {
+    label: "Take care of one basic need",
+    value: "food_water_rest",
+    description: "Choose food, water, rest, medication as prescribed, a shower, or another basic need that would help right now.",
+  },
+  {
+    label: "Ask THRIVE for help",
+    value: "ask_for_help",
+    description: "Open Support if you want help thinking through a next step. Choosing this does not send a request by itself.",
+  },
+  {
+    label: "Something else",
+    value: "other",
+    description: "Choose this when your next step is yours and none of the suggestions fit.",
+  },
 ];
 
 function formatValue(value: string | null | undefined) {
@@ -175,13 +204,18 @@ function ChoiceGroup({
               type="button"
               aria-pressed={selected}
               onClick={() => onChange(selected && optional ? "" : choice.value)}
-              className={`min-h-12 rounded-2xl border px-4 py-3 text-left text-sm font-black transition ${
+              className={`min-h-12 rounded-2xl border px-4 py-3 text-left transition ${
                 selected
                   ? "border-emerald-600 bg-emerald-100 text-emerald-950"
                   : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               }`}
             >
-              {choice.label}
+              <span className="block text-sm font-black">{choice.label}</span>
+              {choice.description ? (
+                <span className="mt-1 block text-sm font-medium leading-5 text-slate-500">
+                  {choice.description}
+                </span>
+              ) : null}
             </button>
           );
         })}
@@ -395,7 +429,7 @@ export default function WellnessCheckinPreview({
         <div className="mt-6">
           <h2 className="text-2xl font-black">What might help next?</h2>
           <p className="mt-3 leading-7 text-slate-600">
-            Pick one small next step, or skip it if nothing fits today.
+            Pick one small next step that feels realistic. These are examples, not instructions. You can choose something else or skip this step.
           </p>
 
           <div className="mt-6">
