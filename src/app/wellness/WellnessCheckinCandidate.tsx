@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import WellnessCheckinPreview from "./WellnessCheckinPreview";
 import {
@@ -32,19 +33,20 @@ export default function WellnessCheckinCandidate() {
   const [draft, setDraft] = useState<WellnessDraft>(emptyDraft);
   const [actionMessage, setActionMessage] = useState("");
   const [isCheckingInAgain, setIsCheckingInAgain] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
-const {
-  participant,
-  participation,
-  recentCheckins,
-  todayCheckin,
-  today,
-  loading,
-  errorMessage,
-  executeInsertCandidate,
-  executeSameDayUpdate,
-  writeEnabled,
-  clientPathTestEnabled,
+  const {
+    participant,
+    participation,
+    recentCheckins,
+    todayCheckin,
+    today,
+    loading,
+    errorMessage,
+    executeInsertCandidate,
+    executeSameDayUpdate,
+    writeEnabled,
+    clientPathTestEnabled,
   } = useWellnessCheckinCandidate();
 
   const savedDraft = useMemo<WellnessDraft>(() => {
@@ -65,48 +67,54 @@ const {
   }, [draft, todayCheckin]);
 
   async function handleSaveCandidate() {
-  const result = await executeInsertCandidate(draft);
+    const result = await executeInsertCandidate(draft);
 
-  if (!result.ok) {
-    setActionMessage(result.message);
+    if (!result.ok) {
+      setActionMessage(result.message);
+      setJustSaved(false);
+      return result;
+    }
+
+    setDraft(emptyDraft);
+    setActionMessage("");
+    setIsCheckingInAgain(false);
+    setJustSaved(true);
+
     return result;
   }
-
-  setDraft(emptyDraft);
-  setActionMessage("");
-  setIsCheckingInAgain(false);
-
-  return result;
-}
 
   async function handleUpdateCandidate() {
     const result = await executeSameDayUpdate(savedDraft);
 
     if (!result.ok) {
       setActionMessage(result.message);
+      setJustSaved(false);
+      return result;
     }
 
+    setActionMessage("");
+    setJustSaved(true);
     return result;
   }
 
   const participantName =
     participant?.preferred_name ?? participant?.display_name ?? "Participant";
 
-    const recentCheckinsByDate = useMemo(() => {
-  return recentCheckins.reduce<Record<string, typeof recentCheckins>>(
-    (groups, checkin) => {
-      if (!groups[checkin.checkin_date]) {
-        groups[checkin.checkin_date] = [];
-      }
+  const recentCheckinsByDate = useMemo(() => {
+    return recentCheckins.reduce<Record<string, typeof recentCheckins>>(
+      (groups, checkin) => {
+        if (!groups[checkin.checkin_date]) {
+          groups[checkin.checkin_date] = [];
+        }
 
-      groups[checkin.checkin_date].push(checkin);
-      return groups;
-    },
-    {},
-  );
-}, [recentCheckins]);
+        groups[checkin.checkin_date].push(checkin);
+        return groups;
+      },
+      {},
+    );
+  }, [recentCheckins]);
 
-const recentCheckinDates = Object.keys(recentCheckinsByDate);
+  const recentCheckinDates = Object.keys(recentCheckinsByDate);
 
   return (
     <div className="space-y-6">
@@ -159,7 +167,9 @@ const recentCheckinDates = Object.keys(recentCheckinsByDate);
                 Saving
               </p>
               <p className="mt-2 font-black text-slate-950">
-                {writeEnabled ? "Available for controlled testing" : "Not available yet"}
+                {writeEnabled
+                  ? "Available for controlled testing"
+                  : "Not available yet"}
               </p>
             </div>
           </div>
@@ -227,27 +237,28 @@ const recentCheckinDates = Object.keys(recentCheckinsByDate);
             </div>
           ) : null}
 
-         <div className="mt-5 flex flex-wrap items-center gap-3">
-  <button
-    type="button"
-    onClick={() => {
-      setDraft(emptyDraft);
-      setActionMessage("");
-      setIsCheckingInAgain(true);
-    }}
-    className="rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-800"
-  >
-    Check in again
-  </button>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(emptyDraft);
+                setActionMessage("");
+                setJustSaved(false);
+                setIsCheckingInAgain(true);
+              }}
+              className="rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-800"
+            >
+              Check in again
+            </button>
 
-  <p className="text-sm leading-6 text-slate-600">
-    A new check-in adds another reflection for today. It does not replace this one.
-  </p>
-</div>
+            <p className="text-sm leading-6 text-slate-600">
+              A new check-in adds another reflection for today. It does not replace this one.
+            </p>
+          </div>
         </section>
       ) : null}
 
-{(!todayCheckin || isCheckingInAgain) ? (
+      {!todayCheckin || isCheckingInAgain ? (
         <WellnessCheckinPreview
           draft={draft}
           onDraftChange={setDraft}
@@ -259,70 +270,111 @@ const recentCheckinDates = Object.keys(recentCheckinsByDate);
         />
       ) : null}
 
-      {recentCheckinDates.length > 0 ? (
-  <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
-    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-      Recent reflections
-    </p>
-
-    <h2 className="mt-2 text-2xl font-black text-slate-950">
-      Your last 7 days
-    </h2>
-
-    <p className="mt-3 leading-7 text-slate-600">
-      These are your saved Wellness reflections, grouped by day.
-    </p>
-
-    <div className="mt-6 space-y-6">
-      {recentCheckinDates.map((dateKey) => (
-        <div key={dateKey} className="space-y-3">
-          <p className="text-sm font-black uppercase tracking-wide text-slate-500">
-            {dateKey === today ? "Today" : dateKey}
+      {justSaved ? (
+        <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-300">
+            Check-in saved
+          </p>
+          <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+            What would be useful next?
+          </h2>
+          <p className="mt-3 max-w-2xl leading-7 text-slate-300">
+            You can keep going somewhere useful, or finish for now.
           </p>
 
-          <div className="space-y-3">
-            {recentCheckinsByDate[dateKey].map((checkin) => {
-              const checkinTime = new Intl.DateTimeFormat("en-US", {
-                timeZone: "America/New_York",
-                hour: "numeric",
-                minute: "2-digit",
-              }).format(new Date(checkin.created_at));
-
-              return (
-                <div
-                  key={checkin.id}
-                  className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
-                >
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <p className="font-black text-slate-950">{checkinTime}</p>
-
-                    <p className="text-sm text-slate-600">
-                      {formatValue(checkin.overall_day)}
-                      {" · "}
-                      {formatValue(checkin.energy)} energy
-                    </p>
-                  </div>
-
-                  {checkin.chosen_next_step ? (
-                    <p className="mt-2 text-sm font-bold text-slate-800">
-                      Next step: {formatValue(checkin.chosen_next_step)}
-                    </p>
-                  ) : null}
-
-                  {checkin.participant_note ? (
-                    <p className="mt-3 text-sm leading-6 text-slate-700">
-                      {checkin.participant_note}
-                    </p>
-                  ) : null}
-                </div>
-              );
-            })}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/goals"
+              className="rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
+            >
+              Continue a Goal
+            </Link>
+            <Link
+              href="/budget"
+              className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900"
+            >
+              Review money
+            </Link>
+            <Link
+              href="/support"
+              className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900"
+            >
+              Open Support
+            </Link>
+            <Link
+              href="/"
+              className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900"
+            >
+              Finish for now
+            </Link>
           </div>
-        </div>
-      ))}
-    </div>
-  </section>
-) : null}
+        </section>
+      ) : null}
+
+      {recentCheckinDates.length > 0 ? (
+        <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+            Recent reflections
+          </p>
+
+          <h2 className="mt-2 text-2xl font-black text-slate-950">
+            Your last 7 days
+          </h2>
+
+          <p className="mt-3 leading-7 text-slate-600">
+            These are your saved Wellness reflections, grouped by day.
+          </p>
+
+          <div className="mt-6 space-y-6">
+            {recentCheckinDates.map((dateKey) => (
+              <div key={dateKey} className="space-y-3">
+                <p className="text-sm font-black uppercase tracking-wide text-slate-500">
+                  {dateKey === today ? "Today" : dateKey}
+                </p>
+
+                <div className="space-y-3">
+                  {recentCheckinsByDate[dateKey].map((checkin) => {
+                    const checkinTime = new Intl.DateTimeFormat("en-US", {
+                      timeZone: "America/New_York",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    }).format(new Date(checkin.created_at));
+
+                    return (
+                      <div
+                        key={checkin.id}
+                        className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+                      >
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                          <p className="font-black text-slate-950">{checkinTime}</p>
+
+                          <p className="text-sm text-slate-600">
+                            {formatValue(checkin.overall_day)}
+                            {" · "}
+                            {formatValue(checkin.energy)} energy
+                          </p>
+                        </div>
+
+                        {checkin.chosen_next_step ? (
+                          <p className="mt-2 text-sm font-bold text-slate-800">
+                            Next step: {formatValue(checkin.chosen_next_step)}
+                          </p>
+                        ) : null}
+
+                        {checkin.participant_note ? (
+                          <p className="mt-3 text-sm leading-6 text-slate-700">
+                            {checkin.participant_note}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {clientPathTestEnabled ? (
         <section className="rounded-3xl border border-violet-200 bg-violet-50 p-6 shadow-sm">
