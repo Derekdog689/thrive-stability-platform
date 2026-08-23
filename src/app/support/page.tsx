@@ -584,6 +584,7 @@ export default function SupportPage() {
   const [notice, setNotice] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [createStep, setCreateStep] = useState(1);
   const [guidanceChoice, setGuidanceChoice] = useState("");
 
@@ -625,16 +626,16 @@ export default function SupportPage() {
   }
 
   function cancelCreateFlow() {
-  const confirmed = window.confirm(
-    "Cancel this Support request? Your current draft will be cleared.",
-  );
+    const confirmed = window.confirm(
+      "Cancel this Support request? Your current draft will be cleared.",
+    );
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  resetCreateFlow();
-  setShowSubmitConfirmation(false);
-  setShowCreate(false);
-}
+    resetCreateFlow();
+    setShowSubmitConfirmation(false);
+    setShowCreate(false);
+  }
 
   function chooseCategory(category: ParticipantSupportCategory) {
     setDraft((current) => ({
@@ -758,7 +759,7 @@ export default function SupportPage() {
                       Request sent
                     </p>
                     <h2 className="mt-2 text-2xl font-black">
-                      Your request is now with Support.
+                      Your request was received.
                     </h2>
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-700">
                       Support aims to acknowledge new requests within 1 hour and
@@ -828,18 +829,18 @@ export default function SupportPage() {
                       </div>
 
                       <div className="flex items-center gap-3">
-  <span className="rounded-full bg-slate-100 px-4 py-2 text-xs font-black text-slate-600">
-    Step {createStep} of 6
-  </span>
+                        <span className="rounded-full bg-slate-100 px-4 py-2 text-xs font-black text-slate-600">
+                          Step {createStep} of 6
+                        </span>
 
-  <button
-    type="button"
-    onClick={cancelCreateFlow}
-    className="text-sm font-black text-slate-600 hover:text-slate-900"
-  >
-    Cancel
-  </button>
-</div>
+                        <button
+                          type="button"
+                          onClick={cancelCreateFlow}
+                          className="text-sm font-black text-slate-600 hover:text-slate-900"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
 
                     {createStep === 1 ? (
@@ -1172,28 +1173,45 @@ export default function SupportPage() {
                 ) : null}
 
                 {historicalRequests.length > 0 ? (
-                  <section className="space-y-4">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                        Request history
-                      </p>
-                      <h2 className="mt-2 text-2xl font-black">
-                        Previous requests
-                      </h2>
-                    </div>
+                  <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <button
+                      type="button"
+                      aria-expanded={showHistory}
+                      onClick={() => setShowHistory((current) => !current)}
+                      className="flex w-full items-center justify-between gap-4 text-left"
+                    >
+                      <span>
+                        <span className="block text-xs font-black uppercase tracking-wide text-slate-500">
+                          Request history
+                        </span>
+                        <span className="mt-2 block text-2xl font-black text-slate-900">
+                          Previous requests ({historicalRequests.length})
+                        </span>
+                        <span className="mt-2 block text-sm font-normal leading-6 text-slate-600">
+                          Past requests stay available when you want to look back.
+                        </span>
+                      </span>
+                      <span className="shrink-0 rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700">
+                        {showHistory ? "Hide" : "View"}
+                      </span>
+                    </button>
 
-                    {historicalRequests.map((request) => (
-                      <SupportRequestCard
-                        key={request.id}
-                        request={request}
-                        statusEvents={statusEvents}
-                        participantResponses={participantResponses}
-                        participantReplies={participantReplies}
-                        working={working}
-                        onWithdraw={withdrawRequest}
-                        onSubmitReply={submitParticipantReply}
-                      />
-                    ))}
+                    {showHistory ? (
+                      <div className="mt-5 space-y-4">
+                        {historicalRequests.map((request) => (
+                          <SupportRequestCard
+                            key={request.id}
+                            request={request}
+                            statusEvents={statusEvents}
+                            participantResponses={participantResponses}
+                            participantReplies={participantReplies}
+                            working={working}
+                            onWithdraw={withdrawRequest}
+                            onSubmitReply={submitParticipantReply}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </section>
                 ) : null}
               </>
