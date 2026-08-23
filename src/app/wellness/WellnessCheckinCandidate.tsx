@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import WellnessCheckinPreview from "./WellnessCheckinPreview";
 import {
-  type WellnessCheckinRow,
   type WellnessDraft,
   useWellnessCheckinCandidate,
 } from "./useWellnessCheckinCandidate";
@@ -16,22 +15,6 @@ function formatValue(value: string | null | undefined) {
     .replaceAll("_", " ")
     .replace(/^./, (letter) => letter.toUpperCase());
 }
-
-const reflectionAreas: Array<{
-  label: string;
-  read: (checkin: WellnessCheckinRow) => string | null;
-}> = [
-  { label: "Stress", read: (checkin) => checkin.stress },
-  { label: "Sleep", read: (checkin) => checkin.sleep },
-  { label: "Energy", read: (checkin) => checkin.energy },
-  { label: "Confidence", read: (checkin) => checkin.confidence },
-  { label: "Routine", read: (checkin) => checkin.routine },
-  {
-    label: "Recovery support",
-    read: (checkin) => checkin.recovery_support,
-  },
-  { label: "Support", read: (checkin) => checkin.support_needed },
-];
 
 const emptyDraft: WellnessDraft = {
   overallDay: null,
@@ -134,15 +117,6 @@ export default function WellnessCheckinCandidate() {
   const recentCheckinDates = Object.keys(recentCheckinsByDate);
 
   const reflectionSummary = useMemo(() => {
-    const areaCounts = reflectionAreas
-      .map((area) => ({
-        label: area.label,
-        count: recentCheckins.filter((checkin) => Boolean(area.read(checkin)))
-          .length,
-      }))
-      .filter((area) => area.count > 0)
-      .sort((left, right) => right.count - left.count);
-
     const nextStepCounts = recentCheckins.reduce<Record<string, number>>(
       (counts, checkin) => {
         if (!checkin.chosen_next_step) return counts;
@@ -157,7 +131,6 @@ export default function WellnessCheckinCandidate() {
     return {
       reflectionCount: recentCheckins.length,
       dayCount: new Set(recentCheckins.map((checkin) => checkin.checkin_date)).size,
-      areaCounts,
       nextStepCounts: Object.entries(nextStepCounts).sort(
         ([, leftCount], [, rightCount]) => rightCount - leftCount,
       ),
@@ -412,27 +385,14 @@ export default function WellnessCheckinCandidate() {
             </div>
           </div>
 
-          {reflectionSummary.areaCounts.length > 0 ? (
-            <div className="mt-6 rounded-2xl border border-slate-100 p-5">
-              <p className="font-black text-slate-950">
-                Areas you chose to look at
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                These counts only show what you selected. More often does not
-                mean better, worse, or more important.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {reflectionSummary.areaCounts.map((area) => (
-                  <span
-                    key={area.label}
-                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-950"
-                  >
-                    {area.label} · {area.count}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
+          <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+            <p className="font-black text-slate-950">About earlier check-ins</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Earlier Wellness versions recorded some detail fields as part of the form.
+              THRIVE does not treat those older fields as proof that you intentionally
+              chose those areas to focus on.
+            </p>
+          </div>
 
           {reflectionSummary.nextStepCounts.length > 0 ? (
             <div className="mt-4 rounded-2xl border border-slate-100 p-5">
