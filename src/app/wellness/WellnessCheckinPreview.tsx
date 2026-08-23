@@ -474,7 +474,7 @@ export default function WellnessCheckinPreview({
             Is there anything you want to look at a little closer?
           </h2>
           <p className="mt-3 leading-7 text-slate-600">
-            Pick one area if you want. Choosing an area does not mean something is wrong with it.
+            Choose one or more areas that feel useful. You can look at several before moving on. Choosing an area does not mean something is wrong with it.
           </p>
 
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
@@ -493,13 +493,15 @@ export default function WellnessCheckinPreview({
                   className={`rounded-2xl border px-4 py-4 text-left transition ${
                     selected
                       ? "border-emerald-600 bg-emerald-100"
-                      : "border-slate-200 bg-white hover:bg-slate-50"
+                      : hasValue
+                        ? "border-emerald-300 bg-emerald-50"
+                        : "border-slate-200 bg-white hover:bg-slate-50"
                   }`}
                 >
                   <p className="font-black text-slate-950">{group.label}</p>
                   {hasValue ? (
-                    <p className="mt-1 text-sm text-emerald-800">
-                      {formatValue(reflections[group.key])}
+                    <p className="mt-1 text-sm font-bold text-emerald-800">
+                      Added: {formatValue(reflections[group.key])}
                     </p>
                   ) : null}
                 </button>
@@ -519,6 +521,9 @@ export default function WellnessCheckinPreview({
               {reflectionAcknowledgement ? (
                 <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-emerald-950">
                   <p className="font-black">{reflectionAcknowledgement}</p>
+                  <p className="mt-1 text-sm leading-6 text-emerald-900">
+                    You can choose another area above, or continue when you are ready.
+                  </p>
                 </div>
               ) : null}
             </div>
@@ -530,7 +535,7 @@ export default function WellnessCheckinPreview({
               onClick={() => setStep(3)}
               className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
             >
-              Continue
+              Continue when I&apos;m done
             </button>
             <button
               type="button"
