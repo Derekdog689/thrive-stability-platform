@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import AuthGate from "./AuthGate";
 import ThriveSidebar from "./ThriveSidebar";
 import { useParticipantGoals } from "./goals/useParticipantGoals";
@@ -11,6 +12,8 @@ import {
   toNumber,
   useParticipantFinancial,
 } from "./useParticipantFinancial";
+
+const GOAL_REVIEWED_SESSION_KEY = "thrive:today:goal-reviewed";
 
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Not available";
@@ -38,13 +41,13 @@ function getSupportMeaning(status: string | null | undefined) {
   switch (status) {
     case "submitted":
       return {
-        title: "Your request is with the team",
+        title: "Your request was received",
         detail: "Nothing is needed from you right now.",
       };
 
     case "acknowledged":
       return {
-        title: "Your request was received",
+        title: "Your request is with the team",
         detail: "Nothing is needed from you right now.",
       };
 
@@ -102,14 +105,35 @@ export default function TodayPage() {
     errorMessage: supportErrorMessage,
   } = useParticipantSupport();
 
+  const [goalReviewedThisSession, setGoalReviewedThisSession] = useState(false);
+
+  useEffect(() => {
+    try {
+      setGoalReviewedThisSession(
+        window.sessionStorage.getItem(GOAL_REVIEWED_SESSION_KEY) === "true",
+      );
+    } catch {
+      setGoalReviewedThisSession(false);
+    }
+  }, []);
+
+  function markGoalReviewedThisSession() {
+    try {
+      window.sessionStorage.setItem(GOAL_REVIEWED_SESSION_KEY, "true");
+    } catch {
+      // Session orientation is optional. Navigation must still work if storage is unavailable.
+    }
+
+    setGoalReviewedThisSession(true);
+  }
+
   const activeBudgetPeriod =
     budgetPeriods.find((period) => period.status === "active") ?? null;
 
   const activeBudgetLines = activeBudgetPeriod
     ? budgetLines.filter(
         (line) =>
-          line.budget_period_id === activeBudgetPeriod.id &&
-          line.is_active,
+          line.budget_period_id === activeBudgetPeriod.id && line.is_active,
       )
     : [];
 
@@ -128,49 +152,41 @@ export default function TodayPage() {
   const receivedIncome = currentPeriodFinancialActivity
     .filter((activity) => activity.activity_direction === "inflow")
     .reduce(
-      (sum, activity) =>
-        sum + Math.abs(toNumber(activity.signed_amount)),
+      (sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)),
       0,
     );
 
   const moneyOutThisPeriod = currentPeriodFinancialActivity
     .filter((activity) => activity.activity_direction === "outflow")
     .reduce(
-      (sum, activity) =>
-        sum + Math.abs(toNumber(activity.signed_amount)),
+      (sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)),
       0,
     );
 
   const budgetRemaining = activeBudgetLines.reduce(
-    (sum, line) =>
-      sum + toNumber(line.derived_remaining_amount),
+    (sum, line) => sum + toNumber(line.derived_remaining_amount),
     0,
   );
 
   const latestWellness = todayCheckin ?? null;
 
   const currentGoal =
-    activeGoals.find(
-      (goal) => goal.progress_status !== "completed",
-    ) ??
+    activeGoals.find((goal) => goal.progress_status !== "completed") ??
     activeGoals[0] ??
     null;
 
   const unresolvedSupportRequest =
     requests.find(
       (request) =>
-        !["completed", "withdrawn", "archived"].includes(
-          request.status,
-        ),
+        !["completed", "withdrawn", "archived"].includes(request.status),
     ) ?? null;
 
-    const supportMeaning = unresolvedSupportRequest
-  ? getSupportMeaning(unresolvedSupportRequest.status)
-  : null;
+  const supportMeaning = unresolvedSupportRequest
+    ? getSupportMeaning(unresolvedSupportRequest.status)
+    : null;
 
   const supportNeedsParticipant =
-    unresolvedSupportRequest?.status ===
-    "waiting_for_participant";
+    unresolvedSupportRequest?.status === "waiting_for_participant";
 
   const primaryAction = (() => {
     if (!wellnessLoading && !wellnessErrorMessage && !latestWellness) {
@@ -181,6 +197,7 @@ export default function TodayPage() {
           "A short check-in can help you decide what would be useful next.",
         href: "/wellness",
         action: "Check in now",
+        marksGoalReviewed: false,
       };
     }
 
@@ -188,10 +205,10 @@ export default function TodayPage() {
       return {
         eyebrow: "Support",
         title: "Your support request needs you",
-        detail:
-          "There is a support request waiting for your response.",
+        detail: "There is a support request waiting for your response.",
         href: "/support",
         action: "Review support",
+        marksGoalReviewed: false,
       };
     }
 
@@ -202,20 +219,33 @@ export default function TodayPage() {
       return {
         eyebrow: "Your next step",
         title: "Ask for help",
-        detail:
-          "You chose asking for help as your next step today.",
+        detail: "You chose asking for help as your next step today.",
         href: "/support",
         action: "Open Support",
+        marksGoalReviewed: false,
       };
     }
 
-    if (currentGoal?.next_step) {
+    if (currentGoal?.next_step && !goalReviewedThisSession) {
       return {
         eyebrow: "Your next step",
         title: currentGoal.next_step,
         detail: `Connected to your goal: ${currentGoal.title}`,
         href: "/goals",
         action: "Continue goal",
+        marksGoalReviewed: true,
+      };
+    }
+
+    if (goalReviewedThisSession) {
+      return {
+        eyebrow: "Keep moving",
+        title: "You already looked at your Goal this session",
+        detail:
+          "You can review your money, look at recent activity, check Support, or finish for now.",
+        href: "/financial-activity",
+        action: "Review recent activity",
+        marksGoalReviewed: false,
       };
     }
 
@@ -226,6 +256,7 @@ export default function TodayPage() {
         "You can check in, review your plan, or continue when you are ready.",
       href: "/wellness",
       action: "Check in",
+      marksGoalReviewed: false,
     };
   })();
 
@@ -281,7 +312,6 @@ export default function TodayPage() {
                       <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
                         Your money
                       </p>
-
                       <h2 className="mt-2 text-2xl font-black">
                         Your current plan
                       </h2>
@@ -319,11 +349,9 @@ export default function TodayPage() {
                         <p className="text-sm font-bold text-slate-500">
                           Income received
                         </p>
-
                         <p className="mt-2 text-3xl font-black">
                           {formatMoney(receivedIncome)}
                         </p>
-
                         <p className="mt-2 text-sm text-slate-500">
                           of {formatMoney(expectedIncome)} expected
                         </p>
@@ -333,11 +361,9 @@ export default function TodayPage() {
                         <p className="text-sm font-bold text-slate-500">
                           Money out
                         </p>
-
                         <p className="mt-2 text-3xl font-black">
                           {formatMoney(moneyOutThisPeriod)}
                         </p>
-
                         <p className="mt-2 text-sm text-slate-500">
                           recorded this plan period
                         </p>
@@ -345,10 +371,7 @@ export default function TodayPage() {
                     </div>
                   ) : (
                     <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-                      <p className="font-black">
-                        No current Budget is open.
-                      </p>
-
+                      <p className="font-black">No current Budget is open.</p>
                       <p className="mt-2 text-sm text-slate-600">
                         Start a plan when you are ready.
                       </p>
@@ -360,7 +383,6 @@ export default function TodayPage() {
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
                     Your Today
                   </p>
-
                   <h2 className="mt-2 text-2xl font-black">
                     Where things stand
                   </h2>
@@ -375,7 +397,6 @@ export default function TodayPage() {
                         <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
                           Wellness
                         </p>
-
                         <p className="mt-2 text-lg font-black">
                           {latestWellness
                             ? `You’re doing ${formatLabel(
@@ -404,29 +425,28 @@ export default function TodayPage() {
                           </p>
 
                           {currentGoal ? (
-  <>
-    <p className="mt-2 font-black">
-      {currentGoal.title}
-    </p>
+                            <>
+                              <p className="mt-2 font-black">
+                                {currentGoal.title}
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-slate-700">
+                                {getGoalProgressLabel(currentGoal.progress_status)}
+                              </p>
 
-    <p className="mt-2 text-sm font-semibold text-slate-700">
-      {getGoalProgressLabel(currentGoal.progress_status)}
-    </p>
-
-    {currentGoal.next_step ? (
-      <p className="mt-2 text-sm text-slate-600">
-        Next:{" "}
-        <span className="font-black">
-          {currentGoal.next_step}
-        </span>
-      </p>
-    ) : null}
-  </>
-) : (
-  <p className="mt-2 text-sm text-slate-600">
-    No active goal right now.
-  </p>
-)}
+                              {currentGoal.next_step ? (
+                                <p className="mt-2 text-sm text-slate-600">
+                                  Next:{" "}
+                                  <span className="font-black">
+                                    {currentGoal.next_step}
+                                  </span>
+                                </p>
+                              ) : null}
+                            </>
+                          ) : (
+                            <p className="mt-2 text-sm text-slate-600">
+                              No active goal right now.
+                            </p>
+                          )}
                         </div>
 
                         <div className="rounded-2xl bg-slate-50 p-5">
@@ -435,26 +455,24 @@ export default function TodayPage() {
                           </p>
 
                           {unresolvedSupportRequest && supportMeaning ? (
-  <>
-    <p className="mt-2 font-black">
-      {supportMeaning.title}
-    </p>
-
-    <p className="mt-2 text-sm text-slate-600">
-      {supportMeaning.detail}
-    </p>
-  </>
-) : (
-  <>
-    <p className="mt-2 font-black">
-      Nothing is waiting on you
-    </p>
-
-    <p className="mt-2 text-sm text-slate-600">
-      No current support request needs your attention.
-    </p>
-  </>
-)}
+                            <>
+                              <p className="mt-2 font-black">
+                                {supportMeaning.title}
+                              </p>
+                              <p className="mt-2 text-sm text-slate-600">
+                                {supportMeaning.detail}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="mt-2 font-black">
+                                Nothing is waiting on you
+                              </p>
+                              <p className="mt-2 text-sm text-slate-600">
+                                No current support request needs your attention.
+                              </p>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -465,17 +483,20 @@ export default function TodayPage() {
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-300">
                     {primaryAction.eyebrow}
                   </p>
-
                   <h2 className="mt-2 text-2xl font-black sm:text-3xl">
                     {primaryAction.title}
                   </h2>
-
                   <p className="mt-3 max-w-2xl leading-7 text-slate-300">
                     {primaryAction.detail}
                   </p>
 
                   <Link
                     href={primaryAction.href}
+                    onClick={
+                      primaryAction.marksGoalReviewed
+                        ? markGoalReviewedThisSession
+                        : undefined
+                    }
                     className="mt-6 inline-block rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
                   >
                     {primaryAction.action}
@@ -506,9 +527,11 @@ export default function TodayPage() {
 
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="font-black">
-                        {currentGoal
-                          ? "Goal in progress"
-                          : "No active goal"}
+                        {goalReviewedThisSession
+                          ? "Goal reviewed this session"
+                          : currentGoal
+                            ? "Goal in progress"
+                            : "No active goal"}
                       </p>
                     </div>
 
