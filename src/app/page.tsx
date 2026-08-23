@@ -202,8 +202,8 @@ export default function TodayPage() {
   const latestWellness = todayCheckin ?? null;
 
   const currentGoal =
-    activeGoals.find((goal) => goal.progress_status !== "completed") ??
-    activeGoals[0] ??
+    activeGoals.find((goal) => goal.progress_status === "in_progress") ??
+    activeGoals.find((goal) => goal.progress_status === "not_started") ??
     null;
 
   const unresolvedSupportRequest =
