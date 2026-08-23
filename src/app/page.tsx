@@ -13,7 +13,9 @@ import {
   useParticipantFinancial,
 } from "./useParticipantFinancial";
 
-const GOAL_REVIEWED_SESSION_KEY = "thrive:today:goal-reviewed";
+const TODAY_SESSION_AREAS_KEY = "thrive:today:visited-areas";
+
+type TodaySessionArea = "goal" | "activity" | "budget" | "support";
 
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Not available";
@@ -105,27 +107,56 @@ export default function TodayPage() {
     errorMessage: supportErrorMessage,
   } = useParticipantSupport();
 
-  const [goalReviewedThisSession, setGoalReviewedThisSession] = useState(false);
+  const [visitedAreas, setVisitedAreas] = useState<TodaySessionArea[]>([]);
 
   useEffect(() => {
     try {
-      setGoalReviewedThisSession(
-        window.sessionStorage.getItem(GOAL_REVIEWED_SESSION_KEY) === "true",
+      const stored = window.sessionStorage.getItem(TODAY_SESSION_AREAS_KEY);
+      const parsed = stored ? JSON.parse(stored) : [];
+      const validAreas: TodaySessionArea[] = [
+        "goal",
+        "activity",
+        "budget",
+        "support",
+      ];
+
+      setVisitedAreas(
+        Array.isArray(parsed)
+          ? parsed.filter((area): area is TodaySessionArea =>
+              validAreas.includes(area as TodaySessionArea),
+            )
+          : [],
       );
     } catch {
-      setGoalReviewedThisSession(false);
+      setVisitedAreas([]);
     }
   }, []);
 
-  function markGoalReviewedThisSession() {
-    try {
-      window.sessionStorage.setItem(GOAL_REVIEWED_SESSION_KEY, "true");
-    } catch {
-      // Session orientation is optional. Navigation must still work if storage is unavailable.
-    }
+  function markAreaVisited(area: TodaySessionArea) {
+    setVisitedAreas((current) => {
+      if (current.includes(area)) {
+        return current;
+      }
 
-    setGoalReviewedThisSession(true);
+      const next = [...current, area];
+
+      try {
+        window.sessionStorage.setItem(
+          TODAY_SESSION_AREAS_KEY,
+          JSON.stringify(next),
+        );
+      } catch {
+        // Session orientation is optional. Navigation must still work if storage is unavailable.
+      }
+
+      return next;
+    });
   }
+
+  const goalReviewedThisSession = visitedAreas.includes("goal");
+  const activityReviewedThisSession = visitedAreas.includes("activity");
+  const budgetReviewedThisSession = visitedAreas.includes("budget");
+  const supportReviewedThisSession = visitedAreas.includes("support");
 
   const activeBudgetPeriod =
     budgetPeriods.find((period) => period.status === "active") ?? null;
@@ -197,7 +228,7 @@ export default function TodayPage() {
           "A short check-in can help you decide what would be useful next.",
         href: "/wellness",
         action: "Check in now",
-        marksGoalReviewed: false,
+        visitArea: null as TodaySessionArea | null,
       };
     }
 
@@ -208,13 +239,14 @@ export default function TodayPage() {
         detail: "There is a support request waiting for your response.",
         href: "/support",
         action: "Review support",
-        marksGoalReviewed: false,
+        visitArea: "support" as TodaySessionArea,
       };
     }
 
     if (
       latestWellness?.chosen_next_step === "ask_for_help" &&
-      !unresolvedSupportRequest
+      !unresolvedSupportRequest &&
+      !supportReviewedThisSession
     ) {
       return {
         eyebrow: "Your next step",
@@ -222,7 +254,7 @@ export default function TodayPage() {
         detail: "You chose asking for help as your next step today.",
         href: "/support",
         action: "Open Support",
-        marksGoalReviewed: false,
+        visitArea: "support" as TodaySessionArea,
       };
     }
 
@@ -233,30 +265,54 @@ export default function TodayPage() {
         detail: `Connected to your goal: ${currentGoal.title}`,
         href: "/goals",
         action: "Continue goal",
-        marksGoalReviewed: true,
+        visitArea: "goal" as TodaySessionArea,
       };
     }
 
-    if (goalReviewedThisSession) {
+    if (!activityReviewedThisSession && financialActivity.length > 0) {
       return {
         eyebrow: "Keep moving",
-        title: "You already looked at your Goal this session",
+        title: "Want to look at your recent Financial Activity?",
         detail:
-          "You can review your money, look at recent activity, check Support, or finish for now.",
+          "You can review what is already recorded without changing your Budget or transaction context.",
         href: "/financial-activity",
         action: "Review recent activity",
-        marksGoalReviewed: false,
+        visitArea: "activity" as TodaySessionArea,
+      };
+    }
+
+    if (activeBudgetPeriod && !budgetReviewedThisSession) {
+      return {
+        eyebrow: "Keep moving",
+        title: "Want to review your current plan?",
+        detail:
+          "Your Budget is active. You can look at the plan without changing anything.",
+        href: "/budget",
+        action: "Review Budget",
+        visitArea: "budget" as TodaySessionArea,
+      };
+    }
+
+    if (unresolvedSupportRequest && !supportReviewedThisSession) {
+      return {
+        eyebrow: "Support",
+        title: "Want to review your open Support request?",
+        detail:
+          "Your request is still open, but nothing is required from you right now.",
+        href: "/support",
+        action: "Review Support",
+        visitArea: "support" as TodaySessionArea,
       };
     }
 
     return {
       eyebrow: "Today",
-      title: "Nothing urgent needs your attention",
+      title: "You’re caught up for now. Come back whenever you want.",
       detail:
-        "You can check in, review your plan, or continue when you are ready.",
-      href: "/wellness",
-      action: "Check in",
-      marksGoalReviewed: false,
+        "You can still review any part of THRIVE, or you can finish for now.",
+      href: "/",
+      action: null,
+      visitArea: null as TodaySessionArea | null,
     };
   })();
 
@@ -320,6 +376,7 @@ export default function TodayPage() {
                     <div className="flex flex-wrap gap-2">
                       <Link
                         href="/budget"
+                        onClick={() => markAreaVisited("budget")}
                         className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
                       >
                         Review Budget
@@ -327,6 +384,7 @@ export default function TodayPage() {
 
                       <Link
                         href="/financial-activity"
+                        onClick={() => markAreaVisited("activity")}
                         className="rounded-2xl border border-emerald-200 bg-white px-5 py-3 font-black text-emerald-900 hover:bg-emerald-50"
                       >
                         View Activity
@@ -490,17 +548,19 @@ export default function TodayPage() {
                     {primaryAction.detail}
                   </p>
 
-                  <Link
-                    href={primaryAction.href}
-                    onClick={
-                      primaryAction.marksGoalReviewed
-                        ? markGoalReviewedThisSession
-                        : undefined
-                    }
-                    className="mt-6 inline-block rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
-                  >
-                    {primaryAction.action}
-                  </Link>
+                  {primaryAction.action ? (
+                    <Link
+                      href={primaryAction.href}
+                      onClick={() => {
+                        if (primaryAction.visitArea) {
+                          markAreaVisited(primaryAction.visitArea);
+                        }
+                      }}
+                      className="mt-6 inline-block rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
+                    >
+                      {primaryAction.action}
+                    </Link>
+                  ) : null}
                 </section>
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
@@ -519,9 +579,11 @@ export default function TodayPage() {
 
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="font-black">
-                        {activeBudgetPeriod
-                          ? "Current Budget active"
-                          : "No current Budget"}
+                        {budgetReviewedThisSession
+                          ? "Budget reviewed this session"
+                          : activeBudgetPeriod
+                            ? "Current Budget active"
+                            : "No current Budget"}
                       </p>
                     </div>
 
@@ -537,13 +599,23 @@ export default function TodayPage() {
 
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="font-black">
-                        {unresolvedSupportRequest
-                          ? `Support ${formatLabel(
-                              unresolvedSupportRequest.status,
-                            ).toLowerCase()}`
-                          : "No open support request"}
+                        {supportReviewedThisSession
+                          ? "Support reviewed this session"
+                          : unresolvedSupportRequest
+                            ? `Support ${formatLabel(
+                                unresolvedSupportRequest.status,
+                              ).toLowerCase()}`
+                            : "No open support request"}
                       </p>
                     </div>
+
+                    {activityReviewedThisSession ? (
+                      <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+                        <p className="font-black">
+                          Financial Activity reviewed this session
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </section>
               </>
