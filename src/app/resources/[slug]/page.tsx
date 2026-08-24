@@ -105,6 +105,13 @@ export default function ResourceDetailPage() {
     return detail.accessPaths.filter((path) => path.id !== primaryPath?.id);
   }, [detail, primaryPath]);
 
+  const supportHref = useMemo(() => {
+    if (!detail) return "/support";
+    const params = new URLSearchParams({ resource: detail.resource.resource_slug });
+    if (primaryPath?.id) params.set("path", primaryPath.id);
+    return `/support?${params.toString()}`;
+  }, [detail, primaryPath]);
+
   return (
     <AuthGate>
       <main className="min-h-screen bg-[#eef4ef] px-4 py-5 text-slate-950 sm:px-6">
@@ -236,12 +243,12 @@ export default function ResourceDetailPage() {
 
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-500">Need help?</p>
-                  <h2 className="mt-2 text-2xl font-black">You can still ask THRIVE Support.</h2>
+                  <h2 className="mt-2 text-2xl font-black">Need help using this Resource?</h2>
                   <p className="mt-3 leading-7 text-slate-600">
-                    Slice A is read-only, so this page does not carry Resource context into Support yet. You can open Support normally if you want help.
+                    You can ask THRIVE Support. The Resource can travel with your request as context, but you still choose what to ask and whether to send it.
                   </p>
-                  <Link href="/support" className="mt-5 inline-flex rounded-2xl border border-slate-300 bg-white px-5 py-3 font-black text-slate-800">
-                    Open Support
+                  <Link href={supportHref} className="mt-5 inline-flex rounded-2xl border border-slate-300 bg-white px-5 py-3 font-black text-slate-800">
+                    Ask THRIVE Support
                   </Link>
                 </section>
               </>
