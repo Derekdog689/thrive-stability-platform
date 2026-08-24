@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 const WORKSPACE_ID = "71000000-0000-4000-8000-000000000001";
 const PROGRAM_ID = "71000000-0000-4000-8000-000000000002";
+const RESOURCE_ID = "834492d1-1a8b-45b3-a260-280e680e110f";
 const RESOURCE_NAME = "SYNTHETIC RESOURCES RLS TEST ONLY";
 const RESOURCE_SLUG = "synthetic-resources-rls-test-only";
 const SUPPORT_DENIAL_SLUG = "synthetic-resources-support-denial-only";
@@ -248,6 +249,26 @@ export default function ResourcesTestPage() {
         return;
       }
 
+      if (id === "R11") {
+        if (actor !== "support") throw new Error("R11 requires Support actor.");
+        const { error } = await supabase.rpc("admin_update_resource_details", {
+          p_resource_id: RESOURCE_ID,
+          p_resource_name: RESOURCE_NAME,
+          p_category: "other_not_sure",
+          p_subcategory: "synthetic_testing",
+          p_plain_language_purpose: "THIS SUPPORT MUTATION MUST BE DENIED",
+          p_participant_boundary_note: "Synthetic test record only.",
+          p_country_code: "US",
+          p_state_code: "FL",
+          p_county_name: null,
+          p_service_area_text: "Synthetic test",
+          p_audience_text: "Synthetic test",
+          p_verification_cadence: "stable",
+        });
+        record({ id, expected: "Support non-admin mutation denied", observed: error ? `Denied: ${error.message}` : "Unexpected RPC success", passed: Boolean(error) });
+        return;
+      }
+
       const current = resource ?? (await loadResource());
       if (!current) throw new Error("Synthetic Resource is not visible to this actor or has not been created.");
 
@@ -368,26 +389,6 @@ export default function ResourcesTestPage() {
         if (actor !== "participant") throw new Error("R10 requires participant actor.");
         const { error } = await supabase.from("resources").update({ plain_language_purpose: "THIS UPDATE MUST BE DENIED" }).eq("id", current.id);
         record({ id, expected: "Direct canonical update denied", observed: error ? `Denied: ${error.message}` : "Unexpected update success", passed: Boolean(error) });
-        return;
-      }
-
-      if (id === "R11") {
-        if (actor !== "support") throw new Error("R11 requires Support actor.");
-        const { error } = await supabase.rpc("admin_update_resource_details", {
-          p_resource_id: current.id,
-          p_resource_name: RESOURCE_NAME,
-          p_category: "other_not_sure",
-          p_subcategory: "synthetic_testing",
-          p_plain_language_purpose: "THIS SUPPORT MUTATION MUST BE DENIED",
-          p_participant_boundary_note: "Synthetic test record only.",
-          p_country_code: "US",
-          p_state_code: "FL",
-          p_county_name: null,
-          p_service_area_text: "Synthetic test",
-          p_audience_text: "Synthetic test",
-          p_verification_cadence: "stable",
-        });
-        record({ id, expected: "Support non-admin mutation denied", observed: error ? `Denied: ${error.message}` : "Unexpected RPC success", passed: Boolean(error) });
         return;
       }
 
