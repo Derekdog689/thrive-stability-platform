@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
-import {
-  loadParticipantResourceDetail,
+import { loadParticipantResourceDetail } from "../resources/resourceData";
+import type {
   ParticipantResource,
   ResourceAccessPath,
 } from "../resources/resourceData";
