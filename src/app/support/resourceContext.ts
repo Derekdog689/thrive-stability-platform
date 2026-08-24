@@ -4,7 +4,7 @@ import {
   ParticipantResource,
   ResourceAccessPath,
 } from "../resources/resourceData";
-import { ParticipantSupportRequest } from "./useParticipantSupport";
+import type { ParticipantSupportRequest } from "./useParticipantSupport";
 
 export type SupportResourceContext = {
   resourceId: string;
