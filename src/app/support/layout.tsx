@@ -1,11 +1,10 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import {
-  SupportResourceContext,
-  validateSupportResourceContext,
-} from "./resourceContext";
+import { validateSupportResourceContext } from "./resourceContext";
+import type { SupportResourceContext } from "./resourceContext";
 
 type ResourceResultEvent = CustomEvent<{
   ok: boolean;
