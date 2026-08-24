@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  attachResourceContextToSupportRequest,
+  validateSupportResourceContext,
+} from "./resourceContext";
 
 export type SupportRequestStatus =
   | "submitted"
@@ -114,11 +118,21 @@ const requestSelect =
 const statusEventSelect =
   "id, workspace_id, program_id, supported_person_id, support_request_id, event_type, from_status, to_status, changed_at, change_note";
 
-  const participantResponseSelect =
+const participantResponseSelect =
   "id, workspace_id, program_id, supported_person_id, support_request_id, entry_type, title, content, created_at";
 
 const participantReplySelect =
   "id, workspace_id, program_id, supported_person_id, support_request_id, entry_type, title, content, created_at";
+
+function dispatchResourceContextResult(ok: boolean, message: string) {
+  if (typeof window === "undefined") return;
+
+  window.dispatchEvent(
+    new CustomEvent("thrive:support-resource-result", {
+      detail: { ok, message },
+    }),
+  );
+}
 
 export function useParticipantSupport() {
   const [participant, setParticipant] = useState<SupportedPerson | null>(null);
@@ -127,14 +141,14 @@ export function useParticipantSupport() {
   const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(null);
   const [requests, setRequests] = useState<ParticipantSupportRequest[]>([]);
   const [statusEvents, setStatusEvents] = useState<
-  ParticipantSupportStatusEvent[]
->([]);
-const [participantResponses, setParticipantResponses] = useState<
-  ParticipantSupportResponse[]
->([]);
-const [participantReplies, setParticipantReplies] = useState<
-  ParticipantSupportReply[]
->([]);
+    ParticipantSupportStatusEvent[]
+  >([]);
+  const [participantResponses, setParticipantResponses] = useState<
+    ParticipantSupportResponse[]
+  >([]);
+  const [participantReplies, setParticipantReplies] = useState<
+    ParticipantSupportReply[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -163,67 +177,58 @@ const [participantReplies, setParticipantReplies] = useState<
     [],
   );
 
-const loadStatusEvents = useCallback(
-  async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
-    const result = await supabase
-      .from("support_request_status_events")
-      .select(statusEventSelect)
-      .eq("supported_person_id", person.id)
-      .eq("workspace_id", person.workspace_id)
-      .eq("program_id", activeParticipation.program_id)
-      .eq("event_type", "status_changed")
-      .order("changed_at", { ascending: true });
+  const loadStatusEvents = useCallback(
+    async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
+      const result = await supabase
+        .from("support_request_status_events")
+        .select(statusEventSelect)
+        .eq("supported_person_id", person.id)
+        .eq("workspace_id", person.workspace_id)
+        .eq("program_id", activeParticipation.program_id)
+        .eq("event_type", "status_changed")
+        .order("changed_at", { ascending: true });
 
-    if (result.error) throw result.error;
+      if (result.error) throw result.error;
+      return (result.data as ParticipantSupportStatusEvent[] | null) ?? [];
+    },
+    [],
+  );
 
-    return (
-      (result.data as ParticipantSupportStatusEvent[] | null) ?? []
-    );
-  },
-  [],
-);
+  const loadParticipantResponses = useCallback(
+    async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
+      const result = await supabase
+        .from("support_request_entries")
+        .select(participantResponseSelect)
+        .eq("supported_person_id", person.id)
+        .eq("workspace_id", person.workspace_id)
+        .eq("program_id", activeParticipation.program_id)
+        .eq("entry_type", "participant_response")
+        .is("archived_at", null)
+        .order("created_at", { ascending: true });
 
-const loadParticipantResponses = useCallback(
-  async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
-    const result = await supabase
-      .from("support_request_entries")
-      .select(participantResponseSelect)
-      .eq("supported_person_id", person.id)
-      .eq("workspace_id", person.workspace_id)
-      .eq("program_id", activeParticipation.program_id)
-      .eq("entry_type", "participant_response")
-      .is("archived_at", null)
-      .order("created_at", { ascending: true });
+      if (result.error) throw result.error;
+      return (result.data as ParticipantSupportResponse[] | null) ?? [];
+    },
+    [],
+  );
 
-    if (result.error) throw result.error;
+  const loadParticipantReplies = useCallback(
+    async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
+      const result = await supabase
+        .from("support_request_entries")
+        .select(participantReplySelect)
+        .eq("supported_person_id", person.id)
+        .eq("workspace_id", person.workspace_id)
+        .eq("program_id", activeParticipation.program_id)
+        .eq("entry_type", "participant_reply")
+        .is("archived_at", null)
+        .order("created_at", { ascending: true });
 
-    return (
-      (result.data as ParticipantSupportResponse[] | null) ?? []
-    );
-  },
-  [],
-);
-
-const loadParticipantReplies = useCallback(
-  async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
-    const result = await supabase
-      .from("support_request_entries")
-      .select(participantReplySelect)
-      .eq("supported_person_id", person.id)
-      .eq("workspace_id", person.workspace_id)
-      .eq("program_id", activeParticipation.program_id)
-      .eq("entry_type", "participant_reply")
-      .is("archived_at", null)
-      .order("created_at", { ascending: true });
-
-    if (result.error) throw result.error;
-
-    return (
-      (result.data as ParticipantSupportReply[] | null) ?? []
-    );
-  },
-  [],
-);
+      if (result.error) throw result.error;
+      return (result.data as ParticipantSupportReply[] | null) ?? [];
+    },
+    [],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -297,20 +302,21 @@ const loadParticipantReplies = useCallback(
       }
 
       try {
- const [requestRows, eventRows, responseRows, replyRows] = await Promise.all([
-  loadRequests(person, activeParticipation),
-  loadStatusEvents(person, activeParticipation),
-  loadParticipantResponses(person, activeParticipation),
-  loadParticipantReplies(person, activeParticipation),
-]);
+        const [requestRows, eventRows, responseRows, replyRows] =
+          await Promise.all([
+            loadRequests(person, activeParticipation),
+            loadStatusEvents(person, activeParticipation),
+            loadParticipantResponses(person, activeParticipation),
+            loadParticipantReplies(person, activeParticipation),
+          ]);
 
-if (!mounted) return;
+        if (!mounted) return;
 
-setRequests(requestRows);
-setStatusEvents(eventRows);
-setParticipantResponses(responseRows);
-setParticipantReplies(replyRows);
-} catch (error) {
+        setRequests(requestRows);
+        setStatusEvents(eventRows);
+        setParticipantResponses(responseRows);
+        setParticipantReplies(replyRows);
+      } catch (error) {
         if (!mounted) return;
         setErrorMessage(
           error instanceof Error
@@ -340,21 +346,22 @@ setParticipantReplies(replyRows);
       return [];
     }
 
-   try {
-  const [requestRows, eventRows, responseRows, replyRows] = await Promise.all([
-  loadRequests(participant, participation),
-  loadStatusEvents(participant, participation),
-  loadParticipantResponses(participant, participation),
-  loadParticipantReplies(participant, participation),
-]);
+    try {
+      const [requestRows, eventRows, responseRows, replyRows] =
+        await Promise.all([
+          loadRequests(participant, participation),
+          loadStatusEvents(participant, participation),
+          loadParticipantResponses(participant, participation),
+          loadParticipantReplies(participant, participation),
+        ]);
 
-setRequests(requestRows);
-setStatusEvents(eventRows);
-setParticipantResponses(responseRows);
-setParticipantReplies(replyRows);
+      setRequests(requestRows);
+      setStatusEvents(eventRows);
+      setParticipantResponses(responseRows);
+      setParticipantReplies(replyRows);
 
-return requestRows;
-} catch (error) {
+      return requestRows;
+    } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -420,9 +427,8 @@ return requestRows;
       .select(requestSelect)
       .single();
 
-    setWorking(false);
-
     if (result.error) {
+      setWorking(false);
       return {
         ok: false,
         message:
@@ -432,179 +438,213 @@ return requestRows;
     }
 
     const row = result.data as ParticipantSupportRequest;
+    let createMessage = "Your Support request was sent.";
+
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const resourceSlug = searchParams.get("resource")?.trim() ?? "";
+      const accessPathId = searchParams.get("path")?.trim() || null;
+
+      if (resourceSlug) {
+        try {
+          const validation = await validateSupportResourceContext(
+            resourceSlug,
+            accessPathId,
+          );
+
+          if (validation.ok) {
+            const attachResult = await attachResourceContextToSupportRequest(
+              row,
+              validation.context,
+            );
+            createMessage = attachResult.message;
+            dispatchResourceContextResult(attachResult.ok, attachResult.message);
+          } else {
+            createMessage =
+              "Your Support request was sent, but the Resource context could not be attached. Support will still receive the words you submitted.";
+            dispatchResourceContextResult(false, createMessage);
+          }
+        } catch {
+          createMessage =
+            "Your Support request was sent, but the Resource context could not be attached. Support will still receive the words you submitted.";
+          dispatchResourceContextResult(false, createMessage);
+        }
+      }
+    }
 
     setRequests((current) => [
       row,
       ...current.filter((request) => request.id !== row.id),
     ]);
+    setWorking(false);
 
     return {
       ok: true,
       row,
-      message: "Your Support request was sent.",
+      message: createMessage,
     };
   }
 
-async function withdrawRequest(request: ParticipantSupportRequest) {
-  setErrorMessage("");
+  async function withdrawRequest(request: ParticipantSupportRequest) {
+    setErrorMessage("");
 
-  if (!authenticatedUserId || !participant || !participation) {
+    if (!authenticatedUserId || !participant || !participation) {
+      return {
+        ok: false,
+        message: "Your participant and program connection is not ready.",
+      };
+    }
+
+    if (request.status !== "submitted") {
+      return {
+        ok: false,
+        message: "Only a newly submitted Support request can be withdrawn.",
+      };
+    }
+
+    setWorking(true);
+
+    const withdrawnAt = new Date().toISOString();
+
+    const result = await supabase
+      .from("support_requests")
+      .update({
+        status: "withdrawn",
+        withdrawn_at: withdrawnAt,
+      })
+      .eq("id", request.id)
+      .eq("supported_person_id", participant.id)
+      .eq("workspace_id", participant.workspace_id)
+      .eq("program_id", participation.program_id)
+      .eq("status", "submitted")
+      .select(requestSelect)
+      .single();
+
+    setWorking(false);
+
+    if (result.error) {
+      return {
+        ok: false,
+        message:
+          result.error.message ||
+          "Your Support request could not be withdrawn.",
+      };
+    }
+
+    await refreshRequests();
+
     return {
-      ok: false,
-      message: "Your participant and program connection is not ready.",
+      ok: true,
+      row: result.data as ParticipantSupportRequest,
+      message: "Your Support request was withdrawn.",
     };
   }
 
-  if (request.status !== "submitted") {
+  async function submitParticipantReply(
+    request: ParticipantSupportRequest,
+    contentValue: string,
+  ): Promise<ParticipantReplyResult> {
+    setErrorMessage("");
+
+    if (!authenticatedUserId || !participant || !participation) {
+      return {
+        ok: false,
+        message: "Your participant and program connection is not ready.",
+      };
+    }
+
+    if (request.status !== "waiting_for_participant") {
+      return {
+        ok: false,
+        message:
+          "A response can only be sent while Support is waiting for information from you.",
+      };
+    }
+
+    if (
+      request.supported_person_id !== participant.id ||
+      request.workspace_id !== participant.workspace_id ||
+      request.program_id !== participation.program_id
+    ) {
+      return {
+        ok: false,
+        message: "This Support request does not match your active participation.",
+      };
+    }
+
+    const content = contentValue.trim();
+
+    if (!content) {
+      return {
+        ok: false,
+        message: "Write your response before sending it.",
+      };
+    }
+
+    if (content.length > 4000) {
+      return {
+        ok: false,
+        message: "Keep your response to 4,000 characters or fewer.",
+      };
+    }
+
+    setWorking(true);
+
+    const result = await supabase
+      .from("support_request_entries")
+      .insert({
+        workspace_id: request.workspace_id,
+        program_id: request.program_id,
+        supported_person_id: request.supported_person_id,
+        support_request_id: request.id,
+        entry_type: "participant_reply",
+        title: null,
+        content,
+        created_by: authenticatedUserId,
+      })
+      .select(participantReplySelect)
+      .single();
+
+    setWorking(false);
+
+    if (result.error) {
+      return {
+        ok: false,
+        message:
+          result.error.message ||
+          "Your response could not be sent. Please try again.",
+      };
+    }
+
+    const row = result.data as ParticipantSupportReply;
+
+    setParticipantReplies((current) => [
+      ...current.filter((reply) => reply.id !== row.id),
+      row,
+    ]);
+
     return {
-      ok: false,
-      message: "Only a newly submitted Support request can be withdrawn.",
+      ok: true,
+      row,
+      message: "Your response was sent to Support.",
     };
   }
-
-  setWorking(true);
-
-  const withdrawnAt = new Date().toISOString();
-
-  const result = await supabase
-    .from("support_requests")
-    .update({
-      status: "withdrawn",
-      withdrawn_at: withdrawnAt,
-    })
-    .eq("id", request.id)
-    .eq("supported_person_id", participant.id)
-    .eq("workspace_id", participant.workspace_id)
-    .eq("program_id", participation.program_id)
-    .eq("status", "submitted")
-    .select(requestSelect)
-    .single();
-
-  setWorking(false);
-
-  if (result.error) {
-    return {
-      ok: false,
-      message:
-        result.error.message ||
-        "Your Support request could not be withdrawn.",
-    };
-  }
-
-  await refreshRequests();
 
   return {
-    ok: true,
-    row: result.data as ParticipantSupportRequest,
-    message: "Your Support request was withdrawn.",
+    participant,
+    participation,
+    participantName,
+    requests,
+    statusEvents,
+    participantResponses,
+    participantReplies,
+    loading,
+    working,
+    errorMessage,
+    canCreate: Boolean(authenticatedUserId && participant && participation),
+    refreshRequests,
+    createRequest,
+    withdrawRequest,
+    submitParticipantReply,
   };
-}
-
-async function submitParticipantReply(
-  request: ParticipantSupportRequest,
-  contentValue: string,
-): Promise<ParticipantReplyResult> {
-  setErrorMessage("");
-
-  if (!authenticatedUserId || !participant || !participation) {
-    return {
-      ok: false,
-      message: "Your participant and program connection is not ready.",
-    };
-  }
-
-  if (request.status !== "waiting_for_participant") {
-    return {
-      ok: false,
-      message:
-        "A response can only be sent while Support is waiting for information from you.",
-    };
-  }
-
-  if (
-    request.supported_person_id !== participant.id ||
-    request.workspace_id !== participant.workspace_id ||
-    request.program_id !== participation.program_id
-  ) {
-    return {
-      ok: false,
-      message: "This Support request does not match your active participation.",
-    };
-  }
-
-  const content = contentValue.trim();
-
-  if (!content) {
-    return {
-      ok: false,
-      message: "Write your response before sending it.",
-    };
-  }
-
-  if (content.length > 4000) {
-    return {
-      ok: false,
-      message: "Keep your response to 4,000 characters or fewer.",
-    };
-  }
-
-  setWorking(true);
-
-  const result = await supabase
-    .from("support_request_entries")
-    .insert({
-      workspace_id: request.workspace_id,
-      program_id: request.program_id,
-      supported_person_id: request.supported_person_id,
-      support_request_id: request.id,
-      entry_type: "participant_reply",
-      title: null,
-      content,
-      created_by: authenticatedUserId,
-    })
-    .select(participantReplySelect)
-    .single();
-
-  setWorking(false);
-
-  if (result.error) {
-    return {
-      ok: false,
-      message:
-        result.error.message ||
-        "Your response could not be sent. Please try again.",
-    };
-  }
-
-  const row = result.data as ParticipantSupportReply;
-
-  setParticipantReplies((current) => [
-    ...current.filter((reply) => reply.id !== row.id),
-    row,
-  ]);
-
-  return {
-    ok: true,
-    row,
-    message: "Your response was sent to Support.",
-  };
-}
-
- return {
-  participant,
-  participation,
-  participantName,
-  requests,
-  statusEvents,
-  participantResponses,
-  participantReplies,
-  loading,
-  working,
-  errorMessage,
-  canCreate: Boolean(authenticatedUserId && participant && participation),
-  refreshRequests,
-  createRequest,
-  withdrawRequest,
-  submitParticipantReply,
-};
 }
