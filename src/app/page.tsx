@@ -16,6 +16,7 @@ import {
 const TODAY_SESSION_AREAS_KEY = "thrive:today:visited-areas";
 
 type TodaySessionArea = "goal" | "activity" | "budget" | "support";
+type OnboardingStage = "wellness" | "goal" | "budget" | "complete";
 
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Not available";
@@ -91,11 +92,13 @@ export default function TodayPage() {
 
   const {
     todayCheckin,
+    recentCheckins,
     loading: wellnessLoading,
     errorMessage: wellnessErrorMessage,
   } = useWellnessCheckinCandidate();
 
   const {
+    goals,
     activeGoals,
     loading: goalsLoading,
     errorMessage: goalsErrorMessage,
@@ -108,6 +111,8 @@ export default function TodayPage() {
   } = useParticipantSupport();
 
   const [visitedAreas, setVisitedAreas] = useState<TodaySessionArea[]>([]);
+  const [onboardingSkippedThisSession, setOnboardingSkippedThisSession] =
+    useState(false);
 
   useEffect(() => {
     try {
@@ -219,19 +224,47 @@ export default function TodayPage() {
   const supportNeedsParticipant =
     unresolvedSupportRequest?.status === "waiting_for_participant";
 
-  const primaryAction = (() => {
-    if (!wellnessLoading && !wellnessErrorMessage && !latestWellness) {
-      return {
-        eyebrow: "Check in",
-        title: "How are you doing today?",
-        detail:
-          "A short check-in can help you decide what would be useful next.",
-        href: "/wellness",
-        action: "Check in now",
-        visitArea: null as TodaySessionArea | null,
-      };
-    }
+  const orientationReady =
+    !wellnessLoading &&
+    !goalsLoading &&
+    !supportLoading &&
+    !wellnessErrorMessage &&
+    !goalsErrorMessage &&
+    !supportErrorMessage;
 
+  const onboardingReady = !loading && !errorMessage && orientationReady;
+  const hasWellnessHistory = recentCheckins.length > 0;
+  const hasGoalHistory = goals.length > 0;
+  const hasBudgetHistory = budgetPeriods.length > 0;
+
+  const onboardingStage: OnboardingStage = !hasWellnessHistory
+    ? "wellness"
+    : !hasGoalHistory
+      ? "goal"
+      : !hasBudgetHistory
+        ? "budget"
+        : "complete";
+
+  const onboardingActive =
+    onboardingReady &&
+    onboardingStage !== "complete" &&
+    !onboardingSkippedThisSession;
+
+  const isFirstRun = onboardingReady && onboardingStage === "wellness";
+
+  const greetingTitle = isFirstRun
+    ? `Welcome to THRIVE, ${participantName}.`
+    : onboardingActive
+      ? `You're getting started, ${participantName}.`
+      : `Welcome back, ${participantName}.`;
+
+  const greetingDetail = isFirstRun
+    ? "You do not need to set everything up today. Start with what feels useful, and THRIVE will help you learn the rest as you go."
+    : onboardingActive
+      ? "Keep building your THRIVE story at your own pace. You can follow the next step or explore anywhere you want."
+      : "What would make today feel a little more manageable?";
+
+  const primaryAction = (() => {
     if (supportNeedsParticipant) {
       return {
         eyebrow: "Support",
@@ -255,6 +288,54 @@ export default function TodayPage() {
         href: "/support",
         action: "Open Support",
         visitArea: "support" as TodaySessionArea,
+      };
+    }
+
+    if (onboardingActive) {
+      if (onboardingStage === "wellness") {
+        return {
+          eyebrow: "Start here",
+          title: "How are you doing today?",
+          detail:
+            "A quick check-in is a simple way to begin your THRIVE story.",
+          href: "/wellness",
+          action: "Start my first check-in",
+          visitArea: null as TodaySessionArea | null,
+        };
+      }
+
+      if (onboardingStage === "goal") {
+        return {
+          eyebrow: "Keep going",
+          title: "Is there something you want to work toward?",
+          detail:
+            "You've started your THRIVE story. A Goal gives something that matters to you a place to live and one next step to begin with.",
+          href: "/goals",
+          action: "Create my first Goal",
+          visitArea: "goal" as TodaySessionArea,
+        };
+      }
+
+      return {
+        eyebrow: "Your money",
+        title: "Want to make a simple money plan?",
+        detail:
+          "You have something you're working toward. Your first Budget can help you see what you expect to have coming in and where you want it to go.",
+        href: "/budget",
+        action: "Build my first Budget",
+        visitArea: "budget" as TodaySessionArea,
+      };
+    }
+
+    if (!wellnessLoading && !wellnessErrorMessage && !latestWellness) {
+      return {
+        eyebrow: "Check in",
+        title: "How are you doing today?",
+        detail:
+          "A short check-in can help you decide what would be useful next.",
+        href: "/wellness",
+        action: "Check in now",
+        visitArea: null as TodaySessionArea | null,
       };
     }
 
@@ -316,14 +397,6 @@ export default function TodayPage() {
     };
   })();
 
-  const orientationReady =
-    !wellnessLoading &&
-    !goalsLoading &&
-    !supportLoading &&
-    !wellnessErrorMessage &&
-    !goalsErrorMessage &&
-    !supportErrorMessage;
-
   return (
     <AuthGate>
       <main className="min-h-screen bg-[#eef4ef] px-4 py-5 text-slate-950 sm:px-6">
@@ -337,11 +410,11 @@ export default function TodayPage() {
               </p>
 
               <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
-                Welcome back, {participantName}.
+                {greetingTitle}
               </h1>
 
               <p className="mt-4 text-lg leading-7 text-slate-600">
-                What would make today feel a little more manageable?
+                {greetingDetail}
               </p>
             </header>
 
@@ -361,264 +434,330 @@ export default function TodayPage() {
             ) : null}
 
             {!loading && !errorMessage ? (
-              <>
-                <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                        Your money
-                      </p>
-                      <h2 className="mt-2 text-2xl font-black">
-                        Your current plan
-                      </h2>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href="/budget"
-                        onClick={() => markAreaVisited("budget")}
-                        className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
-                      >
-                        Review Budget
-                      </Link>
-
-                      <Link
-                        href="/financial-activity"
-                        onClick={() => markAreaVisited("activity")}
-                        className="rounded-2xl border border-emerald-200 bg-white px-5 py-3 font-black text-emerald-900 hover:bg-emerald-50"
-                      >
-                        View Activity
-                      </Link>
-                    </div>
-                  </div>
-
-                  {activeBudgetPeriod ? (
-                    <div className="mt-6 grid gap-4 md:grid-cols-3">
-                      <div className="rounded-2xl bg-emerald-700 p-5 text-white">
-                        <p className="text-sm font-bold text-emerald-100">
-                          Plan remaining
-                        </p>
-                        <p className="mt-2 text-3xl font-black">
-                          {formatMoney(budgetRemaining)}
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl bg-slate-50 p-5">
-                        <p className="text-sm font-bold text-slate-500">
-                          Income received
-                        </p>
-                        <p className="mt-2 text-3xl font-black">
-                          {formatMoney(receivedIncome)}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-500">
-                          of {formatMoney(expectedIncome)} expected
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl bg-slate-50 p-5">
-                        <p className="text-sm font-bold text-slate-500">
-                          Money out
-                        </p>
-                        <p className="mt-2 text-3xl font-black">
-                          {formatMoney(moneyOutThisPeriod)}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-500">
-                          recorded this plan period
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-                      <p className="font-black">No current Budget is open.</p>
-                      <p className="mt-2 text-sm text-slate-600">
-                        Start a plan when you are ready.
-                      </p>
-                    </div>
-                  )}
-                </section>
-
-                <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
-                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                    Your Today
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black">
-                    Where things stand
-                  </h2>
-
-                  {!orientationReady ? (
-                    <p className="mt-5 text-slate-600">
-                      Pulling together today&apos;s information.
+              onboardingActive ? (
+                <>
+                  <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-300">
+                      {primaryAction.eyebrow}
                     </p>
-                  ) : (
-                    <div className="mt-6 grid gap-3">
-                      <div className="rounded-2xl bg-emerald-50 p-5">
+                    <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+                      {primaryAction.title}
+                    </h2>
+                    <p className="mt-3 max-w-2xl leading-7 text-slate-300">
+                      {primaryAction.detail}
+                    </p>
+
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      {primaryAction.action ? (
+                        <Link
+                          href={primaryAction.href}
+                          onClick={() => {
+                            if (primaryAction.visitArea) {
+                              markAreaVisited(primaryAction.visitArea);
+                            }
+                          }}
+                          className="inline-block rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
+                        >
+                          {primaryAction.action}
+                        </Link>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => setOnboardingSkippedThisSession(true)}
+                        className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900"
+                      >
+                        Explore THRIVE instead
+                      </button>
+                    </div>
+                  </section>
+
+                  <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      Your pace
+                    </p>
+                    <h2 className="mt-2 text-xl font-black">
+                      Nothing here is required just to unlock THRIVE.
+                    </h2>
+                    <p className="mt-3 max-w-2xl leading-7 text-slate-600">
+                      Follow the guided step when it feels useful, or use any part of THRIVE from the navigation. Support and Resources are always available.
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <Link
+                        href="/support"
+                        className="rounded-2xl border border-emerald-200 px-4 py-2 font-black text-emerald-900 hover:bg-emerald-50"
+                      >
+                        Support
+                      </Link>
+                      <Link
+                        href="/resources"
+                        className="rounded-2xl border border-emerald-200 px-4 py-2 font-black text-emerald-900 hover:bg-emerald-50"
+                      >
+                        Resources
+                      </Link>
+                    </div>
+                  </section>
+                </>
+              ) : (
+                <>
+                  <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
                         <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                          Wellness
+                          Your money
                         </p>
-                        <p className="mt-2 text-lg font-black">
-                          {latestWellness
-                            ? `You’re doing ${formatLabel(
-                                latestWellness.overall_day,
-                              ).toLowerCase()} today.`
-                            : "You haven’t checked in today."}
-                        </p>
-
-                        {latestWellness?.chosen_next_step ? (
-                          <p className="mt-2 text-sm text-slate-700">
-                            You chose{" "}
-                            <span className="font-black">
-                              {formatLabel(
-                                latestWellness.chosen_next_step,
-                              ).toLowerCase()}
-                            </span>{" "}
-                            as your next step.
-                          </p>
-                        ) : null}
+                        <h2 className="mt-2 text-2xl font-black">
+                          Your current plan
+                        </h2>
                       </div>
 
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href="/budget"
+                          onClick={() => markAreaVisited("budget")}
+                          className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
+                        >
+                          Review Budget
+                        </Link>
+
+                        <Link
+                          href="/financial-activity"
+                          onClick={() => markAreaVisited("activity")}
+                          className="rounded-2xl border border-emerald-200 bg-white px-5 py-3 font-black text-emerald-900 hover:bg-emerald-50"
+                        >
+                          View Activity
+                        </Link>
+                      </div>
+                    </div>
+
+                    {activeBudgetPeriod ? (
+                      <div className="mt-6 grid gap-4 md:grid-cols-3">
+                        <div className="rounded-2xl bg-emerald-700 p-5 text-white">
+                          <p className="text-sm font-bold text-emerald-100">
+                            Plan remaining
+                          </p>
+                          <p className="mt-2 text-3xl font-black">
+                            {formatMoney(budgetRemaining)}
+                          </p>
+                        </div>
+
                         <div className="rounded-2xl bg-slate-50 p-5">
-                          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                            Goal
+                          <p className="text-sm font-bold text-slate-500">
+                            Income received
+                          </p>
+                          <p className="mt-2 text-3xl font-black">
+                            {formatMoney(receivedIncome)}
+                          </p>
+                          <p className="mt-2 text-sm text-slate-500">
+                            of {formatMoney(expectedIncome)} expected
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl bg-slate-50 p-5">
+                          <p className="text-sm font-bold text-slate-500">
+                            Money out
+                          </p>
+                          <p className="mt-2 text-3xl font-black">
+                            {formatMoney(moneyOutThisPeriod)}
+                          </p>
+                          <p className="mt-2 text-sm text-slate-500">
+                            recorded this plan period
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-6 rounded-2xl bg-slate-50 p-5">
+                        <p className="font-black">No current Budget is open.</p>
+                        <p className="mt-2 text-sm text-slate-600">
+                          Start a plan when you are ready.
+                        </p>
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      Your Today
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black">
+                      Where things stand
+                    </h2>
+
+                    {!orientationReady ? (
+                      <p className="mt-5 text-slate-600">
+                        Pulling together today&apos;s information.
+                      </p>
+                    ) : (
+                      <div className="mt-6 grid gap-3">
+                        <div className="rounded-2xl bg-emerald-50 p-5">
+                          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                            Wellness
+                          </p>
+                          <p className="mt-2 text-lg font-black">
+                            {latestWellness
+                              ? `You’re doing ${formatLabel(
+                                  latestWellness.overall_day,
+                                ).toLowerCase()} today.`
+                              : "You haven’t checked in today."}
                           </p>
 
-                          {currentGoal ? (
-                            <>
-                              <p className="mt-2 font-black">
-                                {currentGoal.title}
-                              </p>
-                              <p className="mt-2 text-sm font-semibold text-slate-700">
-                                {getGoalProgressLabel(currentGoal.progress_status)}
-                              </p>
-
-                              {currentGoal.next_step ? (
-                                <p className="mt-2 text-sm text-slate-600">
-                                  Next:{" "}
-                                  <span className="font-black">
-                                    {currentGoal.next_step}
-                                  </span>
-                                </p>
-                              ) : null}
-                            </>
-                          ) : (
-                            <p className="mt-2 text-sm text-slate-600">
-                              No active goal right now.
+                          {latestWellness?.chosen_next_step ? (
+                            <p className="mt-2 text-sm text-slate-700">
+                              You chose{" "}
+                              <span className="font-black">
+                                {formatLabel(
+                                  latestWellness.chosen_next_step,
+                                ).toLowerCase()}
+                              </span>{" "}
+                              as your next step.
                             </p>
-                          )}
+                          ) : null}
                         </div>
 
-                        <div className="rounded-2xl bg-slate-50 p-5">
-                          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                            Support
-                          </p>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="rounded-2xl bg-slate-50 p-5">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                              Goal
+                            </p>
 
-                          {unresolvedSupportRequest && supportMeaning ? (
-                            <>
-                              <p className="mt-2 font-black">
-                                {supportMeaning.title}
-                              </p>
+                            {currentGoal ? (
+                              <>
+                                <p className="mt-2 font-black">
+                                  {currentGoal.title}
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-slate-700">
+                                  {getGoalProgressLabel(currentGoal.progress_status)}
+                                </p>
+
+                                {currentGoal.next_step ? (
+                                  <p className="mt-2 text-sm text-slate-600">
+                                    Next:{" "}
+                                    <span className="font-black">
+                                      {currentGoal.next_step}
+                                    </span>
+                                  </p>
+                                ) : null}
+                              </>
+                            ) : (
                               <p className="mt-2 text-sm text-slate-600">
-                                {supportMeaning.detail}
+                                No active goal right now.
                               </p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="mt-2 font-black">
-                                Nothing is waiting on you
-                              </p>
-                              <p className="mt-2 text-sm text-slate-600">
-                                No current support request needs your attention.
-                              </p>
-                            </>
-                          )}
+                            )}
+                          </div>
+
+                          <div className="rounded-2xl bg-slate-50 p-5">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                              Support
+                            </p>
+
+                            {unresolvedSupportRequest && supportMeaning ? (
+                              <>
+                                <p className="mt-2 font-black">
+                                  {supportMeaning.title}
+                                </p>
+                                <p className="mt-2 text-sm text-slate-600">
+                                  {supportMeaning.detail}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="mt-2 font-black">
+                                  Nothing is waiting on you
+                                </p>
+                                <p className="mt-2 text-sm text-slate-600">
+                                  No current support request needs your attention.
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </section>
+                    )}
+                  </section>
 
-                <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
-                  <p className="text-xs font-black uppercase tracking-wide text-emerald-300">
-                    {primaryAction.eyebrow}
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black sm:text-3xl">
-                    {primaryAction.title}
-                  </h2>
-                  <p className="mt-3 max-w-2xl leading-7 text-slate-300">
-                    {primaryAction.detail}
-                  </p>
+                  <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-300">
+                      {primaryAction.eyebrow}
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+                      {primaryAction.title}
+                    </h2>
+                    <p className="mt-3 max-w-2xl leading-7 text-slate-300">
+                      {primaryAction.detail}
+                    </p>
 
-                  {primaryAction.action ? (
-                    <Link
-                      href={primaryAction.href}
-                      onClick={() => {
-                        if (primaryAction.visitArea) {
-                          markAreaVisited(primaryAction.visitArea);
-                        }
-                      }}
-                      className="mt-6 inline-block rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
-                    >
-                      {primaryAction.action}
-                    </Link>
-                  ) : null}
-                </section>
+                    {primaryAction.action ? (
+                      <Link
+                        href={primaryAction.href}
+                        onClick={() => {
+                          if (primaryAction.visitArea) {
+                            markAreaVisited(primaryAction.visitArea);
+                          }
+                        }}
+                        className="mt-6 inline-block rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
+                      >
+                        {primaryAction.action}
+                      </Link>
+                    ) : null}
+                  </section>
 
-                <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                    Moving forward
-                  </p>
+                  <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      Moving forward
+                    </p>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="font-black">
-                        {latestWellness
-                          ? "Checked in today"
-                          : "Check-in still open"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="font-black">
-                        {budgetReviewedThisSession
-                          ? "Budget reviewed this session"
-                          : activeBudgetPeriod
-                            ? "Current Budget active"
-                            : "No current Budget"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="font-black">
-                        {goalReviewedThisSession
-                          ? "Goal reviewed this session"
-                          : currentGoal
-                            ? "Goal in progress"
-                            : "No active goal"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <p className="font-black">
-                        {supportReviewedThisSession
-                          ? "Support reviewed this session"
-                          : unresolvedSupportRequest
-                            ? `Support ${formatLabel(
-                                unresolvedSupportRequest.status,
-                              ).toLowerCase()}`
-                            : "No open support request"}
-                      </p>
-                    </div>
-
-                    {activityReviewedThisSession ? (
-                      <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl bg-slate-50 p-4">
                         <p className="font-black">
-                          Financial Activity reviewed this session
+                          {latestWellness
+                            ? "Checked in today"
+                            : "Check-in still open"}
                         </p>
                       </div>
-                    ) : null}
-                  </div>
-                </section>
-              </>
+
+                      <div className="rounded-2xl bg-slate-50 p-4">
+                        <p className="font-black">
+                          {budgetReviewedThisSession
+                            ? "Budget reviewed this session"
+                            : activeBudgetPeriod
+                              ? "Current Budget active"
+                              : "No current Budget"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-slate-50 p-4">
+                        <p className="font-black">
+                          {goalReviewedThisSession
+                            ? "Goal reviewed this session"
+                            : currentGoal
+                              ? "Goal in progress"
+                              : "No active goal"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-slate-50 p-4">
+                        <p className="font-black">
+                          {supportReviewedThisSession
+                            ? "Support reviewed this session"
+                            : unresolvedSupportRequest
+                              ? `Support ${formatLabel(
+                                  unresolvedSupportRequest.status,
+                                ).toLowerCase()}`
+                              : "No open support request"}
+                        </p>
+                      </div>
+
+                      {activityReviewedThisSession ? (
+                        <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+                          <p className="font-black">
+                            Financial Activity reviewed this session
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  </section>
+                </>
+              )
             ) : null}
           </section>
         </section>
