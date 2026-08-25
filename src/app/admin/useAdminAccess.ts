@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { THRIVE_PERSONAL_STABILITY_WORKSPACE_ID } from "../useThriveAccountPurpose";
 
 type AdminAccessState =
   | "checking"
@@ -53,6 +54,7 @@ export function useAdminAccess() {
       const { data, error } = await supabase
         .from("workspace_members")
         .select("id, workspace_id, user_id, member_role, status")
+        .eq("workspace_id", THRIVE_PERSONAL_STABILITY_WORKSPACE_ID)
         .eq("user_id", user.id)
         .eq("status", "active")
         .in("member_role", ["admin", "support"])
