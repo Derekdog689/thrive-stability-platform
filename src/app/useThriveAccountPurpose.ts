@@ -26,23 +26,24 @@ export function useThriveAccountPurpose() {
     setErrorMessage("");
 
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    if (userError) {
+    if (sessionError) {
       setEmail(null);
       setPurpose("error");
-      setErrorMessage(userError.message);
+      setErrorMessage(sessionError.message);
       return;
     }
 
-    if (!user) {
+    if (!session?.user) {
       setEmail(null);
       setPurpose("signed-out");
       return;
     }
 
+    const user = session.user;
     setEmail(user.email ?? null);
 
     const [membershipResult, personResult] = await Promise.all([
