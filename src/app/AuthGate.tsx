@@ -1,61 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useThriveAccountPurpose } from "./useThriveAccountPurpose";
 
 type AuthGateProps = {
   children: React.ReactNode;
 };
 
-type GateState = "checking" | "signed-in" | "signed-out";
-
 export default function AuthGate({ children }: AuthGateProps) {
-  const [gateState, setGateState] = useState<GateState>("checking");
-  const [email, setEmail] = useState<string | null>(null);
+  const router = useRouter();
+  const { purpose, email, errorMessage } = useThriveAccountPurpose();
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadSession() {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (error || !data.session?.user) {
-        setGateState("signed-out");
-        setEmail(null);
-        return;
-      }
-
-      setGateState("signed-in");
-      setEmail(data.session.user.email ?? null);
+    if (purpose === "admin") {
+      router.replace("/admin");
+      return;
     }
 
-    loadSession();
+    if (purpose === "support") {
+      router.replace("/admin/support");
+    }
+  }, [purpose, router]);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        setGateState("signed-out");
-        setEmail(null);
-        return;
-      }
-
-      setGateState("signed-in");
-      setEmail(session.user.email ?? null);
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  if (gateState === "checking") {
+  if (["checking", "admin", "support"].includes(purpose)) {
     return (
       <main className="min-h-screen bg-[#eef4ef] px-6 py-6 text-slate-950">
         <section className="mx-auto flex min-h-[80vh] max-w-3xl items-center justify-center">
@@ -65,7 +34,7 @@ export default function AuthGate({ children }: AuthGateProps) {
             </p>
             <h1 className="mt-2 text-3xl font-black">Checking THRIVE access</h1>
             <p className="mt-3 text-slate-600">
-              Verifying your Supabase session before loading the dashboard.
+              Confirming the correct THRIVE experience for this account.
             </p>
           </div>
         </section>
@@ -73,7 +42,7 @@ export default function AuthGate({ children }: AuthGateProps) {
     );
   }
 
-  if (gateState === "signed-out") {
+  if (purpose === "signed-out") {
     return (
       <main className="min-h-screen bg-[#eef4ef] px-6 py-6 text-slate-950">
         <section className="mx-auto flex min-h-[80vh] max-w-3xl items-center justify-center">
@@ -83,19 +52,8 @@ export default function AuthGate({ children }: AuthGateProps) {
             </p>
             <h1 className="mt-2 text-3xl font-black">THRIVE access required</h1>
             <p className="mt-3 leading-7 text-slate-600">
-              This dashboard is protected. Please sign in before viewing THRIVE
-              workspace tools, mock dashboard content, or test workspace records.
+              This dashboard is protected. Please sign in before viewing THRIVE.
             </p>
-
-            <div className="mt-6 rounded-2xl bg-slate-950 p-4 text-sm leading-6 text-white">
-              <p className="font-bold uppercase text-emerald-300">
-                Security boundary
-              </p>
-              <p className="mt-2 text-slate-200">
-                THRIVE remains mock/test only. Do not enter real financial, trust,
-                beneficiary, clinical, recovery, or private case data.
-              </p>
-            </div>
 
             <Link
               href="/login"
@@ -103,6 +61,36 @@ export default function AuthGate({ children }: AuthGateProps) {
             >
               Go to login
             </Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (purpose === "unconfigured" || purpose === "conflict" || purpose === "error") {
+    const title =
+      purpose === "conflict"
+        ? "THRIVE access needs review"
+        : purpose === "unconfigured"
+          ? "THRIVE access is not configured"
+          : "THRIVE access could not be checked";
+
+    const detail =
+      purpose === "conflict"
+        ? "This account currently matches more than one THRIVE purpose. Access has been stopped so the account can be reviewed."
+        : purpose === "unconfigured"
+          ? "This signed-in account does not yet have an active THRIVE participant, support, or admin purpose."
+          : errorMessage || "The THRIVE access check could not be completed.";
+
+    return (
+      <main className="min-h-screen bg-[#eef4ef] px-6 py-6 text-slate-950">
+        <section className="mx-auto flex min-h-[80vh] max-w-3xl items-center justify-center">
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <p className="text-sm font-bold uppercase text-emerald-700">
+              DSS Enterprises
+            </p>
+            <h1 className="mt-2 text-3xl font-black">{title}</h1>
+            <p className="mt-3 leading-7 text-slate-600">{detail}</p>
           </div>
         </section>
       </main>
