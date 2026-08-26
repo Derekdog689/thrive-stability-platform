@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   WellnessDraft,
   WellnessWriteResult,
@@ -20,6 +20,7 @@ type WellnessCheckinPreviewProps = {
   hasSavedCheckin: boolean;
   actionMessage: string;
   writeEnabled: boolean;
+  focusOnMount?: boolean;
 };
 
 type ChoiceGroupProps = {
@@ -134,17 +135,17 @@ const steadyNextStepChoices: Choice[] = [
   {
     label: "Keep doing what is working",
     value: "review_today_plan",
-    description: "Take a quick look at what helped today and keep the part you want to carry forward.",
+    description: "Keep the part of today you want to carry forward.",
   },
   {
     label: "Use the momentum on one thing",
     value: "choose_one_task",
-    description: "Choose one thing you already care about and make a little progress on it.",
+    description: "Choose one thing you care about and make a little progress.",
   },
   {
     label: "Something else",
     value: "other",
-    description: "Choose this when you already know what feels right for you.",
+    description: "Choose this if you already know what feels right.",
   },
 ];
 
@@ -152,36 +153,33 @@ const supportNextStepChoices: Choice[] = [
   {
     label: "Give yourself a little space",
     value: "take_a_break",
-    description: "Step away for a few minutes, sit somewhere quieter, or give yourself a short reset.",
+    description: "Step away for a few minutes or give yourself a short reset.",
   },
   {
     label: "Take care of something basic first",
     value: "food_water_rest",
-    description: "Choose food, water, rest, medication as prescribed, a shower, or another basic need.",
+    description: "Food, water, rest, medication as prescribed, or another basic need.",
   },
   {
     label: "Talk it out with someone you trust",
     value: "contact_supportive_person",
-    description: "Call or message a friend, sponsor, family member, peer, or another person you choose.",
+    description: "Reach out to someone you choose.",
   },
   {
     label: "Ask THRIVE to help you think it through",
     value: "ask_for_help",
-    description: "Open Support for help thinking through a next step. This does not send a request by itself.",
+    description: "Open Support to think through a next step. This does not send a request by itself.",
   },
   {
     label: "I already know what I want to do",
     value: "other",
-    description: "Keep the choice in your own words instead of picking one of these suggestions.",
+    description: "Keep the choice in your own words.",
   },
 ];
 
 function formatValue(value: string | null | undefined) {
   if (!value) return "Not selected";
-
-  return value
-    .replaceAll("_", " ")
-    .replace(/^./, (letter) => letter.toUpperCase());
+  return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function getOverallAcknowledgement(overallDay: string) {
@@ -221,7 +219,11 @@ function getReflectionAcknowledgement(
   if (!value) return "";
 
   if (value === "not_sure") {
-    return `Got it. You are not sure how ${key === "support_needed" ? "support" : reflectionGroups.find((group) => group.key === key)?.label.toLowerCase()} feels right now.`;
+    const label =
+      key === "support_needed"
+        ? "support"
+        : reflectionGroups.find((group) => group.key === key)?.label.toLowerCase();
+    return `Got it. You are not sure how ${label} feels right now.`;
   }
 
   if (isSteadyReflection(key, value)) {
@@ -234,7 +236,6 @@ function getReflectionAcknowledgement(
       recovery_support: "Got it. Recovery support feels where you need it today.",
       support_needed: "Got it. You are not looking for extra support right now.",
     };
-
     return steadyCopy[key];
   }
 
@@ -276,7 +277,6 @@ function ChoiceGroup({
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {choices.map((choice) => {
           const selected = value === choice.value;
-
           return (
             <button
               key={choice.value}
@@ -311,10 +311,19 @@ export default function WellnessCheckinPreview({
   hasSavedCheckin,
   actionMessage,
   writeEnabled,
+  focusOnMount = false,
 }: WellnessCheckinPreviewProps) {
+  const sectionRef = useRef<HTMLElement>(null);
   const [step, setStep] = useState(1);
   const [reflectionKey, setReflectionKey] = useState<ReflectionKey | null>(null);
   const [wantsNextAction, setWantsNextAction] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!focusOnMount) return;
+    window.requestAnimationFrame(() => {
+      sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [focusOnMount]);
 
   const reflections = useMemo<Record<ReflectionKey, string>>(
     () => ({
@@ -340,17 +349,11 @@ export default function WellnessCheckinPreview({
   const overallDay = draft.overallDay ?? "";
   const nextStep = draft.chosenNextStep ?? "";
   const note = draft.participantNote;
-  const activeReflection = reflectionGroups.find(
-    (group) => group.key === reflectionKey,
-  );
+  const activeReflection = reflectionGroups.find((group) => group.key === reflectionKey);
   const activeReflectionValue = reflectionKey ? reflections[reflectionKey] : "";
   const reflectionAcknowledgement =
     reflectionKey && activeReflectionValue
-      ? getReflectionAcknowledgement(
-          reflectionKey,
-          activeReflectionValue,
-          overallDay,
-        )
+      ? getReflectionAcknowledgement(reflectionKey, activeReflectionValue, overallDay)
       : "";
   const useSteadyChoices =
     reflectionKey && activeReflectionValue
@@ -368,14 +371,18 @@ export default function WellnessCheckinPreview({
     [reflections, nextStep, note],
   );
 
+  function moveToStep(nextStep: number) {
+    setStep(Math.min(5, Math.max(1, nextStep)));
+    window.requestAnimationFrame(() => {
+      sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   function setDraftField<K extends keyof WellnessDraft>(
     field: K,
     value: WellnessDraft[K],
   ) {
-    onDraftChange({
-      ...draft,
-      [field]: value,
-    });
+    onDraftChange({ ...draft, [field]: value });
   }
 
   function setReflection(key: ReflectionKey, value: string) {
@@ -394,42 +401,41 @@ export default function WellnessCheckinPreview({
   }
 
   async function saveCheckin() {
-    const result = await (hasSavedCheckin
-      ? onUpdateCandidate()
-      : onSaveCandidate());
-
-    return result;
+    return hasSavedCheckin ? onUpdateCandidate() : onSaveCandidate();
   }
 
   return (
-    <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section
+      ref={sectionRef}
+      className="scroll-mt-3 rounded-3xl bg-white p-4 shadow-sm sm:p-8"
+    >
+      <div className="sticky top-3 z-20 -mx-1 flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:mx-0">
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
             Guided check-in
           </p>
-          <p className="mt-2 text-sm font-bold text-slate-500">
-            Step {step} of 5
-          </p>
+          <p className="mt-1 text-sm font-bold text-slate-500">Step {step} of 5</p>
         </div>
 
         {step > 1 ? (
           <button
             type="button"
-            onClick={() => setStep((current) => Math.max(1, current - 1))}
+            onClick={() => moveToStep(step - 1)}
             className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-50"
           >
             Back
           </button>
-        ) : null}
+        ) : (
+          <span className="text-xs font-black uppercase tracking-wide text-emerald-700">
+            Start here
+          </span>
+        )}
       </div>
 
       {step === 1 ? (
         <div className="mt-6">
           <h2 className="text-2xl font-black">How are things feeling today?</h2>
-          <p className="mt-3 leading-7 text-slate-600">
-            Start with the closest answer. There is no right way to answer this.
-          </p>
+          <p className="mt-2 text-slate-600">Choose the closest answer.</p>
 
           <div className="mt-6">
             <ChoiceGroup
@@ -447,16 +453,13 @@ export default function WellnessCheckinPreview({
           {overallDay ? (
             <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-emerald-950">
               <p className="font-black">{getOverallAcknowledgement(overallDay)}</p>
-              <p className="mt-1 text-sm leading-6 text-emerald-900">
-                Want to look at anything a little closer?
-              </p>
             </div>
           ) : null}
 
           <button
             type="button"
             disabled={!overallDay}
-            onClick={() => setStep(2)}
+            onClick={() => moveToStep(2)}
             className={`mt-6 rounded-2xl px-5 py-3 font-black ${
               overallDay
                 ? "bg-emerald-700 text-white hover:bg-emerald-800"
@@ -470,12 +473,8 @@ export default function WellnessCheckinPreview({
 
       {step === 2 ? (
         <div className="mt-6">
-          <h2 className="text-2xl font-black">
-            Is there anything you want to look at a little closer?
-          </h2>
-          <p className="mt-3 leading-7 text-slate-600">
-            Choose one or more areas that feel useful. You can look at several before moving on. Choosing an area does not mean something is wrong with it.
-          </p>
+          <h2 className="text-2xl font-black">Anything you want to look at closer?</h2>
+          <p className="mt-2 text-slate-600">Choose any area you want to notice.</p>
 
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
             {reflectionGroups.map((group) => {
@@ -521,9 +520,6 @@ export default function WellnessCheckinPreview({
               {reflectionAcknowledgement ? (
                 <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-emerald-950">
                   <p className="font-black">{reflectionAcknowledgement}</p>
-                  <p className="mt-1 text-sm leading-6 text-emerald-900">
-                    You can choose another area above, or continue when you are ready.
-                  </p>
                 </div>
               ) : null}
             </div>
@@ -532,7 +528,7 @@ export default function WellnessCheckinPreview({
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setStep(3)}
+              onClick={() => moveToStep(3)}
               className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
             >
               Continue when I&apos;m done
@@ -543,11 +539,11 @@ export default function WellnessCheckinPreview({
                 setReflectionKey(null);
                 setWantsNextAction(false);
                 setDraftField("chosenNextStep", null);
-                setStep(4);
+                moveToStep(4);
               }}
               className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700 hover:bg-slate-50"
             >
-              Nothing I want to look at right now
+              Nothing right now
             </button>
           </div>
         </div>
@@ -555,22 +551,14 @@ export default function WellnessCheckinPreview({
 
       {step === 3 ? (
         <div className="mt-6">
-          {reflectionAcknowledgement ? (
-            <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-950">
-              <p className="font-black">{reflectionAcknowledgement}</p>
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-950">
-              <p className="font-black">{getOverallAcknowledgement(overallDay)}</p>
-            </div>
-          )}
+          <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-950">
+            <p className="font-black">
+              {reflectionAcknowledgement || getOverallAcknowledgement(overallDay)}
+            </p>
+          </div>
 
-          <h2 className="mt-6 text-2xl font-black">
-            Do you want to do anything with that right now?
-          </h2>
-          <p className="mt-3 leading-7 text-slate-600">
-            You can choose a next step, simply remember what you noticed, or leave it here for now.
-          </p>
+          <h2 className="mt-6 text-2xl font-black">Do you want to do anything with that?</h2>
+          <p className="mt-2 text-slate-600">Choose a next step, or leave it here.</p>
 
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
             <button
@@ -584,9 +572,7 @@ export default function WellnessCheckinPreview({
               }`}
             >
               <p className="font-black text-slate-950">Yes, help me think about a next step</p>
-              <p className="mt-1 text-sm text-slate-500">
-                Show me a few choices that fit what I just said.
-              </p>
+              <p className="mt-1 text-sm text-slate-500">Show me a few choices.</p>
             </button>
 
             <button
@@ -603,9 +589,7 @@ export default function WellnessCheckinPreview({
               }`}
             >
               <p className="font-black text-slate-950">No, I just want to remember it</p>
-              <p className="mt-1 text-sm text-slate-500">
-                That is enough. You do not have to turn every check-in into a task.
-              </p>
+              <p className="mt-1 text-sm text-slate-500">That is enough.</p>
             </button>
           </div>
 
@@ -624,7 +608,7 @@ export default function WellnessCheckinPreview({
             <button
               type="button"
               disabled={wantsNextAction === null || (wantsNextAction === true && !nextStep)}
-              onClick={() => setStep(4)}
+              onClick={() => moveToStep(4)}
               className={`rounded-2xl px-5 py-3 font-black ${
                 wantsNextAction !== null && (wantsNextAction === false || nextStep)
                   ? "bg-emerald-700 text-white hover:bg-emerald-800"
@@ -639,7 +623,7 @@ export default function WellnessCheckinPreview({
               onClick={() => {
                 setWantsNextAction(false);
                 setDraftField("chosenNextStep", null);
-                setStep(4);
+                moveToStep(4);
               }}
               className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700 hover:bg-slate-50"
             >
@@ -652,9 +636,7 @@ export default function WellnessCheckinPreview({
       {step === 4 ? (
         <div className="mt-6">
           <h2 className="text-2xl font-black">Anything you want to remember?</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-500">
-            Optional. Put it in your own words, or leave this blank.
-          </p>
+          <p className="mt-2 text-sm text-slate-500">Optional.</p>
 
           <textarea
             id="wellness-note"
@@ -666,21 +648,19 @@ export default function WellnessCheckinPreview({
             placeholder="Optional note"
           />
 
-          <p className="mt-2 text-right text-xs font-semibold text-slate-400">
-            {note.length}/2000
-          </p>
+          <p className="mt-2 text-right text-xs font-semibold text-slate-400">{note.length}/2000</p>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setStep(5)}
+              onClick={() => moveToStep(5)}
               className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800"
             >
               Review check-in
             </button>
             <button
               type="button"
-              onClick={() => setStep(5)}
+              onClick={() => moveToStep(5)}
               className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700 hover:bg-slate-50"
             >
               Skip note
@@ -691,38 +671,25 @@ export default function WellnessCheckinPreview({
 
       {step === 5 ? (
         <div className="mt-6">
-          <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-            Your reflection
-          </p>
+          <p className="text-xs font-black uppercase tracking-wide text-amber-700">Your reflection</p>
           <h2 className="mt-2 text-2xl font-black">Does this sound like what you meant?</h2>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Overall day
-              </p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Overall day</p>
               <p className="mt-2 font-black">{formatValue(overallDay)}</p>
             </div>
-
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Next step
-              </p>
-              <p className="mt-2 font-black">
-                {nextStep ? formatValue(nextStep) : "No next step chosen"}
-              </p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Next step</p>
+              <p className="mt-2 font-black">{nextStep ? formatValue(nextStep) : "No next step chosen"}</p>
             </div>
           </div>
 
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            Optional details selected: {selectedCount}.
-          </p>
+          <p className="mt-4 text-sm text-slate-600">Optional details selected: {selectedCount}.</p>
 
           {note.trim() ? (
             <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Your note
-              </p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Your note</p>
               <p className="mt-2 leading-7 text-slate-700">{note}</p>
             </div>
           ) : null}
@@ -747,9 +714,7 @@ export default function WellnessCheckinPreview({
           </button>
 
           {actionMessage ? (
-            <p className="mt-3 text-sm font-bold text-amber-900">
-              {actionMessage}
-            </p>
+            <p className="mt-3 text-sm font-bold text-amber-900">{actionMessage}</p>
           ) : null}
         </div>
       ) : null}
