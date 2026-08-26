@@ -82,18 +82,13 @@ export default function WellnessPage() {
           </section>
 
           <section className="rounded-[2rem] border border-emerald-100 bg-white p-5 shadow-sm sm:p-8">
-            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">
-                  Your check-in
-                </p>
-                <h2 className="mt-2 text-2xl font-black sm:text-3xl">
-                  Start wherever feels closest.
-                </h2>
-              </div>
-              <p className="max-w-lg text-sm leading-6 text-slate-500">
-                Your answers stay connected to your Wellness record. Saving a check-in does not automatically contact Support.
+            <div className="mb-5">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">
+                Your check-in
               </p>
+              <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+                Start wherever feels closest.
+              </h2>
             </div>
 
             <div className="[&>div]:space-y-5">
