@@ -36,6 +36,15 @@ const statusLabels: Record<GoalProgressStatus, string> = {
   archived: "Archived",
 };
 
+const goalAreaVisuals: Record<string, { symbol: string; label: string }> = {
+  daily_stability: { symbol: "🏠", label: "Routine" },
+  money_budgeting: { symbol: "$", label: "Money" },
+  health_wellness: { symbol: "♥", label: "Health" },
+  relationships_support: { symbol: "👥", label: "Support" },
+  work_education: { symbol: "💼", label: "Work" },
+  personal_growth: { symbol: "🌱", label: "Growth" },
+};
+
 function GoalsBottomNav() {
   const items = [
     { href: "/", label: "Today", icon: "⌂" },
@@ -472,18 +481,21 @@ export default function GoalsCandidatePage() {
                   {step === 1 ? (
                     <div className="mt-6">
                       <h2 className="font-serif text-3xl font-semibold">What do you want to work on?</h2>
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        {goalAreas.map((area) => (
-                          <button
-                            key={area.id}
-                            type="button"
-                            onClick={() => chooseArea(area.id)}
-                            className="rounded-2xl border border-slate-200 bg-white p-5 text-left transition hover:border-emerald-300 hover:bg-emerald-50/50"
-                          >
-                            <span className="font-black">{area.label}</span>
-                            <span className="mt-2 block text-sm leading-6 text-slate-600">{area.description}</span>
-                          </button>
-                        ))}
+                      <div className="mt-5 grid grid-cols-2 gap-3">
+                        {goalAreas.map((area) => {
+                          const visual = goalAreaVisuals[area.id] ?? { symbol: "•", label: area.label };
+                          return (
+                            <button
+                              key={area.id}
+                              type="button"
+                              onClick={() => chooseArea(area.id)}
+                              className="flex min-h-32 flex-col items-center justify-center rounded-[1.75rem] border border-slate-200 bg-white p-4 text-center transition hover:border-emerald-300 hover:bg-emerald-50/50"
+                            >
+                              <span className="text-3xl leading-none">{visual.symbol}</span>
+                              <span className="mt-3 text-base font-black text-slate-950">{visual.label}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   ) : null}
