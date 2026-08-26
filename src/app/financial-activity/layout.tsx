@@ -98,6 +98,7 @@ export default function FinancialActivityLayout({ children }: { children: ReactN
           box-shadow: 0 10px 30px rgba(15, 23, 42, .055) !important;
         }
 
+        /* Add activity stays available, but Recent Activity is the primary story. */
         .financial-activity-participant main > section > section > section:nth-of-type(1) {
           order: 2;
         }
@@ -106,69 +107,120 @@ export default function FinancialActivityLayout({ children }: { children: ReactN
           order: 1;
         }
 
+        /* The participant boundary remains present without becoming a full visual panel. */
         .financial-activity-participant main > section > section > section:nth-of-type(3) {
           order: 3;
-          padding: .85rem 1rem !important;
-          background: #f7f3e9 !important;
-          color: #334155 !important;
+          padding: .7rem .9rem !important;
+          border: 1px solid rgba(148, 163, 184, .18) !important;
+          background: rgba(255,255,255,.48) !important;
+          color: #475569 !important;
+          box-shadow: none !important;
         }
 
         .financial-activity-participant main > section > section > section:nth-of-type(3) p:first-child {
-          color: #166052 !important;
+          color: #47665f !important;
+          font-size: .72rem !important;
         }
 
         .financial-activity-participant main > section > section > section:nth-of-type(3) p:last-child {
-          margin-top: .35rem !important;
-          color: #64748b !important;
-          font-size: .75rem !important;
-          line-height: 1.35 !important;
+          display: none !important;
         }
 
+        /* Recent activity: compact ledger cards with the amount and source easy to scan. */
         .financial-activity-participant main > section > section > section:nth-of-type(2) > p:nth-of-type(2) {
-          margin-top: .35rem !important;
-          font-size: .78rem !important;
-          line-height: 1.4 !important;
+          margin-top: .25rem !important;
+          font-size: .75rem !important;
+          line-height: 1.35 !important;
+          color: #64748b !important;
         }
 
         .financial-activity-participant main > section > section > section:nth-of-type(2) > div {
-          margin-top: .8rem !important;
+          margin-top: .75rem !important;
           display: grid !important;
-          gap: .65rem !important;
+          gap: .6rem !important;
         }
 
         .financial-activity-participant main > section > section > section:nth-of-type(2) article {
-          padding: .9rem !important;
-          border-radius: 1.25rem !important;
+          padding: .85rem !important;
+          border-radius: 1.2rem !important;
           border-color: #e2ebe6 !important;
           background: #fff !important;
+          box-shadow: 0 5px 16px rgba(15, 23, 42, .035) !important;
         }
 
         .financial-activity-participant main > section > section > section:nth-of-type(2) article > div:first-child {
-          gap: .45rem !important;
+          gap: .4rem !important;
         }
 
         .financial-activity-participant main > section > section > section:nth-of-type(2) article > div:first-child > p:last-child {
-          font-size: 1.05rem !important;
+          font-size: 1.08rem !important;
+          line-height: 1.1 !important;
+        }
+
+        .financial-activity-participant main > section > section > section:nth-of-type(2) article .mt-3 {
+          margin-top: .55rem !important;
         }
 
         .financial-activity-participant main > section > section > section:nth-of-type(2) article .mt-4 {
-          margin-top: .65rem !important;
+          margin-top: .6rem !important;
         }
 
+        /* Add activity: human first, plumbing second. */
         .financial-activity-participant main > section > section > section:nth-of-type(1) h2 {
-          font-size: 1.15rem !important;
+          margin-top: .35rem !important;
+          font-size: 0 !important;
           line-height: 1.2 !important;
         }
 
+        .financial-activity-participant main > section > section > section:nth-of-type(1) h2::after {
+          content: "Add something that happened.";
+          display: block;
+          font-size: 1.15rem;
+          font-weight: 900;
+          color: #0f172a;
+        }
+
         .financial-activity-participant main > section > section > section:nth-of-type(1) > div > div > p:last-of-type {
-          margin-top: .45rem !important;
-          font-size: .78rem !important;
+          margin-top: .35rem !important;
+          max-width: 34rem !important;
+          font-size: 0 !important;
           line-height: 1.4 !important;
+        }
+
+        .financial-activity-participant main > section > section > section:nth-of-type(1) > div > div > p:last-of-type::after {
+          content: "Cash, income, or another activity that is not already here.";
+          display: block;
+          font-size: .76rem;
+          line-height: 1.4;
+          color: #64748b;
         }
 
         .financial-activity-participant main > section > section > section:nth-of-type(1) button {
           padding-top: .65rem !important;
           padding-bottom: .65rem !important;
+        }
+
+        /* Manual entry stays obvious. CSV remains fully wired but becomes a secondary doorway. */
+        .financial-activity-participant main > section > section > section:nth-of-type(1) > div > div > div > button:first-child {
+          background: #047857 !important;
+          color: white !important;
+          border-color: #047857 !important;
+        }
+
+        .financial-activity-participant main > section > section > section:nth-of-type(1) > div > div > div > button:nth-child(2) {
+          background: transparent !important;
+          border-color: transparent !important;
+          color: #64748b !important;
+          box-shadow: none !important;
+          font-size: 0 !important;
+          padding-left: .6rem !important;
+          padding-right: .6rem !important;
+        }
+
+        .financial-activity-participant main > section > section > section:nth-of-type(1) > div > div > div > button:nth-child(2)::after {
+          content: "More ways to add";
+          font-size: .76rem;
+          font-weight: 800;
         }
 
         @media (max-width: 640px) {
@@ -183,7 +235,11 @@ export default function FinancialActivityLayout({ children }: { children: ReactN
           }
 
           .financial-activity-participant main > section > section > section:nth-of-type(2) article > div:first-child > div p:last-child {
-            font-size: .72rem !important;
+            font-size: .7rem !important;
+          }
+
+          .financial-activity-participant main > section > section > section:nth-of-type(1) > div > div > div {
+            align-items: center !important;
           }
         }
       `}</style>
