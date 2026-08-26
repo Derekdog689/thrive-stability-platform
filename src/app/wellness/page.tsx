@@ -96,7 +96,7 @@ export default function WellnessPage() {
               </p>
             </div>
 
-            <div className="[&>div>section:first-child]:hidden [&>div]:space-y-5">
+            <div className="[&>div]:space-y-5">
               <WellnessCheckinCandidate />
             </div>
           </section>
