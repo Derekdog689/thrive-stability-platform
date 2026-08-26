@@ -203,6 +203,9 @@ export default function ActiveBudgetEditor({
   }
 
   function beginLineEdit(line: BudgetLine) {
+    setAddingLine(false);
+    setNewLineDraft(emptyLineDraft);
+    setNewLineNotice("");
     setEditingLineId(line.id);
     setLineNotice("");
     setLineDraft({
@@ -449,23 +452,27 @@ export default function ActiveBudgetEditor({
           <div>
             <p className="text-sm font-black">Categories in this plan</p>
             <p className="mt-1 text-sm text-slate-500">
-              Change the name, type, or planned amount. Current activity remains visible
-              in the Budget summary below after you close the editor.
+              Tap one category to edit it.
             </p>
           </div>
 
-          <button
-            type="button"
-            disabled={working || addingLine}
-            onClick={() => {
-              setNewLineDraft(emptyLineDraft);
-              setNewLineNotice("");
-              setAddingLine(true);
-            }}
-            className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-900 disabled:opacity-60"
-          >
-            Add category
-          </button>
+          {!editingLineId ? (
+            <button
+              type="button"
+              disabled={working || addingLine}
+              onClick={() => {
+                setEditingLineId(null);
+                setLineDraft(emptyLineDraft);
+                setLineNotice("");
+                setNewLineDraft(emptyLineDraft);
+                setNewLineNotice("");
+                setAddingLine(true);
+              }}
+              className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-900 disabled:opacity-60"
+            >
+              Add category
+            </button>
+          ) : null}
         </div>
 
         {addingLine ? (
@@ -600,144 +607,146 @@ export default function ActiveBudgetEditor({
           </form>
         ) : null}
 
-        <div className="mt-4 divide-y divide-slate-100 rounded-3xl border border-slate-100">
-          {activeLines.map((line) => {
-            const isEditing = editingLineId === line.id;
+        {!addingLine ? (
+          <div className="mt-4 divide-y divide-slate-100 rounded-3xl border border-slate-100">
+            {activeLines.map((line) => {
+              const isEditing = editingLineId === line.id;
 
-            return (
-              <article key={line.id} className="p-4 sm:p-5">
-                {!isEditing ? (
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-black">{line.category_name}</h3>
-                      <p className="mt-1 text-sm capitalize text-slate-500">
-                        {line.category_type.replaceAll("_", " ")}
-                      </p>
-                    </div>
+              return (
+                <article key={line.id} className="p-4 sm:p-5">
+                  {!isEditing ? (
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <h3 className="font-black">{line.category_name}</h3>
+                        <p className="mt-1 text-sm capitalize text-slate-500">
+                          {line.category_type.replaceAll("_", " ")}
+                        </p>
+                      </div>
 
-                    <div className="flex flex-wrap items-center gap-4">
-                      <p className="font-black">{formatMoney(line.planned_amount)}</p>
-                      <button
-                        type="button"
-                        disabled={working}
-                        onClick={() => beginLineEdit(line)}
-                        className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-900 disabled:opacity-60"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <form
-                    onSubmit={(event) => handleSaveLine(event, line)}
-                    className="grid gap-4"
-                  >
-                    <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]">
-                      <label className="text-sm font-black">
-                        Category name
-                        <input
-                          type="text"
-                          required
+                      <div className="flex flex-wrap items-center gap-4">
+                        <p className="font-black">{formatMoney(line.planned_amount)}</p>
+                        <button
+                          type="button"
                           disabled={working}
-                          value={lineDraft.categoryName}
-                          onChange={(event) =>
-                            setLineDraft((current) => ({
-                              ...current,
-                              categoryName: event.target.value,
-                            }))
-                          }
-                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
-                        />
-                      </label>
-
-                      <label className="text-sm font-black">
-                        Type
-                        <select
-                          disabled={working}
-                          value={lineDraft.categoryType}
-                          onChange={(event) =>
-                            setLineDraft((current) => ({
-                              ...current,
-                              categoryType: event.target.value as BudgetCategoryType,
-                            }))
-                          }
-                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
+                          onClick={() => beginLineEdit(line)}
+                          className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-900 disabled:opacity-60"
                         >
-                          {categoryTypes.map((type) => (
-                            <option key={type.value} value={type.value}>
-                              {type.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className="text-sm font-black">
-                        Planned amount
-                        <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4">
-                          <span aria-hidden="true" className="font-black text-slate-500">
-                            $
-                          </span>
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={(event) => handleSaveLine(event, line)}
+                      className="grid gap-4"
+                    >
+                      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]">
+                        <label className="text-sm font-black">
+                          Category name
                           <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
+                            type="text"
                             required
                             disabled={working}
-                            value={lineDraft.plannedAmount}
+                            value={lineDraft.categoryName}
                             onChange={(event) =>
                               setLineDraft((current) => ({
                                 ...current,
-                                plannedAmount: event.target.value,
+                                categoryName: event.target.value,
                               }))
                             }
-                            className="w-full bg-transparent px-3 py-3 font-normal outline-none"
+                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
                           />
-                        </div>
-                      </label>
-                    </div>
+                        </label>
 
-                    {lineNotice ? (
-                      <p
-                        role="status"
-                        aria-live="polite"
-                        className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-700"
-                      >
-                        {lineNotice}
-                      </p>
-                    ) : null}
+                        <label className="text-sm font-black">
+                          Type
+                          <select
+                            disabled={working}
+                            value={lineDraft.categoryType}
+                            onChange={(event) =>
+                              setLineDraft((current) => ({
+                                ...current,
+                                categoryType: event.target.value as BudgetCategoryType,
+                              }))
+                            }
+                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
+                          >
+                            {categoryTypes.map((type) => (
+                              <option key={type.value} value={type.value}>
+                                {type.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
 
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        type="submit"
-                        disabled={working}
-                        className="rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
-                      >
-                        {working ? "Saving..." : "Save category"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={working}
-                        onClick={cancelLineEdit}
-                        className="rounded-2xl border border-slate-300 bg-white px-5 py-2 font-black text-slate-700 disabled:opacity-60"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        disabled={working}
-                        onClick={() => void handleDeactivate(line)}
-                        className="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-2 font-black text-amber-950 disabled:opacity-60"
-                      >
-                        Remove from active plan
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </article>
-            );
-          })}
-        </div>
+                        <label className="text-sm font-black">
+                          Planned amount
+                          <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4">
+                            <span aria-hidden="true" className="font-black text-slate-500">
+                              $
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
+                              required
+                              disabled={working}
+                              value={lineDraft.plannedAmount}
+                              onChange={(event) =>
+                                setLineDraft((current) => ({
+                                  ...current,
+                                  plannedAmount: event.target.value,
+                                }))
+                              }
+                              className="w-full bg-transparent px-3 py-3 font-normal outline-none"
+                            />
+                          </div>
+                        </label>
+                      </div>
+
+                      {lineNotice ? (
+                        <p
+                          role="status"
+                          aria-live="polite"
+                          className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-700"
+                        >
+                          {lineNotice}
+                        </p>
+                      ) : null}
+
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="submit"
+                          disabled={working}
+                          className="rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
+                        >
+                          {working ? "Saving..." : "Save category"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={working}
+                          onClick={cancelLineEdit}
+                          className="rounded-2xl border border-slate-300 bg-white px-5 py-2 font-black text-slate-700 disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={working}
+                          onClick={() => void handleDeactivate(line)}
+                          className="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-2 font-black text-amber-950 disabled:opacity-60"
+                        >
+                          Remove from active plan
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </section>
   );
