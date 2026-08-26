@@ -5,13 +5,16 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAdminAccess } from "../useAdminAccess";
 
+type SupportedPersonStatus = "active" | "paused" | "archived";
+type ParticipationStatus = "active" | "inactive" | "completed";
+
 type SupportedPersonRow = {
   id: string;
   workspace_id: string;
   auth_user_id: string | null;
   display_name: string;
   preferred_name: string | null;
-  status: "active" | "paused" | "archived" | string;
+  status: SupportedPersonStatus;
   external_reference: string | null;
   created_at: string;
 };
@@ -20,7 +23,7 @@ type ParticipationRow = {
   id: string;
   program_id: string;
   supported_person_id: string;
-  status: "active" | "inactive" | "completed" | string;
+  status: ParticipationStatus;
 };
 
 type ProgramRow = {
@@ -28,8 +31,19 @@ type ProgramRow = {
   program_name: string;
 };
 
+const personStatuses: SupportedPersonStatus[] = ["active", "paused", "archived"];
+const participationStatuses: ParticipationStatus[] = [
+  "active",
+  "inactive",
+  "completed",
+];
+
 function displayPersonName(person: SupportedPersonRow) {
   return person.preferred_name?.trim() || person.display_name;
+}
+
+function statusLabel(status: string) {
+  return status.charAt(0).toUpperCase() + status.slice(1).replaceAll("_", " ");
 }
 
 export default function SupportedPeopleAdminPage() {
@@ -44,7 +58,7 @@ export default function SupportedPeopleAdminPage() {
   const [participations, setParticipations] = useState<ParticipationRow[]>([]);
   const [program, setProgram] = useState<ProgramRow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [workingPersonId, setWorkingPersonId] = useState<string | null>(null);
+  const [workingAction, setWorkingAction] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [pageError, setPageError] = useState("");
   const [notice, setNotice] = useState("");
@@ -189,7 +203,8 @@ export default function SupportedPeopleAdminPage() {
     const existing = participationByPerson.get(person.id);
     if (existing) return;
 
-    setWorkingPersonId(person.id);
+    const actionKey = `activate:${person.id}`;
+    setWorkingAction(actionKey);
     setPageError("");
     setNotice("");
 
@@ -206,7 +221,7 @@ export default function SupportedPeopleAdminPage() {
       .select("id, program_id, supported_person_id, status")
       .single();
 
-    setWorkingPersonId(null);
+    setWorkingAction(null);
 
     if (result.error) {
       setPageError(result.error.message);
@@ -217,6 +232,108 @@ export default function SupportedPeopleAdminPage() {
     setParticipations((current) => [created, ...current]);
     setNotice(
       `${displayPersonName(person)} is now active in ${program.program_name}.`,
+    );
+  }
+
+  async function updatePersonStatus(
+    person: SupportedPersonRow,
+    nextStatus: SupportedPersonStatus,
+  ) {
+    if (!canAccessSystemAdmin || !membership || person.status === nextStatus) return;
+
+    if (
+      nextStatus === "archived" &&
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Archive ${displayPersonName(person)}? The record will remain in THRIVE and can be reactivated later. Program participation will not change automatically.`,
+      )
+    ) {
+      return;
+    }
+
+    const actionKey = `person:${person.id}`;
+    setWorkingAction(actionKey);
+    setPageError("");
+    setNotice("");
+
+    const result = await supabase
+      .from("supported_people")
+      .update({ status: nextStatus })
+      .eq("id", person.id)
+      .eq("workspace_id", membership.workspace_id)
+      .select(
+        "id, workspace_id, auth_user_id, display_name, preferred_name, status, external_reference, created_at",
+      )
+      .single();
+
+    setWorkingAction(null);
+
+    if (result.error) {
+      setPageError(result.error.message);
+      return;
+    }
+
+    const updated = result.data as SupportedPersonRow;
+    setPeople((current) =>
+      current.map((row) => (row.id === updated.id ? updated : row)),
+    );
+    setNotice(
+      `${displayPersonName(updated)} is now ${statusLabel(updated.status).toLowerCase()}. Program participation was not changed.`,
+    );
+  }
+
+  async function updateParticipationStatus(
+    person: SupportedPersonRow,
+    participation: ParticipationRow,
+    nextStatus: ParticipationStatus,
+  ) {
+    if (
+      !canAccessSystemAdmin ||
+      !membership ||
+      !program ||
+      participation.status === nextStatus
+    ) {
+      return;
+    }
+
+    if (
+      nextStatus === "completed" &&
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Mark ${displayPersonName(person)}'s ${program.program_name} participation complete? The supported-person record will not be archived automatically.`,
+      )
+    ) {
+      return;
+    }
+
+    const actionKey = `participation:${person.id}`;
+    setWorkingAction(actionKey);
+    setPageError("");
+    setNotice("");
+
+    const result = await supabase
+      .from("program_participants")
+      .update({ status: nextStatus })
+      .eq("id", participation.id)
+      .eq("workspace_id", membership.workspace_id)
+      .eq("program_id", program.id)
+      .eq("supported_person_id", person.id)
+      .select("id, program_id, supported_person_id, status")
+      .single();
+
+    setWorkingAction(null);
+
+    if (result.error) {
+      setPageError(result.error.message);
+      return;
+    }
+
+    const updated = result.data as ParticipationRow;
+    setParticipations((current) =>
+      current.map((row) => (row.id === updated.id ? updated : row)),
+    );
+    setNotice(
+      `${displayPersonName(person)}'s ${program.program_name} participation is now ${statusLabel(updated.status).toLowerCase()}. Supported-person status was not changed.`,
     );
   }
 
@@ -272,8 +389,8 @@ export default function SupportedPeopleAdminPage() {
           </p>
           <h1 className="mt-2 text-4xl font-black">Onboarding and participation</h1>
           <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-            Add the minimum identity information THRIVE needs, then activate the
-            person in the Stability Support program. App access is linked separately.
+            Add the minimum identity information THRIVE needs, activate program
+            participation, and review lifecycle status. App access is linked separately.
           </p>
           <Link
             href="/admin"
@@ -353,6 +470,14 @@ export default function SupportedPeopleAdminPage() {
           </form>
         </section>
 
+        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
+          <p className="text-sm font-black uppercase tracking-wide">Lifecycle rule</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6">
+            Supported-person status and program participation are separate facts.
+            THRIVE does not silently change one when Admin changes the other.
+          </p>
+        </section>
+
         <section>
           <div className="mb-4">
             <p className="text-sm font-bold uppercase text-emerald-700">Current people</p>
@@ -371,6 +496,10 @@ export default function SupportedPeopleAdminPage() {
               {people.map((person) => {
                 const participation = participationByPerson.get(person.id);
                 const needsActivation = !participation;
+                const personWorking = workingAction === `person:${person.id}`;
+                const participationWorking =
+                  workingAction === `participation:${person.id}` ||
+                  workingAction === `activate:${person.id}`;
 
                 return (
                   <article
@@ -425,15 +554,73 @@ export default function SupportedPeopleAdminPage() {
                     {needsActivation ? (
                       <button
                         type="button"
-                        disabled={workingPersonId === person.id || !program}
+                        disabled={participationWorking || !program}
                         onClick={() => void activateParticipation(person)}
                         className="mt-5 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        {workingPersonId === person.id
+                        {participationWorking
                           ? "Activating..."
                           : "Activate in THRIVE Stability Support"}
                       </button>
-                    ) : null}
+                    ) : (
+                      <div className="mt-6 grid gap-5 border-t border-slate-200 pt-5 lg:grid-cols-2">
+                        <section>
+                          <p className="text-sm font-black text-slate-900">Supported-person status</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">
+                            Controls whether this person is active, paused, or retained as archived identity history.
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {personStatuses.map((status) => (
+                              <button
+                                key={status}
+                                type="button"
+                                disabled={personWorking || person.status === status}
+                                onClick={() => void updatePersonStatus(person, status)}
+                                className={`rounded-xl border px-3 py-2 text-xs font-bold disabled:cursor-not-allowed ${
+                                  person.status === status
+                                    ? "border-emerald-700 bg-emerald-700 text-white opacity-100"
+                                    : "border-slate-300 bg-white text-slate-700 disabled:opacity-40"
+                                }`}
+                              >
+                                {statusLabel(status)}
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+
+                        <section>
+                          <p className="text-sm font-black text-slate-900">Program participation</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">
+                            Controls this person&apos;s participation in {program?.program_name ?? "THRIVE Stability Support"} only.
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {participationStatuses.map((status) => (
+                              <button
+                                key={status}
+                                type="button"
+                                disabled={
+                                  participationWorking || participation.status === status
+                                }
+                                onClick={() =>
+                                  void updateParticipationStatus(
+                                    person,
+                                    participation,
+                                    status,
+                                  )
+                                }
+                                className={`rounded-xl border px-3 py-2 text-xs font-bold disabled:cursor-not-allowed ${
+                                  participation.status === status
+                                    ? "border-emerald-700 bg-emerald-700 text-white opacity-100"
+                                    : "border-slate-300 bg-white text-slate-700 disabled:opacity-40"
+                                }`}
+                              >
+                                {statusLabel(status)}
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      </div>
+                    )}
                   </article>
                 );
               })}
