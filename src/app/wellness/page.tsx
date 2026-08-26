@@ -75,7 +75,7 @@ export default function WellnessPage() {
                   How are things today?
                 </h1>
                 <p className="mt-5 max-w-2xl text-lg leading-8 text-emerald-50/90 sm:text-xl">
-                  Check in with what feels true right now. There is no score and no perfect answer.
+                  Take a moment to check in.
                 </p>
               </div>
             </div>
