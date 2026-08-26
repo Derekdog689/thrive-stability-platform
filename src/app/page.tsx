@@ -17,6 +17,33 @@ const TODAY_SESSION_AREAS_KEY = "thrive:today:visited-areas";
 
 type TodaySessionArea = "goal" | "activity" | "budget" | "support";
 type OnboardingStage = "wellness" | "goal" | "budget" | "complete";
+type VoiceDestination = {
+  href: string;
+  label: string;
+  visitArea: TodaySessionArea | null;
+};
+
+type SpeechRecognitionAlternativeLike = {
+  transcript: string;
+};
+
+type SpeechRecognitionResultLike = {
+  0: SpeechRecognitionAlternativeLike;
+};
+
+type SpeechRecognitionEventLike = {
+  results: ArrayLike<SpeechRecognitionResultLike>;
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+};
 
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Not available";
@@ -63,6 +90,40 @@ function getTimeGreeting(hour: number) {
   if (hour < 12) return "Good morning,";
   if (hour < 17) return "Good afternoon,";
   return "Good evening,";
+}
+
+function getVoiceDestination(transcript: string): VoiceDestination | null {
+  const normalized = transcript.toLowerCase();
+
+  if (normalized.includes("wellness")) {
+    return { href: "/wellness", label: "Wellness", visitArea: null };
+  }
+
+  if (normalized.includes("goal")) {
+    return { href: "/goals", label: "Goals", visitArea: "goal" };
+  }
+
+  if (normalized.includes("money") || normalized.includes("budget")) {
+    return { href: "/budget", label: "Money", visitArea: "budget" };
+  }
+
+  if (normalized.includes("support")) {
+    return { href: "/support", label: "Support", visitArea: "support" };
+  }
+
+  if (
+    normalized.includes("activity") ||
+    normalized.includes("transaction") ||
+    normalized.includes("financial")
+  ) {
+    return {
+      href: "/financial-activity",
+      label: "Financial Activity",
+      visitArea: "activity",
+    };
+  }
+
+  return null;
 }
 
 function TodayBottomNav() {
@@ -132,9 +193,23 @@ export default function TodayPage() {
   const [onboardingSkippedThisSession, setOnboardingSkippedThisSession] = useState(false);
   const [timeGreeting, setTimeGreeting] = useState("Hello,");
   const [signingOut, setSigningOut] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceHeard, setVoiceHeard] = useState("");
+  const [voiceDestination, setVoiceDestination] = useState<VoiceDestination | null>(null);
+  const [voiceNotice, setVoiceNotice] = useState("");
 
   useEffect(() => {
     setTimeGreeting(getTimeGreeting(new Date().getHours()));
+
+    const speechWindow = window as typeof window & {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    };
+
+    setVoiceSupported(
+      Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition),
+    );
 
     try {
       const stored = window.sessionStorage.getItem(TODAY_SESSION_AREAS_KEY);
@@ -164,6 +239,54 @@ export default function TodayPage() {
     }
 
     window.location.assign("/login");
+  }
+
+  function startVoiceNavigation() {
+    const speechWindow = window as typeof window & {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    };
+    const Recognition =
+      speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+
+    setVoiceHeard("");
+    setVoiceDestination(null);
+    setVoiceNotice("");
+
+    if (!Recognition) {
+      setVoiceNotice("Voice input is not available in this browser.");
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim() ?? "";
+      const destination = getVoiceDestination(transcript);
+
+      setVoiceHeard(transcript);
+      setVoiceDestination(destination);
+      setVoiceNotice(
+        destination
+          ? "Choose the matching area when you are ready."
+          : "Say Wellness, Goals, Money, Support, or Activity.",
+      );
+    };
+
+    recognition.onerror = () => {
+      setVoiceListening(false);
+      setVoiceNotice("THRIVE could not hear that clearly. You can try again.");
+    };
+
+    recognition.onend = () => {
+      setVoiceListening(false);
+    };
+
+    setVoiceListening(true);
+    recognition.start();
   }
 
   function markAreaVisited(area: TodaySessionArea) {
@@ -488,7 +611,49 @@ export default function TodayPage() {
                         Look around instead
                       </button>
                     ) : null}
+
+                    <button
+                      type="button"
+                      onClick={startVoiceNavigation}
+                      disabled={voiceListening}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-5 py-3 font-black text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-60"
+                    >
+                      <span aria-hidden="true">🎙</span>
+                      {voiceListening ? "Listening..." : "Talk instead"}
+                    </button>
                   </div>
+
+                  {!voiceSupported && voiceNotice ? (
+                    <p className="mt-3 text-xs font-semibold text-slate-500">{voiceNotice}</p>
+                  ) : null}
+
+                  {voiceHeard || voiceNotice ? (
+                    <div className="mt-4 rounded-2xl bg-[#eef5f1] p-4">
+                      {voiceHeard ? (
+                        <p className="text-sm text-slate-700">
+                          <span className="font-black">I heard:</span> {voiceHeard}
+                        </p>
+                      ) : null}
+
+                      {voiceNotice ? (
+                        <p className="mt-1 text-xs leading-5 text-slate-500">{voiceNotice}</p>
+                      ) : null}
+
+                      {voiceDestination ? (
+                        <Link
+                          href={voiceDestination.href}
+                          onClick={() => {
+                            if (voiceDestination.visitArea) {
+                              markAreaVisited(voiceDestination.visitArea);
+                            }
+                          }}
+                          className="mt-3 inline-flex rounded-full bg-emerald-700 px-4 py-2 text-sm font-black text-white"
+                        >
+                          Open {voiceDestination.label}
+                        </Link>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="rounded-[2rem] bg-[#07352e]/88 p-5 ring-1 ring-white/10 backdrop-blur sm:p-6">
