@@ -85,10 +85,20 @@ export function useAdminAccess() {
     };
   }, []);
 
+  const canAccessSupportReview =
+    state === "allowed" &&
+    (membership?.member_role === "admin" || membership?.member_role === "support");
+
+  const canAccessSystemAdmin =
+    state === "allowed" && membership?.member_role === "admin";
+
   return {
     state,
     membership,
     errorMessage,
-    canAccessAdmin: state === "allowed",
+    canAccessSystemAdmin,
+    canAccessSupportReview,
+    // Compatibility alias for the existing Support review surface.
+    canAccessAdmin: canAccessSupportReview,
   };
 }
