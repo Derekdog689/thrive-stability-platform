@@ -8,7 +8,7 @@ export default function AdminHomePage() {
     state,
     membership,
     errorMessage,
-    canAccessAdmin,
+    canAccessSystemAdmin,
   } = useAdminAccess();
 
   if (state === "checking") {
@@ -21,7 +21,7 @@ export default function AdminHomePage() {
             </p>
 
             <h1 className="mt-2 text-3xl font-black">
-              Checking THRIVE Review access
+              Checking THRIVE Admin access
             </h1>
           </div>
         </section>
@@ -35,11 +35,11 @@ export default function AdminHomePage() {
         <section className="mx-auto max-w-5xl">
           <div className="rounded-3xl border border-amber-100 bg-white p-8 shadow-sm">
             <h1 className="text-3xl font-black">
-              THRIVE Review access required
+              THRIVE Admin access required
             </h1>
 
             <p className="mt-3 text-slate-600">
-              Sign in before using reviewer tools.
+              Sign in with an authorized admin account to continue.
             </p>
 
             <Link
@@ -60,7 +60,7 @@ export default function AdminHomePage() {
         <section className="mx-auto max-w-5xl">
           <div className="rounded-3xl border border-rose-100 bg-white p-8 shadow-sm">
             <h1 className="text-3xl font-black">
-              THRIVE Review could not load
+              THRIVE Admin could not load
             </h1>
 
             <p className="mt-3 text-slate-600">
@@ -72,23 +72,32 @@ export default function AdminHomePage() {
     );
   }
 
-  if (!canAccessAdmin || state === "denied") {
+  if (!canAccessSystemAdmin || state === "denied") {
     return (
       <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
         <section className="mx-auto max-w-5xl">
           <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
             <p className="text-sm font-bold uppercase text-slate-500">
-              THRIVE Review
+              THRIVE Admin
             </p>
 
             <h1 className="mt-2 text-3xl font-black">
-              Reviewer access not available
+              Admin access not available
             </h1>
 
             <p className="mt-3 max-w-2xl leading-7 text-slate-600">
-              This account does not have an active THRIVE reviewer or admin
-              workspace membership.
+              This account does not have an active THRIVE admin workspace
+              membership.
             </p>
+
+            {membership?.member_role === "support" ? (
+              <Link
+                href="/admin/support"
+                className="mt-6 inline-flex rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white"
+              >
+                Open THRIVE Review
+              </Link>
+            ) : null}
           </div>
         </section>
       </main>
@@ -104,12 +113,12 @@ export default function AdminHomePage() {
           </p>
 
           <h1 className="mt-2 text-4xl font-black">
-            THRIVE Review
+            THRIVE Admin
           </h1>
 
           <p className="mt-3 max-w-2xl leading-7 text-slate-600">
-            Review participant Support requests and complete authorized
-            THRIVE support actions.
+            Manage the THRIVE support environment, supported people, and
+            authorized administrative tools.
           </p>
 
           <p className="mt-4 text-sm font-semibold text-slate-500">
@@ -120,15 +129,34 @@ export default function AdminHomePage() {
         <div className="mt-6 grid gap-5 md:grid-cols-3">
           <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
             <p className="text-sm font-bold uppercase text-emerald-700">
-              Support
+              Supported people
             </p>
 
             <h2 className="mt-2 text-2xl font-black">
-              Support queue
+              Onboarding and participation
             </h2>
 
             <p className="mt-3 leading-6 text-slate-600">
-              Review participant requests and send participant-visible
+              Add and review supported people using the installed THRIVE
+              identity and participation model.
+            </p>
+
+            <p className="mt-5 text-sm font-bold text-slate-500">
+              Coming next
+            </p>
+          </section>
+
+          <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
+            <p className="text-sm font-bold uppercase text-emerald-700">
+              Support review
+            </p>
+
+            <h2 className="mt-2 text-2xl font-black">
+              THRIVE Review
+            </h2>
+
+            <p className="mt-3 leading-6 text-slate-600">
+              Review participant Support requests and send participant-visible
               responses.
             </p>
 
@@ -136,28 +164,27 @@ export default function AdminHomePage() {
               href="/admin/support"
               className="mt-5 inline-flex rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white"
             >
-              Open Support queue
+              Open THRIVE Review
             </Link>
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm font-bold uppercase text-slate-500">
-              Supported people
+              Resources
             </p>
 
             <h2 className="mt-2 text-2xl font-black">
-              Coming later
+              Admin maintenance
             </h2>
-          </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-bold uppercase text-slate-500">
-              Reports
+            <p className="mt-3 leading-6 text-slate-600">
+              Review and maintain canonical Resources after the Supported
+              People workflow is proven.
             </p>
 
-            <h2 className="mt-2 text-2xl font-black">
-              Coming later
-            </h2>
+            <p className="mt-5 text-sm font-bold text-slate-500">
+              Coming after Supported People
+            </p>
           </section>
         </div>
       </section>
