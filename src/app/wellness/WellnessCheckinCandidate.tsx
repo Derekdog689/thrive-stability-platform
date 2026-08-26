@@ -137,77 +137,61 @@ export default function WellnessCheckinCandidate() {
     };
   }, [recentCheckins]);
 
+  const focusMode = !todayCheckin || isCheckingInAgain;
+
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
-          Today&apos;s check-in
-        </p>
-
-        {loading ? (
-          <p className="mt-3 leading-7 text-emerald-950">
-            Loading your Wellness information.
+      {!focusMode ? (
+        <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
+            Today&apos;s check-in
           </p>
-        ) : errorMessage ? (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-white p-4">
-            <p className="font-black text-rose-900">
-              Your Wellness information could not be loaded
+
+          {loading ? (
+            <p className="mt-3 leading-7 text-emerald-950">
+              Loading your Wellness information.
             </p>
-            <p className="mt-2 text-sm leading-6 text-rose-800">
-              {errorMessage}
+          ) : errorMessage ? (
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-white p-4">
+              <p className="font-black text-rose-900">
+                Your Wellness information could not be loaded
+              </p>
+              <p className="mt-2 text-sm leading-6 text-rose-800">{errorMessage}</p>
+            </div>
+          ) : !participant ? (
+            <p className="mt-3 leading-7 text-emerald-950">
+              No active THRIVE participant record is available for this sign-in.
             </p>
-          </div>
-        ) : !participant ? (
-          <p className="mt-3 leading-7 text-emerald-950">
-            No active THRIVE participant record is available for this sign-in.
-          </p>
-        ) : !participation ? (
-          <p className="mt-3 leading-7 text-emerald-950">
-            No active THRIVE program is available for this check-in.
-          </p>
-        ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                For
-              </p>
-              <p className="mt-2 font-black text-slate-950">
-                {participantName}
-              </p>
+          ) : !participation ? (
+            <p className="mt-3 leading-7 text-emerald-950">
+              No active THRIVE program is available for this check-in.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-white p-4">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-500">For</p>
+                <p className="mt-2 font-black text-slate-950">{participantName}</p>
+              </div>
+              <div className="rounded-2xl bg-white p-4">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Date</p>
+                <p className="mt-2 font-black text-slate-950">{today}</p>
+              </div>
+              <div className="rounded-2xl bg-white p-4">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Saving</p>
+                <p className="mt-2 font-black text-slate-950">
+                  {writeEnabled ? "Available for controlled testing" : "Not available yet"}
+                </p>
+              </div>
             </div>
+          )}
+        </section>
+      ) : null}
 
-            <div className="rounded-2xl bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Date
-              </p>
-              <p className="mt-2 font-black text-slate-950">{today}</p>
-            </div>
-
-            <div className="rounded-2xl bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Saving
-              </p>
-              <p className="mt-2 font-black text-slate-950">
-                {writeEnabled
-                  ? "Available for controlled testing"
-                  : "Not available yet"}
-              </p>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {todayCheckin ? (
+      {todayCheckin && !focusMode && !justSaved ? (
         <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-            Today&apos;s saved check-in
-          </p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">
-            Your reflection for today
-          </h2>
-          <p className="mt-3 leading-7 text-slate-600">
-            This is the active check-in currently saved for today.
-          </p>
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Today&apos;s saved check-in</p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">Your reflection for today</h2>
+          <p className="mt-3 leading-7 text-slate-600">This is the active check-in currently saved for today.</p>
 
           <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="rounded-2xl bg-slate-50 p-4">
@@ -230,12 +214,8 @@ export default function WellnessCheckinCandidate() {
 
           {todayCheckin.participant_note ? (
             <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50">
-              <summary className="cursor-pointer list-none p-4 text-xs font-black uppercase tracking-wide text-slate-600">
-                Read your note
-              </summary>
-              <p className="border-t border-slate-100 px-4 pb-4 pt-3 leading-7 text-slate-700">
-                {todayCheckin.participant_note}
-              </p>
+              <summary className="cursor-pointer list-none p-4 text-xs font-black uppercase tracking-wide text-slate-600">Read your note</summary>
+              <p className="border-t border-slate-100 px-4 pb-4 pt-3 leading-7 text-slate-700">{todayCheckin.participant_note}</p>
             </details>
           ) : null}
 
@@ -252,15 +232,12 @@ export default function WellnessCheckinCandidate() {
             >
               Check in again
             </button>
-
-            <p className="text-sm leading-6 text-slate-600">
-              A new check-in adds another reflection for today. It does not replace this one.
-            </p>
+            <p className="text-sm leading-6 text-slate-600">A new check-in adds another reflection for today. It does not replace this one.</p>
           </div>
         </section>
       ) : null}
 
-      {!todayCheckin || isCheckingInAgain ? (
+      {focusMode ? (
         <WellnessCheckinPreview
           draft={draft}
           onDraftChange={setDraft}
@@ -287,16 +264,14 @@ export default function WellnessCheckinCandidate() {
         </section>
       ) : null}
 
-      {recentCheckinDates.length > 0 ? (
+      {recentCheckinDates.length > 0 && !focusMode && !justSaved ? (
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-8">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Your reflection history</p>
               <h2 className="mt-2 text-2xl font-black text-slate-950">What you&apos;ve been noticing</h2>
             </div>
-            <p className="max-w-xl text-sm leading-6 text-slate-500">
-              A factual look at your saved check-ins from the last 7 days. You decide what, if anything, matters now.
-            </p>
+            <p className="max-w-xl text-sm leading-6 text-slate-500">A factual look at your saved check-ins from the last 7 days. You decide what, if anything, matters now.</p>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
@@ -318,9 +293,7 @@ export default function WellnessCheckinCandidate() {
               </div>
               <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                 {reflectionSummary.nextStepCounts.map(([label, count]) => (
-                  <span key={label} className="shrink-0 rounded-full bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800">
-                    {label} · {count}
-                  </span>
+                  <span key={label} className="shrink-0 rounded-full bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800">{label} · {count}</span>
                 ))}
               </div>
             </div>
@@ -337,10 +310,7 @@ export default function WellnessCheckinCandidate() {
               <div className="grid auto-cols-[86%] grid-flow-col gap-3 overflow-x-auto overscroll-x-contain pb-2 sm:auto-cols-[48%] lg:auto-cols-[42%]">
                 {recentCheckinDates.map((dateKey) => (
                   <article key={dateKey} className="snap-start rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                      {dateKey === today ? "Today" : dateKey}
-                    </p>
-
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">{dateKey === today ? "Today" : dateKey}</p>
                     <div className="mt-3 space-y-3">
                       {recentCheckinsByDate[dateKey].map((checkin) => {
                         const checkinTime = new Intl.DateTimeFormat("en-US", {
@@ -355,15 +325,8 @@ export default function WellnessCheckinCandidate() {
                               <p className="font-black text-slate-950">{checkinTime}</p>
                               <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-600">{formatValue(checkin.overall_day)}</span>
                             </div>
-
-                            {checkin.energy ? (
-                              <p className="mt-2 text-xs text-slate-500">Energy: {formatValue(checkin.energy)}</p>
-                            ) : null}
-
-                            {checkin.chosen_next_step ? (
-                              <p className="mt-2 text-sm font-bold text-slate-800">Next: {formatValue(checkin.chosen_next_step)}</p>
-                            ) : null}
-
+                            {checkin.energy ? <p className="mt-2 text-xs text-slate-500">Energy: {formatValue(checkin.energy)}</p> : null}
+                            {checkin.chosen_next_step ? <p className="mt-2 text-sm font-bold text-slate-800">Next: {formatValue(checkin.chosen_next_step)}</p> : null}
                             {checkin.participant_note ? (
                               <details className="mt-3">
                                 <summary className="cursor-pointer text-xs font-black text-emerald-800">Read note</summary>
@@ -386,9 +349,7 @@ export default function WellnessCheckinCandidate() {
         <section className="rounded-3xl border border-violet-200 bg-violet-50 p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-wide text-violet-700">Controlled test mode</p>
           <h2 className="mt-2 text-2xl font-black text-violet-950">Person D Wellness test</h2>
-          <p className="mt-3 leading-7 text-violet-900">
-            Saving is available only for the approved synthetic Person D test. Other identities remain read-only.
-          </p>
+          <p className="mt-3 leading-7 text-violet-900">Saving is available only for the approved synthetic Person D test. Other identities remain read-only.</p>
         </section>
       ) : null}
     </div>
