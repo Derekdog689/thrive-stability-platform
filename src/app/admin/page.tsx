@@ -1,15 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAdminAccess } from "./useAdminAccess";
 
 export default function AdminHomePage() {
+  const router = useRouter();
   const {
     state,
     membership,
     errorMessage,
     canAccessSystemAdmin,
   } = useAdminAccess();
+
+  useEffect(() => {
+    if (state === "allowed" && membership?.member_role === "support") {
+      router.replace("/admin/support");
+    }
+  }, [state, membership?.member_role, router]);
 
   if (state === "checking") {
     return (
@@ -72,6 +81,24 @@ export default function AdminHomePage() {
     );
   }
 
+  if (state === "allowed" && membership?.member_role === "support") {
+    return (
+      <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
+        <section className="mx-auto max-w-5xl">
+          <div className="rounded-3xl border border-emerald-100 bg-white p-8 shadow-sm">
+            <p className="text-sm font-bold uppercase text-emerald-700">
+              THRIVE Review
+            </p>
+
+            <h1 className="mt-2 text-3xl font-black">
+              Opening your Review workspace
+            </h1>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   if (!canAccessSystemAdmin || state === "denied") {
     return (
       <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
@@ -89,15 +116,6 @@ export default function AdminHomePage() {
               This account does not have an active THRIVE admin workspace
               membership.
             </p>
-
-            {membership?.member_role === "support" ? (
-              <Link
-                href="/admin/support"
-                className="mt-6 inline-flex rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white"
-              >
-                Open THRIVE Review
-              </Link>
-            ) : null}
           </div>
         </section>
       </main>
