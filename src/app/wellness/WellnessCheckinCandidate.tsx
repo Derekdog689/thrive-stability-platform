@@ -36,17 +36,12 @@ export default function WellnessCheckinCandidate() {
   const [justSaved, setJustSaved] = useState(false);
 
   const {
-    participant,
-    participation,
     recentCheckins,
     todayCheckin,
     today,
-    loading,
-    errorMessage,
     executeInsertCandidate,
     executeSameDayUpdate,
     writeEnabled,
-    clientPathTestEnabled,
   } = useWellnessCheckinCandidate();
 
   const savedDraft = useMemo<WellnessDraft>(() => {
@@ -97,9 +92,6 @@ export default function WellnessCheckinCandidate() {
     return result;
   }
 
-  const participantName =
-    participant?.preferred_name ?? participant?.display_name ?? "Participant";
-
   const recentCheckinsByDate = useMemo(() => {
     return recentCheckins.reduce<Record<string, typeof recentCheckins>>(
       (groups, checkin) => {
@@ -141,57 +133,10 @@ export default function WellnessCheckinCandidate() {
 
   return (
     <div className="space-y-6">
-      {!focusMode ? (
-        <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
-            Today&apos;s check-in
-          </p>
-
-          {loading ? (
-            <p className="mt-3 leading-7 text-emerald-950">
-              Loading your Wellness information.
-            </p>
-          ) : errorMessage ? (
-            <div className="mt-4 rounded-2xl border border-rose-200 bg-white p-4">
-              <p className="font-black text-rose-900">
-                Your Wellness information could not be loaded
-              </p>
-              <p className="mt-2 text-sm leading-6 text-rose-800">{errorMessage}</p>
-            </div>
-          ) : !participant ? (
-            <p className="mt-3 leading-7 text-emerald-950">
-              No active THRIVE participant record is available for this sign-in.
-            </p>
-          ) : !participation ? (
-            <p className="mt-3 leading-7 text-emerald-950">
-              No active THRIVE program is available for this check-in.
-            </p>
-          ) : (
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl bg-white p-4">
-                <p className="text-xs font-black uppercase tracking-wide text-slate-500">For</p>
-                <p className="mt-2 font-black text-slate-950">{participantName}</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4">
-                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Date</p>
-                <p className="mt-2 font-black text-slate-950">{today}</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4">
-                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Saving</p>
-                <p className="mt-2 font-black text-slate-950">
-                  {writeEnabled ? "Available for controlled testing" : "Not available yet"}
-                </p>
-              </div>
-            </div>
-          )}
-        </section>
-      ) : null}
-
       {todayCheckin && !focusMode && !justSaved ? (
         <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
           <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Today&apos;s saved check-in</p>
           <h2 className="mt-2 text-2xl font-black text-slate-950">Your reflection for today</h2>
-          <p className="mt-3 leading-7 text-slate-600">This is the active check-in currently saved for today.</p>
 
           <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="rounded-2xl bg-slate-50 p-4">
@@ -232,7 +177,7 @@ export default function WellnessCheckinCandidate() {
             >
               Check in again
             </button>
-            <p className="text-sm leading-6 text-slate-600">A new check-in adds another reflection for today. It does not replace this one.</p>
+            <p className="text-sm leading-6 text-slate-600">A new check-in adds another reflection for today.</p>
           </div>
         </section>
       ) : null}
@@ -246,6 +191,7 @@ export default function WellnessCheckinCandidate() {
           hasSavedCheckin={false}
           actionMessage={actionMessage}
           writeEnabled={writeEnabled}
+          focusOnMount={isCheckingInAgain}
         />
       ) : null}
 
@@ -342,14 +288,6 @@ export default function WellnessCheckinCandidate() {
               </div>
             </div>
           </details>
-        </section>
-      ) : null}
-
-      {clientPathTestEnabled ? (
-        <section className="rounded-3xl border border-violet-200 bg-violet-50 p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-wide text-violet-700">Controlled test mode</p>
-          <h2 className="mt-2 text-2xl font-black text-violet-950">Person D Wellness test</h2>
-          <p className="mt-3 leading-7 text-violet-900">Saving is available only for the approved synthetic Person D test. Other identities remain read-only.</p>
         </section>
       ) : null}
     </div>
