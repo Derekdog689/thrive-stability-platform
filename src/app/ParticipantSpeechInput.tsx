@@ -88,6 +88,7 @@ export default function ParticipantSpeechInput() {
 
     const Recognition = getRecognitionConstructor();
     if (!Recognition) return;
+    const RecognitionConstructor = Recognition;
 
     const buttons = new Set<HTMLButtonElement>();
 
@@ -108,7 +109,7 @@ export default function ParticipantSpeechInput() {
       button.addEventListener("click", () => {
         if (!field.isConnected || button.dataset.listening === "true") return;
 
-        recognition = new Recognition();
+        recognition = new RecognitionConstructor();
         recognition.lang = "en-US";
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
