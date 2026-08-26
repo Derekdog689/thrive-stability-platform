@@ -159,9 +159,12 @@ export default function AdminHomePage() {
               identity and participation model.
             </p>
 
-            <p className="mt-5 text-sm font-bold text-slate-500">
-              Coming next
-            </p>
+            <Link
+              href="/admin/supported-people"
+              className="mt-5 inline-flex rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white"
+            >
+              Open Supported People
+            </Link>
           </section>
 
           <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
