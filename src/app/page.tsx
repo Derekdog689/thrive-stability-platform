@@ -11,6 +11,7 @@ import {
   toNumber,
   useParticipantFinancial,
 } from "./useParticipantFinancial";
+import { supabase } from "@/lib/supabaseClient";
 
 const TODAY_SESSION_AREAS_KEY = "thrive:today:visited-areas";
 
@@ -56,6 +57,12 @@ function getSupportMeaning(status: string | null | undefined) {
     default:
       return { title: formatLabel(status), detail: "Your support activity is still open." };
   }
+}
+
+function getTimeGreeting(hour: number) {
+  if (hour < 12) return "Good morning,";
+  if (hour < 17) return "Good afternoon,";
+  return "Good evening,";
 }
 
 function TodayBottomNav() {
@@ -123,8 +130,12 @@ export default function TodayPage() {
 
   const [visitedAreas, setVisitedAreas] = useState<TodaySessionArea[]>([]);
   const [onboardingSkippedThisSession, setOnboardingSkippedThisSession] = useState(false);
+  const [timeGreeting, setTimeGreeting] = useState("Hello,");
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
+    setTimeGreeting(getTimeGreeting(new Date().getHours()));
+
     try {
       const stored = window.sessionStorage.getItem(TODAY_SESSION_AREAS_KEY);
       const parsed = stored ? JSON.parse(stored) : [];
@@ -139,6 +150,21 @@ export default function TodayPage() {
       setVisitedAreas([]);
     }
   }, []);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("THRIVE sign out failed:", error.message);
+      setSigningOut(false);
+      return;
+    }
+
+    window.location.assign("/login");
+  }
 
   function markAreaVisited(area: TodaySessionArea) {
     setVisitedAreas((current) => {
@@ -162,7 +188,9 @@ export default function TodayPage() {
 
   const activeBudgetPeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
   const activeBudgetLines = activeBudgetPeriod
-    ? budgetLines.filter((line) => line.budget_period_id === activeBudgetPeriod.id && line.is_active)
+    ? budgetLines.filter(
+        (line) => line.budget_period_id === activeBudgetPeriod.id && line.is_active,
+      )
     : [];
 
   const currentPeriodFinancialActivity = activeBudgetPeriod
@@ -192,8 +220,12 @@ export default function TodayPage() {
     null;
 
   const unresolvedSupportRequest =
-    requests.find((request) => !["completed", "withdrawn", "archived"].includes(request.status)) ?? null;
-  const supportMeaning = unresolvedSupportRequest ? getSupportMeaning(unresolvedSupportRequest.status) : null;
+    requests.find(
+      (request) => !["completed", "withdrawn", "archived"].includes(request.status),
+    ) ?? null;
+  const supportMeaning = unresolvedSupportRequest
+    ? getSupportMeaning(unresolvedSupportRequest.status)
+    : null;
   const supportNeedsParticipant = unresolvedSupportRequest?.status === "waiting_for_participant";
 
   const orientationReady =
@@ -220,10 +252,6 @@ export default function TodayPage() {
   const onboardingActive =
     onboardingReady && onboardingStage !== "complete" && !onboardingSkippedThisSession;
   const isFirstRun = onboardingReady && onboardingStage === "wellness";
-
-  const greetingTitle = isFirstRun
-    ? `Welcome to THRIVE, ${participantName}.`
-    : `Good to see you, ${participantName}.`;
   const greetingDetail = isFirstRun
     ? "Where would you like to begin?"
     : "What would you like to start with today?";
@@ -281,7 +309,8 @@ export default function TodayPage() {
       return {
         eyebrow: "A place to continue",
         title: "Want to make a simple money plan?",
-        detail: "Build your first Budget from what you expect to have coming in and where you want it to go.",
+        detail:
+          "Build your first Budget from what you expect to have coming in and where you want it to go.",
         href: "/budget",
         action: "Build my first Budget",
         visitArea: "budget" as TodaySessionArea,
@@ -354,9 +383,22 @@ export default function TodayPage() {
   })();
 
   const wellnessSignal = latestWellness ? "Check-in saved" : "Check-in open";
-  const goalSignal = currentGoal ? getGoalProgressLabel(currentGoal.progress_status) : "No active Goal";
+  const goalSignal = currentGoal
+    ? getGoalProgressLabel(currentGoal.progress_status)
+    : "No active Goal";
   const budgetSignal = activeBudgetPeriod ? "Plan active" : "No current plan";
   const supportSignal = supportMeaning?.title ?? "Nothing waiting";
+
+  const wellnessDetail = latestWellness?.chosen_next_step
+    ? `You chose: ${formatLabel(latestWellness.chosen_next_step)}`
+    : "Check in whenever you want.";
+  const goalDetail = currentGoal
+    ? currentGoal.title
+    : "Create one when something feels worth working toward.";
+  const budgetDetail = activeBudgetPeriod
+    ? `${formatMoney(budgetRemaining)} remaining in the current plan.`
+    : "Build a plan whenever you are ready.";
+  const supportDetail = supportMeaning?.detail ?? "Open Support whenever you want to connect.";
 
   const engagementNote = latestWellness && currentGoal
     ? "You checked in and have a Goal in motion. Nice work taking time for THRIVE today."
@@ -379,23 +421,34 @@ export default function TodayPage() {
             <div className="absolute bottom-[26%] left-[7%] right-[7%] h-24 rounded-[50%] bg-emerald-950/40 blur-xl" />
 
             <div className="relative flex min-h-[600px] flex-col p-5 sm:min-h-[640px] sm:p-8 lg:p-10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/12 text-lg font-black ring-1 ring-white/20 backdrop-blur">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/12 text-lg font-black ring-1 ring-white/20 backdrop-blur">
                     T
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100/80">DSS Enterprises</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100/80">DSS Enterprises</p>
                     <p className="text-sm font-black tracking-wide text-white">THRIVE</p>
                   </div>
                 </div>
-                <div className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-wide text-white/90 backdrop-blur">
-                  Today
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="hidden rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white/90 backdrop-blur sm:inline-flex">
+                    Today
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void handleSignOut()}
+                    disabled={signingOut}
+                    className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white/90 backdrop-blur transition hover:bg-white/15 disabled:opacity-60"
+                  >
+                    {signingOut ? "Signing out..." : "Log out"}
+                  </button>
                 </div>
               </div>
 
               <div className="mt-14 max-w-2xl sm:mt-16">
-                <p className="font-serif text-2xl text-amber-50/90 sm:text-3xl">Good morning,</p>
+                <p className="font-serif text-2xl text-amber-50/90 sm:text-3xl">{timeGreeting}</p>
                 <h1 className="mt-1 font-serif text-5xl font-semibold tracking-tight text-white sm:text-7xl">
                   {participantName}
                 </h1>
@@ -441,21 +494,25 @@ export default function TodayPage() {
                 <div className="rounded-[2rem] bg-[#07352e]/88 p-5 ring-1 ring-white/10 backdrop-blur sm:p-6">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">Right now</p>
                   <div className="mt-4 grid grid-cols-2 gap-3">
-                    <Link href="/wellness" className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 transition hover:bg-white/15">
+                    <Link href="/wellness" className="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 transition hover:bg-white/15 sm:p-4">
                       <span className="block text-[10px] font-black uppercase tracking-wide text-emerald-200">Wellness</span>
-                      <span className="mt-2 block text-sm font-black text-white">{wellnessSignal}</span>
+                      <span className="mt-1.5 block text-sm font-black text-white">{wellnessSignal}</span>
+                      <span className="mt-1.5 block text-[10px] leading-4 text-emerald-50/70">{wellnessDetail}</span>
                     </Link>
-                    <Link href="/goals" onClick={() => markAreaVisited("goal")} className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 transition hover:bg-white/15">
+                    <Link href="/goals" onClick={() => markAreaVisited("goal")} className="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 transition hover:bg-white/15 sm:p-4">
                       <span className="block text-[10px] font-black uppercase tracking-wide text-emerald-200">Goal</span>
-                      <span className="mt-2 block text-sm font-black text-white">{goalSignal}</span>
+                      <span className="mt-1.5 block text-sm font-black text-white">{goalSignal}</span>
+                      <span className="mt-1.5 block text-[10px] leading-4 text-emerald-50/70">{goalDetail}</span>
                     </Link>
-                    <Link href="/budget" onClick={() => markAreaVisited("budget")} className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 transition hover:bg-white/15">
+                    <Link href="/budget" onClick={() => markAreaVisited("budget")} className="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 transition hover:bg-white/15 sm:p-4">
                       <span className="block text-[10px] font-black uppercase tracking-wide text-emerald-200">Budget</span>
-                      <span className="mt-2 block text-sm font-black text-white">{budgetSignal}</span>
+                      <span className="mt-1.5 block text-sm font-black text-white">{budgetSignal}</span>
+                      <span className="mt-1.5 block text-[10px] leading-4 text-emerald-50/70">{budgetDetail}</span>
                     </Link>
-                    <Link href="/support" onClick={() => markAreaVisited("support")} className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 transition hover:bg-white/15">
+                    <Link href="/support" onClick={() => markAreaVisited("support")} className="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 transition hover:bg-white/15 sm:p-4">
                       <span className="block text-[10px] font-black uppercase tracking-wide text-emerald-200">Support</span>
-                      <span className="mt-2 block text-sm font-black text-white">{supportSignal}</span>
+                      <span className="mt-1.5 block text-sm font-black text-white">{supportSignal}</span>
+                      <span className="mt-1.5 block text-[10px] leading-4 text-emerald-50/70">{supportDetail}</span>
                     </Link>
                   </div>
                 </div>
@@ -471,48 +528,6 @@ export default function TodayPage() {
             <section className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-rose-950">
               <p className="font-black">Your Today information could not be loaded.</p>
               <p className="mt-2 text-sm">{errorMessage}</p>
-            </section>
-          ) : null}
-
-          {!loading && !errorMessage && orientationReady ? (
-            <section className="rounded-[2rem] border border-emerald-100 bg-white p-5 shadow-sm sm:p-8">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Your day at a glance</p>
-                  <h2 className="mt-2 text-2xl font-black">Here&apos;s where things stand.</h2>
-                </div>
-                <p className="max-w-lg text-sm leading-6 text-slate-500">Open any area when you want to see more.</p>
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
-                <Link href="/wellness" className="rounded-3xl bg-emerald-50 p-4 transition hover:bg-emerald-100/70 sm:p-5">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Wellness</p>
-                  <p className="mt-2 text-base font-black sm:text-xl">{wellnessSignal}</p>
-                  {latestWellness?.chosen_next_step ? (
-                    <p className="mt-2 text-xs leading-5 text-slate-600 sm:text-sm">You chose: {formatLabel(latestWellness.chosen_next_step)}</p>
-                  ) : (
-                    <p className="mt-2 text-xs leading-5 text-slate-600 sm:text-sm">Check in whenever you want.</p>
-                  )}
-                </Link>
-
-                <Link href="/goals" onClick={() => markAreaVisited("goal")} className="rounded-3xl bg-slate-50 p-4 transition hover:bg-slate-100 sm:p-5">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Goal</p>
-                  <p className="mt-2 text-base font-black sm:text-xl">{goalSignal}</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-600 sm:text-sm">{currentGoal ? currentGoal.title : "Create one when something feels worth working toward."}</p>
-                </Link>
-
-                <Link href="/budget" onClick={() => markAreaVisited("budget")} className="rounded-3xl bg-slate-50 p-4 transition hover:bg-slate-100 sm:p-5">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Budget</p>
-                  <p className="mt-2 text-base font-black sm:text-xl">{budgetSignal}</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-600 sm:text-sm">{activeBudgetPeriod ? `${formatMoney(budgetRemaining)} remaining in the current plan.` : "Build a plan whenever you are ready."}</p>
-                </Link>
-
-                <Link href="/support" onClick={() => markAreaVisited("support")} className="rounded-3xl bg-slate-50 p-4 transition hover:bg-slate-100 sm:p-5">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Support</p>
-                  <p className="mt-2 text-base font-black sm:text-xl">{supportSignal}</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-600 sm:text-sm">{supportMeaning?.detail ?? "Open Support whenever you want to connect."}</p>
-                </Link>
-              </div>
             </section>
           ) : null}
 
