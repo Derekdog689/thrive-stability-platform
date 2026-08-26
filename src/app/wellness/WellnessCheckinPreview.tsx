@@ -476,10 +476,11 @@ export default function WellnessCheckinPreview({
           <h2 className="text-2xl font-black">Anything you want to look at closer?</h2>
           <p className="mt-2 text-slate-600">Choose any area you want to notice.</p>
 
-          <div className="mt-6 grid gap-2 sm:grid-cols-2">
+          <div className="mt-6 grid grid-cols-2 gap-3">
             {reflectionGroups.map((group) => {
               const selected = reflectionKey === group.key;
               const hasValue = Boolean(reflections[group.key]);
+              const fullWidth = group.key === "support_needed";
 
               return (
                 <button
@@ -489,7 +490,9 @@ export default function WellnessCheckinPreview({
                     setReflectionKey(group.key);
                     setWantsNextAction(null);
                   }}
-                  className={`rounded-2xl border px-4 py-4 text-left transition ${
+                  className={`flex min-h-24 flex-col justify-center rounded-2xl border px-4 py-4 text-center transition ${
+                    fullWidth ? "col-span-2" : ""
+                  } ${
                     selected
                       ? "border-emerald-600 bg-emerald-100"
                       : hasValue
