@@ -209,53 +209,34 @@ export default function WellnessCheckinCandidate() {
             This is the active check-in currently saved for today.
           </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Overall day
-              </p>
-              <p className="mt-2 font-black text-slate-950">
-                {formatValue(todayCheckin.overall_day)}
-              </p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Overall day</p>
+              <p className="mt-2 font-black text-slate-950">{formatValue(todayCheckin.overall_day)}</p>
             </div>
-
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Energy
-              </p>
-              <p className="mt-2 font-black text-slate-950">
-                {formatValue(todayCheckin.energy)}
-              </p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Energy</p>
+              <p className="mt-2 font-black text-slate-950">{formatValue(todayCheckin.energy)}</p>
             </div>
-
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Next step
-              </p>
-              <p className="mt-2 font-black text-slate-950">
-                {formatValue(todayCheckin.chosen_next_step)}
-              </p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Next step</p>
+              <p className="mt-2 font-black text-slate-950">{formatValue(todayCheckin.chosen_next_step)}</p>
             </div>
-
             <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Status
-              </p>
-              <p className="mt-2 font-black text-slate-950">
-                {formatValue(todayCheckin.status)}
-              </p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Status</p>
+              <p className="mt-2 font-black text-slate-950">{formatValue(todayCheckin.status)}</p>
             </div>
           </div>
 
           {todayCheckin.participant_note ? (
-            <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Your note
-              </p>
-              <p className="mt-2 leading-7 text-slate-700">
+            <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50">
+              <summary className="cursor-pointer list-none p-4 text-xs font-black uppercase tracking-wide text-slate-600">
+                Read your note
+              </summary>
+              <p className="border-t border-slate-100 px-4 pb-4 pt-3 leading-7 text-slate-700">
                 {todayCheckin.participant_note}
               </p>
-            </div>
+            </details>
           ) : null}
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -293,119 +274,51 @@ export default function WellnessCheckinCandidate() {
 
       {justSaved ? (
         <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
-          <p className="text-xs font-black uppercase tracking-wide text-emerald-300">
-            Check-in saved
-          </p>
-          <h2 className="mt-2 text-2xl font-black sm:text-3xl">
-            What would be useful next?
-          </h2>
-          <p className="mt-3 max-w-2xl leading-7 text-slate-300">
-            You can keep going somewhere useful, or finish for now.
-          </p>
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-300">Check-in saved</p>
+          <h2 className="mt-2 text-2xl font-black sm:text-3xl">What would be useful next?</h2>
+          <p className="mt-3 max-w-2xl leading-7 text-slate-300">You can keep going somewhere useful, or finish for now.</p>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/goals"
-              className="rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300"
-            >
-              Continue a Goal
-            </Link>
-            <Link
-              href="/budget"
-              className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900"
-            >
-              Review money
-            </Link>
-            <Link
-              href="/support"
-              className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900"
-            >
-              Open Support
-            </Link>
-            <Link
-              href="/"
-              className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900"
-            >
-              Finish for now
-            </Link>
+            <Link href="/goals" className="rounded-2xl bg-emerald-400 px-5 py-3 font-black text-slate-950 hover:bg-emerald-300">Continue a Goal</Link>
+            <Link href="/budget" className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900">Review money</Link>
+            <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900">Open Support</Link>
+            <Link href="/" className="rounded-2xl border border-slate-700 px-5 py-3 font-black text-white hover:bg-slate-900">Finish for now</Link>
           </div>
         </section>
       ) : null}
 
       {recentCheckinDates.length > 0 ? (
-        <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-            Your reflection history
-          </p>
-
-          <h2 className="mt-2 text-2xl font-black text-slate-950">
-            What you&apos;ve been noticing
-          </h2>
-
-          <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-            This is a factual look at your saved check-ins from the last 7 days.
-            It does not score your week or decide what your answers mean.
-          </p>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
-                Days you checked in
-              </p>
-              <p className="mt-2 text-3xl font-black text-emerald-950">
-                {reflectionSummary.dayCount} of 7
-              </p>
-              <p className="mt-2 text-sm leading-6 text-emerald-900">
-                A day can include more than one reflection.
-              </p>
+        <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Your reflection history</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-950">What you&apos;ve been noticing</h2>
             </div>
-
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Saved reflections
-              </p>
-              <p className="mt-2 text-3xl font-black text-slate-950">
-                {reflectionSummary.reflectionCount}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Your own check-ins, kept together for reference.
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-slate-50 p-4 sm:col-span-2 lg:col-span-1">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-                What this is for
-              </p>
-              <p className="mt-2 font-black text-slate-950">
-                Remember what you chose to notice.
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                You decide whether any of it matters now.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-5">
-            <p className="font-black text-slate-950">About earlier check-ins</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Earlier Wellness versions recorded some detail fields as part of the form.
-              THRIVE does not treat those older fields as proof that you intentionally
-              chose those areas to focus on.
+            <p className="max-w-xl text-sm leading-6 text-slate-500">
+              A factual look at your saved check-ins from the last 7 days. You decide what, if anything, matters now.
             </p>
           </div>
 
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-emerald-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-wide text-emerald-800">Days checked in</p>
+              <p className="mt-2 text-2xl font-black text-emerald-950 sm:text-3xl">{reflectionSummary.dayCount} of 7</p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Reflections</p>
+              <p className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl">{reflectionSummary.reflectionCount}</p>
+            </div>
+          </div>
+
           {reflectionSummary.nextStepCounts.length > 0 ? (
-            <div className="mt-4 rounded-2xl border border-slate-100 p-5">
-              <p className="font-black text-slate-950">Next steps you chose</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                A reminder of choices you recorded, not a checklist you owe.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-black text-slate-950">Next steps you chose</p>
+                <p className="text-xs text-slate-500">Saved choices, not obligations</p>
+              </div>
+              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                 {reflectionSummary.nextStepCounts.map(([label, count]) => (
-                  <span
-                    key={label}
-                    className="rounded-full bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800"
-                  >
+                  <span key={label} className="shrink-0 rounded-full bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800">
                     {label} · {count}
                   </span>
                 ))}
@@ -413,64 +326,57 @@ export default function WellnessCheckinCandidate() {
             </div>
           ) : null}
 
-          <details className="mt-6 rounded-2xl border border-slate-200 bg-slate-50">
-            <summary className="cursor-pointer list-none p-5 font-black text-slate-950">
-              See your individual reflections
-              <span className="ml-2 text-sm font-normal text-slate-500">
-                ({reflectionSummary.reflectionCount})
-              </span>
+          <details className="mt-4 rounded-2xl border border-slate-200 bg-slate-50">
+            <summary className="cursor-pointer list-none p-4 font-black text-slate-950">
+              Browse individual reflections
+              <span className="ml-2 text-sm font-normal text-slate-500">({reflectionSummary.reflectionCount})</span>
             </summary>
 
-            <div className="space-y-6 border-t border-slate-200 p-5">
-              {recentCheckinDates.map((dateKey) => (
-                <div key={dateKey} className="space-y-3">
-                  <p className="text-sm font-black uppercase tracking-wide text-slate-500">
-                    {dateKey === today ? "Today" : dateKey}
-                  </p>
+            <div className="border-t border-slate-200 p-4">
+              <p className="mb-3 text-xs font-semibold text-slate-500 sm:hidden">Swipe sideways to look back.</p>
+              <div className="grid auto-cols-[86%] grid-flow-col gap-3 overflow-x-auto overscroll-x-contain pb-2 sm:auto-cols-[48%] lg:auto-cols-[42%]">
+                {recentCheckinDates.map((dateKey) => (
+                  <article key={dateKey} className="snap-start rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      {dateKey === today ? "Today" : dateKey}
+                    </p>
 
-                  <div className="space-y-3">
-                    {recentCheckinsByDate[dateKey].map((checkin) => {
-                      const checkinTime = new Intl.DateTimeFormat("en-US", {
-                        timeZone: "America/New_York",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      }).format(new Date(checkin.created_at));
+                    <div className="mt-3 space-y-3">
+                      {recentCheckinsByDate[dateKey].map((checkin) => {
+                        const checkinTime = new Intl.DateTimeFormat("en-US", {
+                          timeZone: "America/New_York",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        }).format(new Date(checkin.created_at));
 
-                      return (
-                        <div
-                          key={checkin.id}
-                          className="rounded-2xl border border-slate-100 bg-white p-4"
-                        >
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                            <p className="font-black text-slate-950">
-                              {checkinTime}
-                            </p>
+                        return (
+                          <div key={checkin.id} className="rounded-xl bg-slate-50 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-black text-slate-950">{checkinTime}</p>
+                              <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-600">{formatValue(checkin.overall_day)}</span>
+                            </div>
 
-                            <p className="text-sm text-slate-600">
-                              {formatValue(checkin.overall_day)}
-                              {checkin.energy
-                                ? ` · ${formatValue(checkin.energy)} energy`
-                                : ""}
-                            </p>
+                            {checkin.energy ? (
+                              <p className="mt-2 text-xs text-slate-500">Energy: {formatValue(checkin.energy)}</p>
+                            ) : null}
+
+                            {checkin.chosen_next_step ? (
+                              <p className="mt-2 text-sm font-bold text-slate-800">Next: {formatValue(checkin.chosen_next_step)}</p>
+                            ) : null}
+
+                            {checkin.participant_note ? (
+                              <details className="mt-3">
+                                <summary className="cursor-pointer text-xs font-black text-emerald-800">Read note</summary>
+                                <p className="mt-2 text-sm leading-6 text-slate-700">{checkin.participant_note}</p>
+                              </details>
+                            ) : null}
                           </div>
-
-                          {checkin.chosen_next_step ? (
-                            <p className="mt-2 text-sm font-bold text-slate-800">
-                              Next step: {formatValue(checkin.chosen_next_step)}
-                            </p>
-                          ) : null}
-
-                          {checkin.participant_note ? (
-                            <p className="mt-3 text-sm leading-6 text-slate-700">
-                              {checkin.participant_note}
-                            </p>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                        );
+                      })}
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </details>
         </section>
@@ -478,15 +384,10 @@ export default function WellnessCheckinCandidate() {
 
       {clientPathTestEnabled ? (
         <section className="rounded-3xl border border-violet-200 bg-violet-50 p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-wide text-violet-700">
-            Controlled test mode
-          </p>
-          <h2 className="mt-2 text-2xl font-black text-violet-950">
-            Person D Wellness test
-          </h2>
+          <p className="text-xs font-black uppercase tracking-wide text-violet-700">Controlled test mode</p>
+          <h2 className="mt-2 text-2xl font-black text-violet-950">Person D Wellness test</h2>
           <p className="mt-3 leading-7 text-violet-900">
-            Saving is available only for the approved synthetic Person D test.
-            Other identities remain read-only.
+            Saving is available only for the approved synthetic Person D test. Other identities remain read-only.
           </p>
         </section>
       ) : null}
