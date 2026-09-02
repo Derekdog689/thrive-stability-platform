@@ -1,90 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AuthGate from "./AuthGate";
 import { useParticipantGoals } from "./goals/useParticipantGoals";
 import { useParticipantSupport } from "./support/useParticipantSupport";
 import { useWellnessCheckinCandidate } from "./wellness/useWellnessCheckinCandidate";
-import {
-  formatMoney,
-  toNumber,
-  useParticipantFinancial,
-} from "./useParticipantFinancial";
+import { formatMoney, toNumber, useParticipantFinancial } from "./useParticipantFinancial";
 import { supabase } from "@/lib/supabaseClient";
-
-const TODAY_SESSION_AREAS_KEY = "thrive:today:visited-areas";
-
-type TodaySessionArea = "goal" | "activity" | "budget" | "support";
-type OnboardingStage = "wellness" | "goal" | "budget" | "complete";
-type VoiceDestination = {
-  href: string;
-  label: string;
-  visitArea: TodaySessionArea | null;
-};
-
-type SpeechRecognitionAlternativeLike = {
-  transcript: string;
-};
-
-type SpeechRecognitionResultLike = {
-  0: SpeechRecognitionAlternativeLike;
-};
-
-type SpeechRecognitionEventLike = {
-  results: ArrayLike<SpeechRecognitionResultLike>;
-};
-
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  start: () => void;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-};
-
-function formatLabel(value: string | null | undefined) {
-  if (!value) return "Not available";
-
-  return value
-    .replaceAll("_", " ")
-    .replace(/^./, (letter) => letter.toUpperCase());
-}
-
-function getGoalProgressLabel(value: string | null | undefined) {
-  switch (value) {
-    case "active":
-    case "in_progress":
-      return "In progress";
-    case "not_started":
-      return "Ready to start";
-    case "paused":
-      return "Paused";
-    case "completed":
-      return "Completed";
-    default:
-      return formatLabel(value);
-  }
-}
-
-function getSupportMeaning(status: string | null | undefined) {
-  switch (status) {
-    case "submitted":
-      return { title: "Request received", detail: "Nothing is needed from you right now." };
-    case "acknowledged":
-      return { title: "With the team", detail: "Nothing is needed from you right now." };
-    case "in_progress":
-      return { title: "In progress", detail: "Nothing is needed from you right now." };
-    case "waiting_for_participant":
-      return { title: "Response needed", detail: "Review your support request when you are ready." };
-    case "participant_reply":
-      return { title: "Response sent", detail: "The request is back with the team." };
-    default:
-      return { title: formatLabel(status), detail: "Your support activity is still open." };
-  }
-}
 
 function getTimeGreeting(hour: number) {
   if (hour < 12) return "Good morning,";
@@ -92,38 +15,9 @@ function getTimeGreeting(hour: number) {
   return "Good evening,";
 }
 
-function getVoiceDestination(transcript: string): VoiceDestination | null {
-  const normalized = transcript.toLowerCase();
-
-  if (normalized.includes("wellness")) {
-    return { href: "/wellness", label: "Wellness", visitArea: null };
-  }
-
-  if (normalized.includes("goal")) {
-    return { href: "/goals", label: "Goals", visitArea: "goal" };
-  }
-
-  if (normalized.includes("money") || normalized.includes("budget")) {
-    return { href: "/budget", label: "Money", visitArea: "budget" };
-  }
-
-  if (normalized.includes("support")) {
-    return { href: "/support", label: "Support", visitArea: "support" };
-  }
-
-  if (
-    normalized.includes("activity") ||
-    normalized.includes("transaction") ||
-    normalized.includes("financial")
-  ) {
-    return {
-      href: "/financial-activity",
-      label: "Financial Activity",
-      visitArea: "activity",
-    };
-  }
-
-  return null;
+function formatChoice(value: string | null | undefined) {
+  if (!value) return "Not recorded";
+  return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function TodayBottomNav() {
@@ -132,11 +26,11 @@ function TodayBottomNav() {
     { href: "/wellness", label: "Wellness", icon: "◌" },
     { href: "/goals", label: "Goals", icon: "◎" },
     { href: "/budget", label: "Money", icon: "$" },
-    { href: "/support", label: "Support", icon: "◯" },
+    { href: "/support", label: "Support", icon: "♡" },
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[1.75rem] border border-white/60 bg-white/90 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:bottom-5">
+    <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-2xl rounded-[1.75rem] border border-white/70 bg-white/92 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:bottom-5">
       <div className="grid grid-cols-5 gap-1">
         {items.map((item) => (
           <Link
@@ -165,8 +59,8 @@ export default function TodayPage() {
     financialActivity,
     budgetPeriods,
     budgetLines,
-    loading,
-    errorMessage,
+    loading: financialLoading,
+    errorMessage: financialErrorMessage,
   } = useParticipantFinancial();
 
   const {
@@ -189,125 +83,27 @@ export default function TodayPage() {
     errorMessage: supportErrorMessage,
   } = useParticipantSupport();
 
-  const [visitedAreas, setVisitedAreas] = useState<TodaySessionArea[]>([]);
-  const [onboardingSkippedThisSession, setOnboardingSkippedThisSession] = useState(false);
   const [timeGreeting, setTimeGreeting] = useState("Hello,");
+  const [showWhy, setShowWhy] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [doneForNow, setDoneForNow] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [voiceSupported, setVoiceSupported] = useState(false);
-  const [voiceListening, setVoiceListening] = useState(false);
-  const [voiceHeard, setVoiceHeard] = useState("");
-  const [voiceDestination, setVoiceDestination] = useState<VoiceDestination | null>(null);
-  const [voiceNotice, setVoiceNotice] = useState("");
 
   useEffect(() => {
     setTimeGreeting(getTimeGreeting(new Date().getHours()));
-
-    const speechWindow = window as typeof window & {
-      SpeechRecognition?: new () => SpeechRecognitionLike;
-      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-    };
-
-    setVoiceSupported(
-      Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition),
-    );
-
-    try {
-      const stored = window.sessionStorage.getItem(TODAY_SESSION_AREAS_KEY);
-      const parsed = stored ? JSON.parse(stored) : [];
-      const validAreas: TodaySessionArea[] = ["goal", "activity", "budget", "support"];
-
-      setVisitedAreas(
-        Array.isArray(parsed)
-          ? parsed.filter((area): area is TodaySessionArea => validAreas.includes(area as TodaySessionArea))
-          : [],
-      );
-    } catch {
-      setVisitedAreas([]);
-    }
   }, []);
 
   async function handleSignOut() {
     if (signingOut) return;
-
     setSigningOut(true);
     const { error } = await supabase.auth.signOut();
-
     if (error) {
       console.error("THRIVE sign out failed:", error.message);
       setSigningOut(false);
       return;
     }
-
     window.location.assign("/login");
   }
-
-  function startVoiceNavigation() {
-    const speechWindow = window as typeof window & {
-      SpeechRecognition?: new () => SpeechRecognitionLike;
-      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-    };
-    const Recognition =
-      speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
-
-    setVoiceHeard("");
-    setVoiceDestination(null);
-    setVoiceNotice("");
-
-    if (!Recognition) {
-      setVoiceNotice("Voice input is not available in this browser.");
-      return;
-    }
-
-    const recognition = new Recognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript?.trim() ?? "";
-      const destination = getVoiceDestination(transcript);
-
-      setVoiceHeard(transcript);
-      setVoiceDestination(destination);
-      setVoiceNotice(
-        destination
-          ? "Choose the matching area when you are ready."
-          : "Say Wellness, Goals, Money, Support, or Activity.",
-      );
-    };
-
-    recognition.onerror = () => {
-      setVoiceListening(false);
-      setVoiceNotice("THRIVE could not hear that clearly. You can try again.");
-    };
-
-    recognition.onend = () => {
-      setVoiceListening(false);
-    };
-
-    setVoiceListening(true);
-    recognition.start();
-  }
-
-  function markAreaVisited(area: TodaySessionArea) {
-    setVisitedAreas((current) => {
-      if (current.includes(area)) return current;
-      const next = [...current, area];
-
-      try {
-        window.sessionStorage.setItem(TODAY_SESSION_AREAS_KEY, JSON.stringify(next));
-      } catch {
-        // Session orientation is optional. Navigation must still work if storage is unavailable.
-      }
-
-      return next;
-    });
-  }
-
-  const goalReviewedThisSession = visitedAreas.includes("goal");
-  const activityReviewedThisSession = visitedAreas.includes("activity");
-  const budgetReviewedThisSession = visitedAreas.includes("budget");
-  const supportReviewedThisSession = visitedAreas.includes("support");
 
   const activeBudgetPeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
   const activeBudgetLines = activeBudgetPeriod
@@ -336,7 +132,6 @@ export default function TodayPage() {
     0,
   );
 
-  const latestWellness = todayCheckin ?? null;
   const currentGoal =
     activeGoals.find((goal) => goal.progress_status === "in_progress") ??
     activeGoals.find((goal) => goal.progress_status === "not_started") ??
@@ -346,415 +141,442 @@ export default function TodayPage() {
     requests.find(
       (request) => !["completed", "withdrawn", "archived"].includes(request.status),
     ) ?? null;
-  const supportMeaning = unresolvedSupportRequest
-    ? getSupportMeaning(unresolvedSupportRequest.status)
-    : null;
+
   const supportNeedsParticipant = unresolvedSupportRequest?.status === "waiting_for_participant";
+  const loading = financialLoading || wellnessLoading || goalsLoading || supportLoading;
+  const errorMessage =
+    financialErrorMessage || wellnessErrorMessage || goalsErrorMessage || supportErrorMessage;
 
-  const orientationReady =
-    !wellnessLoading &&
-    !goalsLoading &&
-    !supportLoading &&
-    !wellnessErrorMessage &&
-    !goalsErrorMessage &&
-    !supportErrorMessage;
+  const isNewParticipant =
+    !loading && recentCheckins.length === 0 && goals.length === 0 && budgetPeriods.length === 0;
 
-  const onboardingReady = !loading && !errorMessage && orientationReady;
-  const hasWellnessHistory = recentCheckins.length > 0;
-  const hasGoalHistory = goals.length > 0;
-  const hasBudgetHistory = budgetPeriods.length > 0;
+  const story = useMemo(() => {
+    if (isNewParticipant) {
+      return {
+        title: "You do not need to learn everything today.",
+        detail: "Start with one quick check-in. THRIVE can take it from there.",
+        icon: "✦",
+      };
+    }
 
-  const onboardingStage: OnboardingStage = !hasWellnessHistory
-    ? "wellness"
-    : !hasGoalHistory
-      ? "goal"
-      : !hasBudgetHistory
-        ? "budget"
-        : "complete";
-
-  const onboardingActive =
-    onboardingReady && onboardingStage !== "complete" && !onboardingSkippedThisSession;
-  const isFirstRun = onboardingReady && onboardingStage === "wellness";
-  const greetingDetail = isFirstRun
-    ? "Where would you like to begin?"
-    : "What would you like to start with today?";
-
-  const primaryAction = (() => {
     if (supportNeedsParticipant) {
       return {
-        eyebrow: "Needs your attention",
-        title: "Your Support request is waiting for you",
-        detail: "There is a Support request ready for your response.",
-        href: "/support",
-        action: "Review Support",
-        visitArea: "support" as TodaySessionArea,
+        title: "You already asked for help.",
+        detail: "Your Support request is waiting for your response.",
+        icon: "♡",
       };
     }
 
-    if (
-      latestWellness?.chosen_next_step === "ask_for_help" &&
-      !unresolvedSupportRequest &&
-      !supportReviewedThisSession
-    ) {
+    if (todayCheckin?.chosen_next_step === "ask_for_help") {
       return {
-        eyebrow: "You chose this next",
-        title: "Ask for help",
-        detail: "You chose asking for help as your next step today.",
-        href: "/support",
-        action: "Open Support",
-        visitArea: "support" as TodaySessionArea,
+        title: "You checked in and chose to ask for help.",
+        detail: unresolvedSupportRequest
+          ? "Your request is already open, so you do not need to start over."
+          : "THRIVE can take you straight to Support when you are ready.",
+        icon: "♡",
       };
     }
 
-    if (onboardingActive) {
-      if (onboardingStage === "wellness") {
-        return {
-          eyebrow: "A place to begin",
-          title: "How are things today?",
-          detail: "A quick Wellness check-in can be your first step.",
-          href: "/wellness",
-          action: "Start my check-in",
-          visitArea: null as TodaySessionArea | null,
-        };
-      }
-
-      if (onboardingStage === "goal") {
-        return {
-          eyebrow: "A place to continue",
-          title: "Is there something you want to work toward?",
-          detail: "Create a Goal and choose one first step.",
-          href: "/goals",
-          action: "Create my first Goal",
-          visitArea: "goal" as TodaySessionArea,
-        };
-      }
-
+    if (todayCheckin && currentGoal) {
       return {
-        eyebrow: "A place to continue",
-        title: "Want to make a simple money plan?",
-        detail:
-          "Build your first Budget from what you expect to have coming in and where you want it to go.",
-        href: "/budget",
-        action: "Build my first Budget",
-        visitArea: "budget" as TodaySessionArea,
+        title: "You already checked in and have something in progress.",
+        detail: `You said today feels ${formatChoice(todayCheckin.overall_day).toLowerCase()}. You do not need to work on everything at once.`,
+        icon: "✓",
       };
     }
 
-    if (!wellnessLoading && !wellnessErrorMessage && !latestWellness) {
+    if (todayCheckin) {
       return {
-        eyebrow: "Available today",
-        title: "How are things today?",
-        detail: "Your Wellness check-in is ready whenever you want it.",
-        href: "/wellness",
-        action: "Check in now",
-        visitArea: null as TodaySessionArea | null,
+        title: "Your check-in is saved.",
+        detail: `You said today feels ${formatChoice(todayCheckin.overall_day).toLowerCase()}. Nothing else has to happen right now.`,
+        icon: "✓",
       };
     }
 
-    if (currentGoal?.next_step && !goalReviewedThisSession) {
+    if (currentGoal) {
       return {
-        eyebrow: "Your next step",
-        title: currentGoal.next_step,
-        detail: `From your Goal: ${currentGoal.title}`,
-        href: "/goals",
-        action: "Open my Goal",
-        visitArea: "goal" as TodaySessionArea,
+        title: "You already have something moving.",
+        detail: "You can continue it, choose something else, or leave THRIVE alone for now.",
+        icon: "◎",
       };
     }
 
-    if (!activityReviewedThisSession && financialActivity.length > 0) {
+    if (activeBudgetPeriod) {
       return {
-        eyebrow: "Available to review",
-        title: "Your recent Financial Activity",
-        detail: "See what is already recorded for you.",
-        href: "/financial-activity",
-        action: "View activity",
-        visitArea: "activity" as TodaySessionArea,
-      };
-    }
-
-    if (activeBudgetPeriod && !budgetReviewedThisSession) {
-      return {
-        eyebrow: "Your current plan",
-        title: "Your Budget is active",
-        detail: "Open it whenever you want to see the plan.",
-        href: "/budget",
-        action: "Review Budget",
-        visitArea: "budget" as TodaySessionArea,
-      };
-    }
-
-    if (unresolvedSupportRequest && !supportReviewedThisSession) {
-      return {
-        eyebrow: "Support",
-        title: "Your Support request is still open",
-        detail: "Nothing is required from you right now.",
-        href: "/support",
-        action: "Review Support",
-        visitArea: "support" as TodaySessionArea,
+        title: "Your money plan is active.",
+        detail: "THRIVE can help you see where things stand without making you rebuild the plan.",
+        icon: "$",
       };
     }
 
     return {
-      eyebrow: "Today",
-      title: "Everything here is available when you want it",
-      detail: "Explore anything that feels useful, or finish for now.",
-      href: "/",
-      action: null,
-      visitArea: null as TodaySessionArea | null,
+      title: "Start wherever feels useful.",
+      detail: "A quick check-in is an easy place to begin.",
+      icon: "✦",
     };
-  })();
+  }, [
+    isNewParticipant,
+    supportNeedsParticipant,
+    todayCheckin,
+    unresolvedSupportRequest,
+    currentGoal,
+    activeBudgetPeriod,
+  ]);
 
-  const wellnessSignal = latestWellness ? "Check-in saved" : "Check-in open";
-  const goalSignal = currentGoal
-    ? getGoalProgressLabel(currentGoal.progress_status)
-    : "No active Goal";
-  const budgetSignal = activeBudgetPeriod ? "Plan active" : "No current plan";
-  const supportSignal = supportMeaning?.title ?? "Nothing waiting";
+  const primaryAction = useMemo(() => {
+    if (isNewParticipant) {
+      return {
+        eyebrow: "A simple place to begin",
+        title: "Check in",
+        detail: "One quick check-in gives THRIVE somewhere to start.",
+        href: "/wellness",
+        action: "Check in",
+        icon: "◌",
+      };
+    }
 
-  const wellnessDetail = latestWellness?.chosen_next_step
-    ? `You chose: ${formatLabel(latestWellness.chosen_next_step)}`
-    : "Check in whenever you want.";
-  const goalDetail = currentGoal
-    ? currentGoal.title
-    : "Create one when something feels worth working toward.";
-  const budgetDetail = activeBudgetPeriod
-    ? `${formatMoney(budgetRemaining)} remaining in the current plan.`
-    : "Build a plan whenever you are ready.";
-  const supportDetail = supportMeaning?.detail ?? "Open Support whenever you want to connect.";
+    if (supportNeedsParticipant) {
+      return {
+        eyebrow: "One thing that needs you",
+        title: "See your Support request",
+        detail: "There is a response waiting for you.",
+        href: "/support",
+        action: "See request",
+        icon: "♡",
+      };
+    }
 
-  const engagementNote = latestWellness && currentGoal
-    ? "You checked in and have a Goal in motion. Nice work taking time for THRIVE today."
-    : latestWellness
-      ? "You took time to check in today. That moment is saved here for you."
-      : currentGoal
-        ? "You have a Goal ready here whenever you want to pick it back up."
-        : "Nothing is overdue here. Explore something when it feels useful.";
+    if (todayCheckin?.chosen_next_step === "ask_for_help") {
+      return {
+        eyebrow: "One thing you chose",
+        title: "Ask for help",
+        detail: unresolvedSupportRequest
+          ? "Your request is already open."
+          : "Open Support without explaining everything again.",
+        href: "/support",
+        action: unresolvedSupportRequest ? "See request" : "Open Support",
+        icon: "♡",
+      };
+    }
+
+    if (currentGoal) {
+      return {
+        eyebrow: "One thing to keep moving",
+        title: currentGoal.title,
+        detail: currentGoal.next_step
+          ? `Next step: ${currentGoal.next_step}`
+          : "Open your Goal and choose what comes next.",
+        href: "/goals",
+        action: "Continue",
+        icon: "◎",
+      };
+    }
+
+    if (activeBudgetPeriod) {
+      return {
+        eyebrow: "One useful place to look",
+        title: "See where your money stands",
+        detail: "Your current plan is active.",
+        href: "/budget",
+        action: "See my money",
+        icon: "$",
+      };
+    }
+
+    return {
+      eyebrow: "One easy place to start",
+      title: "How are things today?",
+      detail: "A quick check-in can be enough for today.",
+      href: "/wellness",
+      action: "Check in",
+      icon: "◌",
+    };
+  }, [
+    isNewParticipant,
+    supportNeedsParticipant,
+    todayCheckin,
+    unresolvedSupportRequest,
+    currentGoal,
+    activeBudgetPeriod,
+  ]);
+
+  const statusItems = [
+    {
+      label: "Check-in",
+      value: todayCheckin ? "Saved" : "Open",
+      icon: todayCheckin ? "✓" : "◌",
+      className: "bg-emerald-50 text-emerald-950",
+    },
+    {
+      label: "Goal",
+      value: currentGoal ? "In progress" : "Open",
+      icon: "◎",
+      className: "bg-amber-50 text-amber-950",
+    },
+    {
+      label: "Budget",
+      value: activeBudgetPeriod ? "Active" : "Open",
+      icon: "$",
+      className: "bg-teal-50 text-teal-950",
+    },
+    {
+      label: "Support",
+      value: unresolvedSupportRequest ? "Received" : "Open",
+      icon: "♡",
+      className: "bg-violet-50 text-violet-950",
+    },
+  ];
+
+  const whyFacts = [
+    todayCheckin ? `Check-in: ${formatChoice(todayCheckin.overall_day)}` : null,
+    currentGoal ? `Goal: ${currentGoal.title}` : null,
+    activeBudgetPeriod ? "Budget: Active" : null,
+    unresolvedSupportRequest ? `Support: ${formatChoice(unresolvedSupportRequest.status)}` : null,
+  ].filter(Boolean) as string[];
+
+  if (loading) {
+    return (
+      <AuthGate>
+        <main className="min-h-screen bg-[#f4f7f2] px-4 py-10 text-slate-950">
+          <div className="mx-auto max-w-3xl rounded-[2rem] border border-emerald-100 bg-white p-8 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">THRIVE Today</p>
+            <h1 className="mt-3 text-3xl font-black">Getting your day ready...</h1>
+          </div>
+        </main>
+      </AuthGate>
+    );
+  }
 
   return (
     <AuthGate>
-      <main className="min-h-screen bg-[#e8f0eb] px-3 pb-28 pt-3 text-slate-950 sm:px-6 sm:pb-32 sm:pt-6">
-        <section className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
-          <section className="relative min-h-[600px] overflow-hidden rounded-[2.5rem] bg-[#073f32] text-white shadow-[0_28px_90px_rgba(6,55,42,0.3)] sm:min-h-[640px]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_22%,rgba(251,191,120,0.7),transparent_18%),radial-gradient(circle_at_60%_36%,rgba(246,198,134,0.28),transparent_24%),linear-gradient(155deg,#7f9c91_0%,#4f786b_24%,#1b5648_52%,#073f32_76%,#052d27_100%)]" />
-            <div className="absolute inset-x-0 bottom-0 h-[54%] bg-[linear-gradient(145deg,transparent_0%,transparent_22%,rgba(9,56,46,0.88)_23%,rgba(5,43,36,0.98)_47%,rgba(4,37,32,1)_100%)]" />
-            <div className="absolute -left-[12%] top-[24%] h-64 w-[70%] rotate-[-10deg] rounded-[50%] bg-slate-950/20 blur-sm" />
-            <div className="absolute -right-[14%] top-[34%] h-52 w-[58%] rotate-[8deg] rounded-[50%] bg-emerald-950/35 blur-sm" />
-            <div className="absolute inset-x-0 bottom-[31%] h-px bg-amber-100/20" />
-            <div className="absolute bottom-[26%] left-[7%] right-[7%] h-24 rounded-[50%] bg-emerald-950/40 blur-xl" />
+      <main className="min-h-screen bg-[linear-gradient(180deg,#f4f7f2_0%,#eef5ef_48%,#f8faf8_100%)] pb-32 text-slate-950">
+        <section className="mx-auto max-w-6xl px-3 pb-8 pt-3 sm:px-6 sm:pt-6">
+          <header className="relative overflow-hidden rounded-[2rem] border border-emerald-900/10 bg-[radial-gradient(circle_at_78%_18%,rgba(250,204,21,0.22),transparent_21%),linear-gradient(135deg,#eaf4e7_0%,#dcebdc_44%,#f8f3df_100%)] px-5 pb-6 pt-5 shadow-[0_18px_50px_rgba(20,83,45,0.08)] sm:px-8 sm:pb-8 sm:pt-7">
+            <div className="pointer-events-none absolute -right-14 top-20 h-48 w-48 rounded-full border-[28px] border-amber-200/25" />
+            <div className="pointer-events-none absolute -bottom-20 right-5 h-56 w-80 rotate-[-8deg] rounded-[50%] bg-emerald-200/35 blur-[1px]" />
+            <div className="pointer-events-none absolute -bottom-28 left-20 h-64 w-[32rem] rotate-[7deg] rounded-[50%] bg-emerald-900/8" />
 
-            <div className="relative flex min-h-[600px] flex-col p-5 sm:min-h-[640px] sm:p-8 lg:p-10">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/12 text-lg font-black ring-1 ring-white/20 backdrop-blur">
-                    T
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100/80">DSS Enterprises</p>
-                    <p className="text-sm font-black tracking-wide text-white">THRIVE</p>
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="hidden rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white/90 backdrop-blur sm:inline-flex">
-                    Today
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void handleSignOut()}
-                    disabled={signingOut}
-                    className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white/90 backdrop-blur transition hover:bg-white/15 disabled:opacity-60"
-                  >
-                    {signingOut ? "Signing out..." : "Log out"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-14 max-w-2xl sm:mt-16">
-                <p className="font-serif text-2xl text-amber-50/90 sm:text-3xl">{timeGreeting}</p>
-                <h1 className="mt-1 font-serif text-5xl font-semibold tracking-tight text-white sm:text-7xl">
-                  {participantName}
-                </h1>
-                <p className="mt-5 max-w-xl text-lg leading-8 text-emerald-50/90 sm:text-xl">
-                  {greetingDetail}
-                </p>
-              </div>
-
-              <div className="mt-auto grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-[2rem] bg-white/95 p-5 text-slate-950 shadow-2xl shadow-slate-950/20 backdrop-blur sm:p-7">
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">
-                    {primaryAction.eyebrow}
-                  </p>
-                  <h2 className="mt-3 text-2xl font-black sm:text-3xl">{primaryAction.title}</h2>
-                  <p className="mt-3 max-w-2xl leading-7 text-slate-600">{primaryAction.detail}</p>
-
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    {primaryAction.action ? (
-                      <Link
-                        href={primaryAction.href}
-                        onClick={() => {
-                          if (primaryAction.visitArea) markAreaVisited(primaryAction.visitArea);
-                        }}
-                        className="inline-flex items-center gap-3 rounded-full bg-[#d9905b] px-6 py-3 font-black text-white shadow-lg shadow-orange-950/15 transition hover:translate-x-0.5 hover:bg-[#c97f4d]"
-                      >
-                        {primaryAction.action}
-                        <span aria-hidden="true">→</span>
-                      </Link>
-                    ) : null}
-
-                    {onboardingActive ? (
-                      <button
-                        type="button"
-                        onClick={() => setOnboardingSkippedThisSession(true)}
-                        className="rounded-full border border-slate-200 bg-white px-5 py-3 font-black text-slate-700"
-                      >
-                        Look around instead
-                      </button>
-                    ) : null}
-
-                    <button
-                      type="button"
-                      onClick={startVoiceNavigation}
-                      disabled={voiceListening}
-                      className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-5 py-3 font-black text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-60"
-                    >
-                      <span aria-hidden="true">🎙</span>
-                      {voiceListening ? "Listening..." : "Talk instead"}
-                    </button>
-                  </div>
-
-                  {!voiceSupported && voiceNotice ? (
-                    <p className="mt-3 text-xs font-semibold text-slate-500">{voiceNotice}</p>
-                  ) : null}
-
-                  {voiceHeard || voiceNotice ? (
-                    <div className="mt-4 rounded-2xl bg-[#eef5f1] p-4">
-                      {voiceHeard ? (
-                        <p className="text-sm text-slate-700">
-                          <span className="font-black">I heard:</span> {voiceHeard}
-                        </p>
-                      ) : null}
-
-                      {voiceNotice ? (
-                        <p className="mt-1 text-xs leading-5 text-slate-500">{voiceNotice}</p>
-                      ) : null}
-
-                      {voiceDestination ? (
-                        <Link
-                          href={voiceDestination.href}
-                          onClick={() => {
-                            if (voiceDestination.visitArea) {
-                              markAreaVisited(voiceDestination.visitArea);
-                            }
-                          }}
-                          className="mt-3 inline-flex rounded-full bg-emerald-700 px-4 py-2 text-sm font-black text-white"
-                        >
-                          Open {voiceDestination.label}
-                        </Link>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="rounded-[2rem] bg-[#07352e]/88 p-5 ring-1 ring-white/10 backdrop-blur sm:p-6">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">Right now</p>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <Link href="/wellness" className="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 transition hover:bg-white/15 sm:p-4">
-                      <span className="block text-[10px] font-black uppercase tracking-wide text-emerald-200">Wellness</span>
-                      <span className="mt-1.5 block text-sm font-black text-white">{wellnessSignal}</span>
-                      <span className="mt-1.5 block text-[10px] leading-4 text-emerald-50/70">{wellnessDetail}</span>
-                    </Link>
-                    <Link href="/goals" onClick={() => markAreaVisited("goal")} className="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 transition hover:bg-white/15 sm:p-4">
-                      <span className="block text-[10px] font-black uppercase tracking-wide text-emerald-200">Goal</span>
-                      <span className="mt-1.5 block text-sm font-black text-white">{goalSignal}</span>
-                      <span className="mt-1.5 block text-[10px] leading-4 text-emerald-50/70">{goalDetail}</span>
-                    </Link>
-                    <Link href="/budget" onClick={() => markAreaVisited("budget")} className="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 transition hover:bg-white/15 sm:p-4">
-                      <span className="block text-[10px] font-black uppercase tracking-wide text-emerald-200">Budget</span>
-                      <span className="mt-1.5 block text-sm font-black text-white">{budgetSignal}</span>
-                      <span className="mt-1.5 block text-[10px] leading-4 text-emerald-50/70">{budgetDetail}</span>
-                    </Link>
-                    <Link href="/support" onClick={() => markAreaVisited("support")} className="rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/10 transition hover:bg-white/15 sm:p-4">
-                      <span className="block text-[10px] font-black uppercase tracking-wide text-emerald-200">Support</span>
-                      <span className="mt-1.5 block text-sm font-black text-white">{supportSignal}</span>
-                      <span className="mt-1.5 block text-[10px] leading-4 text-emerald-50/70">{supportDetail}</span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {loading ? (
-            <section className="rounded-[2rem] bg-white p-6 shadow-sm">Loading your Today.</section>
-          ) : null}
-
-          {!loading && errorMessage ? (
-            <section className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-rose-950">
-              <p className="font-black">Your Today information could not be loaded.</p>
-              <p className="mt-2 text-sm">{errorMessage}</p>
-            </section>
-          ) : null}
-
-          {!loading && !errorMessage && orientationReady ? (
-            <section className="rounded-[2rem] bg-gradient-to-br from-[#f4e9dd] to-[#eef4ef] p-6 shadow-sm sm:p-8">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#9b613f]">A little credit where it&apos;s due</p>
-              <p className="mt-3 max-w-3xl font-serif text-2xl leading-9 text-slate-900 sm:text-3xl">{engagementNote}</p>
-            </section>
-          ) : null}
-
-          {!loading && !errorMessage && !onboardingActive ? (
-            <section className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 p-5 sm:p-7">
+            <div className="relative z-10 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-800/15 bg-white/75 text-lg font-black text-emerald-900 shadow-sm">T</div>
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Your money</p>
-                  <h2 className="mt-2 text-2xl font-black">Current plan</h2>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href="/budget" onClick={() => markAreaVisited("budget")} className="rounded-full bg-emerald-700 px-5 py-3 font-black text-white">Review Budget</Link>
-                  <Link href="/financial-activity" onClick={() => markAreaVisited("activity")} className="rounded-full border border-slate-200 bg-white px-5 py-3 font-black text-slate-700">View Activity</Link>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-800">DSS Enterprises</p>
+                  <p className="text-sm font-black text-emerald-950">THRIVE</p>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="rounded-full border border-emerald-900/15 bg-white/70 px-4 py-2 text-xs font-black text-emerald-950 backdrop-blur hover:bg-white disabled:opacity-60"
+              >
+                {signingOut ? "Signing out" : "Log out"}
+              </button>
+            </div>
 
-              {activeBudgetPeriod ? (
-                <div className="grid grid-cols-3 gap-px bg-slate-100">
-                  <div className="bg-emerald-700 p-4 text-white sm:p-6">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-100">Remaining</p>
-                    <p className="mt-2 text-xl font-black sm:text-3xl">{formatMoney(budgetRemaining)}</p>
-                  </div>
-                  <div className="bg-white p-4 sm:p-6">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Received</p>
-                    <p className="mt-2 text-xl font-black sm:text-3xl">{formatMoney(receivedIncome)}</p>
-                    <p className="mt-1 hidden text-xs text-slate-500 sm:block">of {formatMoney(expectedIncome)}</p>
-                  </div>
-                  <div className="bg-white p-4 sm:p-6">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Money out</p>
-                    <p className="mt-2 text-xl font-black sm:text-3xl">{formatMoney(moneyOutThisPeriod)}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-6">
-                  <p className="font-black">No current Budget is open.</p>
-                  <p className="mt-2 text-sm text-slate-600">Start a plan when you are ready.</p>
-                </div>
-              )}
+            <div className="relative z-10 mt-8 max-w-3xl sm:mt-12">
+              <p className="font-serif text-2xl text-emerald-950 sm:text-3xl">{timeGreeting}</p>
+              <h1 className="font-serif text-5xl font-black tracking-tight text-emerald-950 sm:text-7xl">
+                {participantName || "there"}
+              </h1>
+              <p className="mt-4 text-xl font-black text-emerald-950 sm:text-2xl">
+                {isNewParticipant ? "Welcome to THRIVE." : "Here’s where you are today."}
+              </p>
+            </div>
+          </header>
+
+          {errorMessage ? (
+            <section role="alert" className="mt-4 rounded-3xl border border-rose-200 bg-rose-50 p-5 text-rose-950">
+              <p className="font-black">Some parts of Today could not be loaded.</p>
+              <p className="mt-1 text-sm">You can still use the navigation below.</p>
             </section>
           ) : null}
 
-          <section className="grid gap-3 sm:grid-cols-3">
-            <Link href="/my-program" className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-700">My Program</p>
-              <p className="mt-2 font-black text-slate-900">See your program information</p>
-            </Link>
-            <Link href="/resources" className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Resources</p>
-              <p className="mt-2 font-black text-slate-900">Explore available resources</p>
-            </Link>
-            <Link href="/financial-activity" onClick={() => markAreaVisited("activity")} className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Activity</p>
-              <p className="mt-2 font-black text-slate-900">Review Financial Activity</p>
-            </Link>
+          <section className="relative z-20 -mt-3 grid gap-3 sm:-mt-6 sm:px-6">
+            <article className="rounded-[1.75rem] border border-white/70 bg-white/95 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.10)] backdrop-blur sm:p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-2xl font-black text-emerald-900 ring-8 ring-emerald-50">
+                  {story.icon}
+                </div>
+                <div>
+                  <h2 className="text-xl font-black leading-tight sm:text-2xl">{story.title}</h2>
+                  <p className="mt-2 max-w-3xl text-base leading-6 text-slate-600">{story.detail}</p>
+                </div>
+              </div>
+            </article>
+
+            {!isNewParticipant ? (
+              <div className="grid grid-cols-2 gap-2 rounded-[1.5rem] border border-white/70 bg-white/88 p-2 shadow-sm backdrop-blur sm:grid-cols-4">
+                {statusItems.map((item) => (
+                  <div key={item.label} className={`rounded-2xl px-3 py-3 ${item.className}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-black">{item.icon}</span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[10px] font-black uppercase tracking-[0.12em] opacity-70">{item.label}</p>
+                        <p className="truncate text-sm font-black">{item.value}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {doneForNow ? (
+              <article className="rounded-[1.75rem] border border-emerald-100 bg-white p-6 shadow-sm">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">You’re all set</p>
+                <h2 className="mt-2 text-2xl font-black">That’s enough for now.</h2>
+                <p className="mt-2 text-slate-600">THRIVE will keep your place. Come back whenever it feels useful.</p>
+                <button
+                  type="button"
+                  onClick={() => setDoneForNow(false)}
+                  className="mt-5 rounded-2xl border border-slate-200 bg-white px-5 py-3 font-black text-slate-800"
+                >
+                  Keep looking
+                </button>
+              </article>
+            ) : (
+              <article className="overflow-hidden rounded-[1.9rem] border border-emerald-900/10 bg-[linear-gradient(135deg,#edf7e8_0%,#f8f6e7_100%)] shadow-[0_18px_45px_rgba(20,83,45,0.08)]">
+                <div className="relative p-5 sm:p-7">
+                  <div className="pointer-events-none absolute -right-10 -top-14 h-40 w-40 rounded-full bg-emerald-200/45" />
+                  <div className="relative z-10 flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/80 text-xl font-black text-emerald-900 shadow-sm">
+                      {primaryAction.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">{primaryAction.eyebrow}</p>
+                      <h2 className="mt-2 text-2xl font-black leading-tight text-emerald-950 sm:text-3xl">{primaryAction.title}</h2>
+                      <p className="mt-2 text-base leading-6 text-slate-600">{primaryAction.detail}</p>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={primaryAction.href}
+                    className="relative z-10 mt-6 flex min-h-14 w-full items-center justify-center rounded-2xl bg-emerald-700 px-5 py-4 text-center text-lg font-black text-white shadow-[0_10px_24px_rgba(4,120,87,0.25)] transition hover:bg-emerald-800"
+                  >
+                    {primaryAction.action}
+                    <span className="ml-2 text-xl">›</span>
+                  </Link>
+                </div>
+              </article>
+            )}
+
+            {!doneForNow ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOptions((current) => !current)}
+                  className="min-h-14 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-left font-black text-slate-800 shadow-sm"
+                >
+                  Show other options <span className="float-right">›</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDoneForNow(true)}
+                  className="min-h-14 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-left font-black text-slate-800 shadow-sm"
+                >
+                  Done for now <span className="float-right">›</span>
+                </button>
+              </div>
+            ) : null}
+
+            {showOptions && !doneForNow ? (
+              <section className="rounded-[1.75rem] border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Other ways THRIVE can help</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                  {[
+                    ["/wellness", "Check in"],
+                    ["/goals", "Goals"],
+                    ["/budget", "Money"],
+                    ["/resources", "Find resources"],
+                    ["/support", "Ask Support"],
+                  ].map(([href, label]) => (
+                    <Link key={href} href={href} className="rounded-2xl bg-slate-50 px-4 py-4 font-black text-slate-800 hover:bg-emerald-50 hover:text-emerald-950">
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowWhy((current) => !current)}
+                className="rounded-full px-4 py-2 text-sm font-black text-blue-700 hover:bg-blue-50"
+              >
+                Why am I seeing this?
+              </button>
+            </div>
+
+            {showWhy ? (
+              <section className="rounded-[1.75rem] border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-xl font-black">Why THRIVE showed this</h2>
+                  <button type="button" onClick={() => setShowWhy(false)} className="rounded-full border border-slate-200 px-3 py-1 text-sm font-black">Close</button>
+                </div>
+                <p className="mt-4 text-sm font-semibold text-slate-600">THRIVE used these saved items:</p>
+                <ul className="mt-3 space-y-2">
+                  {whyFacts.length > 0 ? (
+                    whyFacts.map((fact) => (
+                      <li key={fact} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800">{fact}</li>
+                    ))
+                  ) : (
+                    <li className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800">There is not much saved yet, so THRIVE is offering a simple place to start.</li>
+                  )}
+                </ul>
+                <p className="mt-4 text-sm leading-6 text-slate-600">These are starting points, not decisions about what you need.</p>
+              </section>
+            ) : null}
           </section>
+
+          {!isNewParticipant ? (
+            <section className="mt-6 grid gap-4 lg:grid-cols-2">
+              <article className="rounded-[1.75rem] border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Your money</p>
+                    <h2 className="mt-1 text-2xl font-black">Current plan</h2>
+                  </div>
+                  <Link href="/budget" className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-black text-white">See money</Link>
+                </div>
+                {activeBudgetPeriod ? (
+                  <div className="mt-5 grid grid-cols-3 gap-2">
+                    <div className="rounded-2xl bg-emerald-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Remaining</p>
+                      <p className="mt-1 text-xl font-black">{formatMoney(budgetRemaining)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Received</p>
+                      <p className="mt-1 text-xl font-black">{formatMoney(receivedIncome)}</p>
+                      <p className="mt-1 text-xs text-slate-500">of {formatMoney(expectedIncome)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-amber-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Money out</p>
+                      <p className="mt-1 text-xl font-black">{formatMoney(moneyOutThisPeriod)}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-slate-600">No active money plan right now.</p>
+                )}
+              </article>
+
+              <article className="rounded-[1.75rem] border border-amber-100 bg-[linear-gradient(135deg,#fffaf0_0%,#fffdf8_100%)] p-5 shadow-sm sm:p-6">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-700">A little credit where it’s due</p>
+                <h2 className="mt-2 text-2xl font-black">
+                  {recentCheckins.length > 1
+                    ? "You have been checking in."
+                    : todayCheckin
+                      ? "You checked in today."
+                      : "You showed up today."}
+                </h2>
+                <p className="mt-2 leading-6 text-slate-600">
+                  {currentGoal
+                    ? "You also have a Goal in motion. You can keep it moving or leave it alone for now."
+                    : "You do not need to create more work just because you opened THRIVE."}
+                </p>
+              </article>
+            </section>
+          ) : null}
         </section>
 
         <TodayBottomNav />
