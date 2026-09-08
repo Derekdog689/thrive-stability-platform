@@ -96,6 +96,20 @@ function formatMoneyShort(value: number) {
   });
 }
 
+function localDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function daysUntil(dateKey: string) {
+  const today = new Date(`${localDateKey()}T12:00:00`);
+  const target = new Date(`${dateKey}T12:00:00`);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
 function daySignal(value: string | null | undefined) {
   switch (value) {
     case "good":
@@ -197,6 +211,9 @@ export default function TodayPage() {
   const activeBudgetLines = activeBudgetPeriod
     ? budgetLines.filter((line) => line.budget_period_id === activeBudgetPeriod.id && line.is_active)
     : [];
+  const budgetExpired = activeBudgetPeriod ? activeBudgetPeriod.period_end < localDateKey() : false;
+  const budgetDaysLeft = activeBudgetPeriod ? daysUntil(activeBudgetPeriod.period_end) : null;
+  const budgetEndingSoon = !!activeBudgetPeriod && !budgetExpired && budgetDaysLeft !== null && budgetDaysLeft >= 0 && budgetDaysLeft <= 3;
 
   const currentPeriodFinancialActivity = activeBudgetPeriod
     ? financialActivity.filter(
@@ -258,6 +275,17 @@ export default function TodayPage() {
       };
     }
 
+    if (budgetExpired && activeBudgetPeriod) {
+      return {
+        label: "Needs you",
+        title: "Your Money plan ended",
+        detail: `It ended ${new Date(`${activeBudgetPeriod.period_end}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}. Review it, complete it, and start the next one.`,
+        href: "/budget",
+        action: "Finish Money plan",
+        icon: "money" as IconName,
+      };
+    }
+
     if (todayCheckin?.chosen_next_step === "ask_for_help") {
       return {
         label: "Up next",
@@ -282,9 +310,13 @@ export default function TodayPage() {
 
     if (activeBudgetPeriod) {
       return {
-        label: "Worth a look",
-        title: "Your money",
-        detail: `${formatMoneyShort(budgetRemaining)} remaining`,
+        label: budgetEndingSoon ? "Coming up" : "Worth a look",
+        title: budgetEndingSoon ? "Money plan ending soon" : "Your money",
+        detail: budgetEndingSoon
+          ? budgetDaysLeft === 0
+            ? "Your Money plan ends today."
+            : `Your Money plan ends in ${budgetDaysLeft} day${budgetDaysLeft === 1 ? "" : "s"}.`
+          : `${formatMoneyShort(budgetRemaining)} remaining`,
         href: "/budget",
         action: "Review money",
         icon: "money" as IconName,
@@ -302,6 +334,9 @@ export default function TodayPage() {
   }, [
     isNewParticipant,
     supportNeedsParticipant,
+    budgetExpired,
+    budgetEndingSoon,
+    budgetDaysLeft,
     todayCheckin,
     unresolvedSupportRequest,
     currentGoal,
@@ -398,6 +433,16 @@ export default function TodayPage() {
             </section>
           ) : null}
 
+          {budgetExpired && activeBudgetPeriod ? (
+            <Link href="/budget" className="mt-3 flex items-center justify-between gap-4 rounded-[1.6rem] border border-amber-200 bg-amber-50/88 p-4 text-amber-950 shadow-sm transition active:scale-[0.99]">
+              <div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/80 text-amber-800"><Icon name="money" className="h-6 w-6" /></div><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">Money plan ended</p><p className="mt-1 font-black">Finish the plan and start the next one.</p></div></div><Icon name="arrow" className="h-5 w-5 shrink-0" />
+            </Link>
+          ) : budgetEndingSoon && activeBudgetPeriod ? (
+            <Link href="/budget" className="mt-3 flex items-center justify-between gap-4 rounded-[1.6rem] border border-cyan-100 bg-cyan-50/80 p-4 text-cyan-950 shadow-sm transition active:scale-[0.99]">
+              <div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/80 text-cyan-800"><Icon name="money" className="h-6 w-6" /></div><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Coming up</p><p className="mt-1 font-black">{budgetDaysLeft === 0 ? "Your Money plan ends today." : `Your Money plan ends in ${budgetDaysLeft} day${budgetDaysLeft === 1 ? "" : "s"}.`}</p></div></div><Icon name="arrow" className="h-5 w-5 shrink-0" />
+            </Link>
+          ) : null}
+
           {!isNewParticipant ? (
             <section className="mt-3 grid grid-cols-4 gap-2">
               <Link href="/wellness" className="thrive-glance thrive-glance-compact border-emerald-100/70 bg-emerald-50/58 text-emerald-950">
@@ -413,7 +458,7 @@ export default function TodayPage() {
               <Link href="/budget" className="thrive-glance thrive-glance-compact border-cyan-100/70 bg-cyan-50/58 text-cyan-950">
                 <Icon name="money" className="h-6 w-6" />
                 <span>Money</span>
-                <strong>{activeBudgetPeriod ? formatMoneyShort(budgetRemaining) : "No plan"}</strong>
+                <strong>{budgetExpired ? "Ended" : activeBudgetPeriod ? formatMoneyShort(budgetRemaining) : "No plan"}</strong>
               </Link>
               <Link href="/support" className="thrive-glance thrive-glance-compact border-violet-100/70 bg-violet-50/58 text-violet-950">
                 <Icon name="support" className="h-6 w-6" />
@@ -452,9 +497,9 @@ export default function TodayPage() {
                     <p className="text-[10px] font-black uppercase tracking-[0.18em]">Money</p>
                   </div>
                   <h2 className="mt-2 text-4xl font-black tracking-tight text-slate-950">
-                    {activeBudgetPeriod ? formatMoneyShort(budgetRemaining) : "No plan"}
+                    {budgetExpired ? "Plan ended" : activeBudgetPeriod ? formatMoneyShort(budgetRemaining) : "No plan"}
                   </h2>
-                  {activeBudgetPeriod ? <p className="mt-1 text-xs font-bold text-slate-500">remaining</p> : null}
+                  {activeBudgetPeriod ? <p className="mt-1 text-xs font-bold text-slate-500">{budgetExpired ? `Ended ${new Date(`${activeBudgetPeriod.period_end}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "remaining"}</p> : null}
                 </div>
                 <Link href="/budget" className="rounded-full border border-white/80 bg-white/65 px-4 py-2 text-sm font-black text-slate-800 backdrop-blur-xl transition active:scale-95">Review</Link>
               </div>
@@ -478,9 +523,11 @@ export default function TodayPage() {
                     </div>
                   </div>
                   <p className={`mt-3 text-sm font-black ${overPlan ? "text-amber-800" : "text-emerald-800"}`}>
-                    {overPlan
-                      ? `${formatMoneyShort(moneyOutThisPeriod - moneyPlanTotal)} over plan`
-                      : `${formatMoneyShort(receivedIncome)} received${expectedIncome > 0 ? ` of ${formatMoneyShort(expectedIncome)}` : ""}`}
+                    {budgetExpired
+                      ? "Review and complete this plan to start the next one."
+                      : overPlan
+                        ? `${formatMoneyShort(moneyOutThisPeriod - moneyPlanTotal)} over plan`
+                        : `${formatMoneyShort(receivedIncome)} received${expectedIncome > 0 ? ` of ${formatMoneyShort(expectedIncome)}` : ""}`}
                   </p>
                 </div>
               ) : (
