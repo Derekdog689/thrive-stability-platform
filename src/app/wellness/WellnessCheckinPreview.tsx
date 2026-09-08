@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { WellnessDraft, WellnessWriteResult } from "./useWellnessCheckinCandidate";
 
-type Choice = { label: string; value: string; description?: string };
+type Choice = { label: string; value: string };
 type ReflectionKey = "stress" | "sleep" | "energy" | "confidence" | "routine" | "recovery_support" | "support_needed";
 
 type WellnessCheckinPreviewProps = {
@@ -43,17 +43,19 @@ const reflectionGroups: Array<{ key: ReflectionKey; label: string; prompt: strin
 ];
 
 const steadyNextStepChoices: Choice[] = [
-  { label: "Keep doing what is working", value: "review_today_plan" },
+  { label: "Keep it going", value: "review_today_plan" },
   { label: "Do one useful thing", value: "choose_one_task" },
   { label: "Something else", value: "other" },
+  { label: "Nothing right now", value: "none" },
 ];
 
 const supportNextStepChoices: Choice[] = [
-  { label: "Take a short break", value: "take_a_break" },
-  { label: "Take care of a basic need", value: "food_water_rest" },
-  { label: "Talk to someone you trust", value: "contact_supportive_person" },
+  { label: "Take a break", value: "take_a_break" },
+  { label: "Handle a basic need", value: "food_water_rest" },
+  { label: "Talk to someone", value: "contact_supportive_person" },
   { label: "Ask THRIVE for help", value: "ask_for_help" },
   { label: "Something else", value: "other" },
+  { label: "Nothing right now", value: "none" },
 ];
 
 function formatValue(value: string | null | undefined) {
@@ -71,53 +73,20 @@ function getOverallAcknowledgement(overallDay: string) {
 
 function isSteadyReflection(key: ReflectionKey, value: string) {
   const steadyValues: Record<ReflectionKey, string[]> = {
-    stress: ["low", "okay"],
-    sleep: ["good", "okay"],
-    energy: ["good", "okay"],
-    confidence: ["good", "okay"],
-    routine: ["on_track"],
-    recovery_support: ["connected", "not_needed"],
-    support_needed: ["no"],
+    stress: ["low", "okay"], sleep: ["good", "okay"], energy: ["good", "okay"], confidence: ["good", "okay"], routine: ["on_track"], recovery_support: ["connected", "not_needed"], support_needed: ["no"],
   };
   return steadyValues[key].includes(value);
-}
-
-function getReflectionAcknowledgement(key: ReflectionKey, value: string, overallDay: string) {
-  if (!value) return "";
-  if (value === "not_sure") return "Got it. You are not sure about that right now.";
-  if (isSteadyReflection(key, value)) return "Got it.";
-
-  const copy: Record<ReflectionKey, string> = {
-    stress: "Stress is running high today.",
-    sleep: "Sleep has been rough.",
-    energy: "Energy is running low today.",
-    confidence: "Confidence feels lower today.",
-    routine: "Routine feels off today.",
-    recovery_support: "More recovery support could help today.",
-    support_needed: "You are saying support could help today.",
-  };
-
-  return overallDay === "good" ? `${copy[key]} One part of the day can still be harder.` : copy[key];
 }
 
 function ChoiceGroup({ label, value, choices, onChange, optional = true }: ChoiceGroupProps) {
   return (
     <fieldset>
-      <legend className="font-black text-slate-950">
-        {label}
-        {optional ? <span className="ml-2 text-xs font-bold uppercase tracking-wide text-slate-400">Optional</span> : null}
-      </legend>
+      <legend className="font-black text-slate-950">{label}{optional ? <span className="ml-2 text-xs font-bold uppercase tracking-wide text-slate-400">Optional</span> : null}</legend>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {choices.map((choice) => {
           const selected = value === choice.value;
           return (
-            <button
-              key={choice.value}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onChange(selected && optional ? "" : choice.value)}
-              className={`min-h-12 rounded-2xl border px-4 py-3 text-left transition ${selected ? "border-emerald-600 bg-emerald-100 text-emerald-950" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
-            >
+            <button key={choice.value} type="button" aria-pressed={selected} onClick={() => onChange(selected && optional ? "" : choice.value)} className={`min-h-12 rounded-2xl border px-4 py-3 text-left transition ${selected ? "border-emerald-600 bg-emerald-100 text-emerald-950" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
               <span className="block text-sm font-black">{choice.label}</span>
             </button>
           );
@@ -131,7 +100,6 @@ export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCan
   const sectionRef = useRef<HTMLElement>(null);
   const [step, setStep] = useState(1);
   const [reflectionKey, setReflectionKey] = useState<ReflectionKey | null>(null);
-  const [wantsNextAction, setWantsNextAction] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!focusOnMount) return;
@@ -139,13 +107,7 @@ export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCan
   }, [focusOnMount]);
 
   const reflections = useMemo<Record<ReflectionKey, string>>(() => ({
-    stress: draft.stress ?? "",
-    sleep: draft.sleep ?? "",
-    energy: draft.energy ?? "",
-    confidence: draft.confidence ?? "",
-    routine: draft.routine ?? "",
-    recovery_support: draft.recoverySupport ?? "",
-    support_needed: draft.supportNeeded ?? "",
+    stress: draft.stress ?? "", sleep: draft.sleep ?? "", energy: draft.energy ?? "", confidence: draft.confidence ?? "", routine: draft.routine ?? "", recovery_support: draft.recoverySupport ?? "", support_needed: draft.supportNeeded ?? "",
   }), [draft.stress, draft.sleep, draft.energy, draft.confidence, draft.routine, draft.recoverySupport, draft.supportNeeded]);
 
   const overallDay = draft.overallDay ?? "";
@@ -153,7 +115,6 @@ export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCan
   const note = draft.participantNote;
   const activeReflection = reflectionGroups.find((group) => group.key === reflectionKey);
   const activeReflectionValue = reflectionKey ? reflections[reflectionKey] : "";
-  const reflectionAcknowledgement = reflectionKey && activeReflectionValue ? getReflectionAcknowledgement(reflectionKey, activeReflectionValue, overallDay) : "";
   const contextualNextStepChoices = reflectionKey && activeReflectionValue
     ? (isSteadyReflection(reflectionKey, activeReflectionValue) ? steadyNextStepChoices : supportNextStepChoices)
     : (overallDay === "good" || overallDay === "okay" ? steadyNextStepChoices : supportNextStepChoices);
@@ -161,7 +122,7 @@ export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCan
   const reviewDetails = reflectionGroups.filter((group) => reflections[group.key]);
 
   function moveToStep(nextStepNumber: number) {
-    setStep(Math.min(5, Math.max(1, nextStepNumber)));
+    setStep(Math.min(4, Math.max(1, nextStepNumber)));
     window.requestAnimationFrame(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
@@ -171,16 +132,9 @@ export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCan
 
   function setReflection(key: ReflectionKey, value: string) {
     const fieldMap: Record<ReflectionKey, keyof WellnessDraft> = {
-      stress: "stress",
-      sleep: "sleep",
-      energy: "energy",
-      confidence: "confidence",
-      routine: "routine",
-      recovery_support: "recoverySupport",
-      support_needed: "supportNeeded",
+      stress: "stress", sleep: "sleep", energy: "energy", confidence: "confidence", routine: "routine", recovery_support: "recoverySupport", support_needed: "supportNeeded",
     };
     setDraftField(fieldMap[key], value || null);
-    setWantsNextAction(null);
   }
 
   async function saveCheckin() {
@@ -190,138 +144,50 @@ export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCan
   return (
     <section ref={sectionRef} className="scroll-mt-3 rounded-3xl bg-white p-4 shadow-sm sm:p-8">
       <div className="sticky top-3 z-20 -mx-1 flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:mx-0">
-        <div>
-          <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Guided check-in</p>
-          <p className="mt-1 text-sm font-bold text-slate-500">Step {step} of 5</p>
-        </div>
+        <div><p className="text-xs font-black uppercase tracking-wide text-emerald-700">Guided check-in</p><p className="mt-1 text-sm font-bold text-slate-500">Step {step} of 4</p></div>
         {step > 1 ? <button type="button" onClick={() => moveToStep(step - 1)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-50">Back</button> : null}
       </div>
 
-      {step === 1 ? (
-        <div className="mt-6">
-          <h2 className="text-2xl font-black">How are things feeling today?</h2>
-          <p className="mt-2 text-slate-600">Choose the closest answer.</p>
-          <div className="mt-6">
-            <ChoiceGroup label="Overall day" value={overallDay} choices={overallChoices} onChange={(value) => { setDraftField("overallDay", value || null); setWantsNextAction(null); }} optional={false} />
-          </div>
-          {overallDay ? <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-emerald-950"><p className="font-black">{getOverallAcknowledgement(overallDay)}</p></div> : null}
-          <button type="button" disabled={!overallDay} onClick={() => moveToStep(2)} className={`mt-6 rounded-2xl px-5 py-3 font-black ${overallDay ? "bg-emerald-700 text-white hover:bg-emerald-800" : "cursor-not-allowed bg-slate-200 text-slate-500"}`}>Continue</button>
-        </div>
-      ) : null}
+      {step === 1 ? <div className="mt-6">
+        <h2 className="text-2xl font-black">How are things feeling today?</h2><p className="mt-2 text-slate-600">Choose the closest answer.</p>
+        <div className="mt-6"><ChoiceGroup label="Overall day" value={overallDay} choices={overallChoices} onChange={(value) => setDraftField("overallDay", value || null)} optional={false} /></div>
+        {overallDay ? <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-emerald-950"><p className="font-black">{getOverallAcknowledgement(overallDay)}</p></div> : null}
+        <button type="button" disabled={!overallDay} onClick={() => moveToStep(2)} className={`mt-6 rounded-2xl px-5 py-3 font-black ${overallDay ? "bg-emerald-700 text-white hover:bg-emerald-800" : "cursor-not-allowed bg-slate-200 text-slate-500"}`}>Continue</button>
+      </div> : null}
 
-      {step === 2 ? (
-        <div className="mt-6">
-          {!activeReflection ? (
-            <>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-black">Anything you want to look at closer?</h2>
-                  <p className="mt-2 text-slate-600">Optional. Pick one, or skip it.</p>
-                </div>
-                <button type="button" onClick={() => { setWantsNextAction(false); setDraftField("chosenNextStep", null); moveToStep(4); }} className="shrink-0 rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-50">Skip</button>
-              </div>
+      {step === 2 ? <div className="mt-6">
+        {!activeReflection ? <>
+          <div className="flex items-start justify-between gap-4"><div><h2 className="text-2xl font-black">Anything you want to look at closer?</h2><p className="mt-2 text-slate-600">Optional. Pick one, or skip it.</p></div><button type="button" onClick={() => moveToStep(3)} className="shrink-0 rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-50">Skip</button></div>
+          <div className="mt-5 grid grid-cols-2 gap-3">{reflectionGroups.map((group) => {
+            const hasValue = Boolean(reflections[group.key]);
+            return <button key={group.key} type="button" onClick={() => setReflectionKey(group.key)} className={`flex min-h-20 flex-col justify-center rounded-2xl border px-4 py-3 text-center transition ${group.key === "support_needed" ? "col-span-2" : ""} ${hasValue ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="font-black text-slate-950">{group.label}</p>{hasValue ? <p className="mt-1 text-xs font-bold text-emerald-800">{formatValue(reflections[group.key])}</p> : null}</button>;
+          })}</div>
+          {hasReflection ? <button type="button" onClick={() => moveToStep(3)} className="mt-5 w-full rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800">Done</button> : null}
+        </> : <div className="rounded-2xl bg-slate-50 p-5">
+          <div className="mb-5 flex items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-wide text-emerald-700">{activeReflection.label}</p><button type="button" onClick={() => setReflectionKey(null)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700">Choose another</button></div>
+          <ChoiceGroup label={activeReflection.prompt} value={reflections[activeReflection.key]} choices={activeReflection.choices} onChange={(value) => setReflection(activeReflection.key, value)} />
+          <div className="mt-5 flex gap-3"><button type="button" disabled={!activeReflectionValue} onClick={() => moveToStep(3)} className={`flex-1 rounded-2xl px-5 py-3 font-black ${activeReflectionValue ? "bg-emerald-700 text-white hover:bg-emerald-800" : "cursor-not-allowed bg-slate-200 text-slate-500"}`}>Done</button><button type="button" onClick={() => setReflectionKey(null)} className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700">Add another</button></div>
+        </div>}
+      </div> : null}
 
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {reflectionGroups.map((group) => {
-                  const hasValue = Boolean(reflections[group.key]);
-                  const fullWidth = group.key === "support_needed";
-                  return (
-                    <button key={group.key} type="button" onClick={() => { setReflectionKey(group.key); setWantsNextAction(null); }} className={`flex min-h-20 flex-col justify-center rounded-2xl border px-4 py-3 text-center transition ${fullWidth ? "col-span-2" : ""} ${hasValue ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
-                      <p className="font-black text-slate-950">{group.label}</p>
-                      {hasValue ? <p className="mt-1 text-xs font-bold text-emerald-800">{formatValue(reflections[group.key])}</p> : null}
-                    </button>
-                  );
-                })}
-              </div>
+      {step === 3 ? <div className="mt-6">
+        <h2 className="text-2xl font-black">{overallDay === "good" || overallDay === "okay" ? "What’s next?" : "What would help right now?"}</h2>
+        <div className="mt-5 grid gap-3">{contextualNextStepChoices.map((choice) => {
+          const selected = nextStep === choice.value;
+          return <button key={choice.value} type="button" aria-pressed={selected} onClick={() => setDraftField("chosenNextStep", choice.value === "none" ? null : choice.value)} className={`rounded-2xl border px-5 py-4 text-left font-black transition ${selected || (choice.value === "none" && !nextStep) ? "border-emerald-600 bg-emerald-100 text-emerald-950" : "border-slate-200 bg-white text-slate-800"}`}>{choice.label}</button>;
+        })}</div>
+        <button type="button" onClick={() => moveToStep(4)} className="mt-5 w-full rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white">Continue</button>
+      </div> : null}
 
-              {hasReflection ? <button type="button" onClick={() => moveToStep(3)} className="mt-5 w-full rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white hover:bg-emerald-800">Done</button> : null}
-            </>
-          ) : (
-            <div className="rounded-2xl bg-slate-50 p-5">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">{activeReflection.label}</p>
-                <button type="button" onClick={() => setReflectionKey(null)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700">Choose another</button>
-              </div>
-              <ChoiceGroup label={activeReflection.prompt} value={reflections[activeReflection.key]} choices={activeReflection.choices} onChange={(value) => setReflection(activeReflection.key, value)} />
-              {reflectionAcknowledgement ? <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-emerald-950"><p className="font-black">{reflectionAcknowledgement}</p></div> : null}
-              <div className="mt-5 flex gap-3">
-                <button type="button" disabled={!activeReflectionValue} onClick={() => moveToStep(3)} className={`flex-1 rounded-2xl px-5 py-3 font-black ${activeReflectionValue ? "bg-emerald-700 text-white hover:bg-emerald-800" : "cursor-not-allowed bg-slate-200 text-slate-500"}`}>Done</button>
-                <button type="button" onClick={() => setReflectionKey(null)} className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700">Add another</button>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      {step === 3 ? (
-        <div className="mt-6">
-          {wantsNextAction === null ? (
-            <>
-              <h2 className="text-2xl font-black">Do you want a next step?</h2>
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <button type="button" onClick={() => setWantsNextAction(true)} className="rounded-2xl border border-emerald-500 bg-emerald-100 px-5 py-5 text-left font-black text-emerald-950">Yes</button>
-                <button type="button" onClick={() => { setWantsNextAction(false); setDraftField("chosenNextStep", null); moveToStep(4); }} className="rounded-2xl border border-slate-200 bg-white px-5 py-5 text-left font-black text-slate-950">No</button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-black">Pick one</h2>
-                <button type="button" onClick={() => { setWantsNextAction(null); setDraftField("chosenNextStep", null); }} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700">Back</button>
-              </div>
-              <div className="mt-5 grid gap-3">
-                {contextualNextStepChoices.map((choice) => {
-                  const selected = nextStep === choice.value;
-                  return (
-                    <button key={choice.value} type="button" aria-pressed={selected} onClick={() => setDraftField("chosenNextStep", choice.value)} className={`rounded-2xl border px-5 py-4 text-left font-black transition ${selected ? "border-emerald-600 bg-emerald-100 text-emerald-950" : "border-slate-200 bg-white text-slate-800"}`}>
-                      {choice.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="button" disabled={!nextStep} onClick={() => moveToStep(4)} className={`mt-5 w-full rounded-2xl px-5 py-3 font-black ${nextStep ? "bg-emerald-700 text-white" : "cursor-not-allowed bg-slate-200 text-slate-500"}`}>Continue</button>
-            </>
-          )}
-        </div>
-      ) : null}
-
-      {step === 4 ? (
-        <div className="mt-6">
-          <h2 className="text-2xl font-black">Anything you want to remember?</h2>
-          <p className="mt-2 text-sm text-slate-500">Optional.</p>
-          <textarea id="wellness-note" value={note} maxLength={2000} onChange={(event) => setDraftField("participantNote", event.target.value)} rows={5} className="mt-5 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" placeholder="Optional note" />
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button type="button" onClick={() => moveToStep(5)} className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white">Review</button>
-            <button type="button" onClick={() => moveToStep(5)} className="rounded-2xl border border-slate-200 px-5 py-3 font-black text-slate-700">Skip note</button>
-          </div>
-        </div>
-      ) : null}
-
-      {step === 5 ? (
-        <div className="mt-6">
-          <p className="text-xs font-black uppercase tracking-wide text-amber-700">Your reflection</p>
-          <h2 className="mt-2 text-2xl font-black">Review</h2>
-
-          <div className="mt-6 rounded-3xl bg-emerald-50 p-5">
-            <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Overall day</p>
-            <p className="mt-2 text-3xl font-black text-emerald-950">{formatValue(overallDay)}</p>
-          </div>
-
-          {reviewDetails.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {reviewDetails.map((group) => (
-                <span key={group.key} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">{group.label}: {formatValue(reflections[group.key])}</span>
-              ))}
-            </div>
-          ) : null}
-
-          {nextStep ? <div className="mt-4 rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-slate-500">Next step</p><p className="mt-2 font-black text-slate-950">{formatValue(nextStep)}</p></div> : null}
-          {note.trim() ? <div className="mt-4 rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-slate-500">Your note</p><p className="mt-2 leading-7 text-slate-700">{note}</p></div> : null}
-
-          <button type="button" disabled={!writeEnabled} onClick={() => { void saveCheckin(); }} className={`mt-6 w-full rounded-2xl px-5 py-4 font-black sm:w-auto ${writeEnabled ? "bg-emerald-700 text-white" : "cursor-not-allowed bg-slate-300 text-slate-600"}`}>{writeEnabled ? (hasSavedCheckin ? "Update check-in" : "Save check-in") : "Save check-in unavailable"}</button>
-          {actionMessage ? <p className="mt-3 text-sm font-bold text-amber-900">{actionMessage}</p> : null}
-        </div>
-      ) : null}
+      {step === 4 ? <div className="mt-6">
+        <h2 className="text-2xl font-black">Anything you want to remember?</h2><p className="mt-2 text-sm text-slate-500">Optional.</p>
+        <textarea id="wellness-note" value={note} maxLength={2000} onChange={(event) => setDraftField("participantNote", event.target.value)} rows={5} className="mt-5 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" placeholder="Optional note" />
+        <div className="mt-6 rounded-3xl bg-emerald-50 p-5"><p className="text-xs font-black uppercase tracking-wide text-emerald-700">Overall day</p><p className="mt-2 text-3xl font-black text-emerald-950">{formatValue(overallDay)}</p></div>
+        {reviewDetails.length > 0 ? <div className="mt-4 flex flex-wrap gap-2">{reviewDetails.map((group) => <span key={group.key} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">{group.label}: {formatValue(reflections[group.key])}</span>)}</div> : null}
+        {nextStep ? <div className="mt-4 rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-slate-500">Next step</p><p className="mt-2 font-black text-slate-950">{formatValue(nextStep)}</p></div> : null}
+        <button type="button" disabled={!writeEnabled} onClick={() => { void saveCheckin(); }} className={`mt-6 w-full rounded-2xl px-5 py-4 font-black ${writeEnabled ? "bg-emerald-700 text-white" : "cursor-not-allowed bg-slate-300 text-slate-600"}`}>{writeEnabled ? (hasSavedCheckin ? "Update check-in" : "Save check-in") : "Save check-in unavailable"}</button>
+        {actionMessage ? <p className="mt-3 text-sm font-bold text-amber-900">{actionMessage}</p> : null}
+      </div> : null}
     </section>
   );
 }
