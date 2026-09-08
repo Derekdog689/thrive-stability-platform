@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import AuthGate from "../AuthGate";
 import {
+  FinancialActivity,
+  FinancialActivityAllocation,
   formatDate,
   formatMoney,
   toNumber,
@@ -17,10 +20,6 @@ import {
   TransactionExplanationCategory,
   useParticipantTransactionExplanations,
 } from "../transaction-explanations/useParticipantTransactionExplanations";
-import {
-  ParticipantTransactionAllocation,
-  useParticipantTransactionAllocations,
-} from "../transaction-allocations/useParticipantTransactionAllocations";
 
 const contextChoices: Array<{ value: TransactionExplanationCategory; label: string }> = [
   { value: "recognized_purchase", label: "I recognize it" },
@@ -46,70 +45,110 @@ function MoneyBottomNav() {
   return <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[1.8rem] border border-white/70 bg-white/90 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.16)] backdrop-blur-2xl sm:bottom-5"><div className="grid grid-cols-5 gap-1">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-center transition ${item.href === "/budget" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-900"}`}><span className="text-xl font-black leading-none">{item.icon}</span><span className="mt-1 truncate text-[10px] font-black uppercase tracking-wide sm:text-xs">{item.label}</span></Link>)}</div></nav>;
 }
 
-function TransactionCard({
-  transaction,
-  explanation,
+function ActivityCard({
+  activity,
   allocations,
   budgetLines,
+  explanation,
   canWriteContext,
   canConnectPlan,
-  contextWorking,
-  allocationWorking,
   onCreateContext,
   onUpdateContext,
   onAllocate,
+  onUpdateManual,
+  onArchiveManual,
 }: {
-  transaction: any;
-  explanation: ParticipantTransactionExplanation | undefined;
-  allocations: ParticipantTransactionAllocation[];
+  activity: FinancialActivity;
+  allocations: FinancialActivityAllocation[];
   budgetLines: any[];
+  explanation: ParticipantTransactionExplanation | undefined;
   canWriteContext: boolean;
   canConnectPlan: boolean;
-  contextWorking: boolean;
-  allocationWorking: boolean;
   onCreateContext: (transactionId: string, category: TransactionExplanationCategory, note: string) => Promise<{ ok: boolean; message: string }>;
   onUpdateContext: (explanation: ParticipantTransactionExplanation, category: TransactionExplanationCategory, note: string) => Promise<{ ok: boolean; message: string }>;
-  onAllocate: (transactionId: string, budgetLineId: string, amount: number) => Promise<{ ok: boolean; message: string }>;
+  onAllocate: (activity: FinancialActivity, budgetLineId: string, amount: number) => Promise<{ ok: boolean; message: string }>;
+  onUpdateManual: (activity: FinancialActivity, date: string, direction: "inflow" | "outflow", amount: number, description: string) => Promise<{ ok: boolean; message: string }>;
+  onArchiveManual: (activity: FinancialActivity) => Promise<{ ok: boolean; message: string }>;
 }) {
   const [showContext, setShowContext] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [category, setCategory] = useState<TransactionExplanationCategory>(explanation?.explanation_category ?? "recognized_purchase");
   const [note, setNote] = useState(explanation?.explanation_text ?? "");
+  const [editDate, setEditDate] = useState(activity.activity_date);
+  const [editDirection, setEditDirection] = useState<"inflow" | "outflow">(activity.activity_direction === "inflow" ? "inflow" : "outflow");
+  const [editAmount, setEditAmount] = useState(String(Math.abs(toNumber(activity.signed_amount))));
+  const [editDescription, setEditDescription] = useState(activity.description);
   const [notice, setNotice] = useState("");
+  const [working, setWorking] = useState(false);
 
   const activeAllocations = allocations.filter((item) => item.status === "active");
   const assigned = activeAllocations.reduce((sum, item) => sum + toNumber(item.allocated_amount), 0);
-  const total = Math.abs(toNumber(transaction.amount));
+  const total = Math.abs(toNumber(activity.signed_amount));
   const unassigned = Math.max(total - assigned, 0);
+  const isImported = activity.activity_record_type === "imported";
 
   async function saveContext() {
+    if (!isImported) return;
+    setWorking(true);
     setNotice("");
     const result = explanation && explanation.status === "draft"
       ? await onUpdateContext(explanation, category, note)
-      : await onCreateContext(transaction.id, category, note);
+      : await onCreateContext(activity.activity_id, category, note);
     setNotice(result.message);
     if (result.ok) setShowContext(false);
+    setWorking(false);
   }
 
   async function connect(line: any) {
-    if (unassigned <= 0 || !canConnectPlan) return;
+    if (!canConnectPlan || unassigned <= 0) return;
+    setWorking(true);
     setNotice("");
-    const result = await onAllocate(transaction.id, line.id, unassigned);
+    const result = await onAllocate(activity, line.id, unassigned);
     setNotice(result.message);
     if (result.ok) setShowPlan(false);
+    setWorking(false);
   }
 
-  return <article className="rounded-[1.5rem] border border-slate-100 bg-white/90 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{transaction.merchant_name ?? "Merchant not provided"}</p><p className="mt-1 truncate text-xs font-semibold text-slate-500">{formatDate(transaction.posted_date)}{transaction.category_name ? ` · ${transaction.category_name}` : ""}</p></div><p className="shrink-0 text-base font-black">{formatMoney(transaction.amount)}</p></div>
+  async function saveManual(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const numericAmount = Number(editAmount);
+    if (!editDate || !Number.isFinite(numericAmount) || numericAmount <= 0 || !editDescription.trim()) {
+      setNotice("Add a date, amount, and short description.");
+      return;
+    }
+    setWorking(true);
+    const result = await onUpdateManual(activity, editDate, editDirection, numericAmount, editDescription.trim());
+    setNotice(result.message);
+    if (result.ok) setShowEdit(false);
+    setWorking(false);
+  }
 
-    {explanation ? <div className="mt-3 rounded-2xl bg-emerald-50 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Your context</p><p className="mt-1 text-sm font-black text-emerald-950">{contextChoices.find((choice) => choice.value === explanation.explanation_category)?.label ?? "Saved context"}</p>{explanation.explanation_text ? <p className="mt-1 text-xs leading-5 text-slate-600">{explanation.explanation_text}</p> : null}</div> : null}
+  async function removeManual() {
+    if (!window.confirm("Remove this entry from current activity? Its history will stay preserved.")) return;
+    setWorking(true);
+    const result = await onArchiveManual(activity);
+    setNotice(result.message);
+    setWorking(false);
+  }
+
+  return <article className="rounded-[1.5rem] border border-slate-100 bg-white/90 p-4">
+    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-lg font-black">{activity.description}</p><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${isImported ? "bg-sky-50 text-sky-700" : "bg-emerald-50 text-emerald-700"}`}>{isImported ? "Imported" : "Added by you"}</span></div><p className="mt-1 text-xs font-semibold text-slate-500">{formatDate(activity.activity_date)} · {activity.source_name}</p></div><div className="shrink-0 text-right"><p className={`text-lg font-black ${activity.activity_direction === "inflow" ? "text-emerald-700" : "text-slate-950"}`}>{formatMoney(Math.abs(toNumber(activity.signed_amount)))}</p><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{activity.activity_direction === "inflow" ? "Money in" : "Money out"}</p></div></div>
+
+    {explanation && isImported ? <div className="mt-3 rounded-2xl bg-emerald-50 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Your context</p><p className="mt-1 text-sm font-black text-emerald-950">{contextChoices.find((choice) => choice.value === explanation.explanation_category)?.label ?? "Saved context"}</p>{explanation.explanation_text ? <p className="mt-1 text-xs leading-5 text-slate-600">{explanation.explanation_text}</p> : null}</div> : null}
 
     {activeAllocations.length ? <div className="mt-3 flex flex-wrap gap-2">{activeAllocations.map((item) => <span key={item.allocation_id} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600">{item.budget_category_name} · {formatMoney(item.allocated_amount)}</span>)}</div> : null}
 
-    <div className={`mt-3 grid gap-2 ${canConnectPlan ? "grid-cols-2" : "grid-cols-1"}`}><button type="button" disabled={!canWriteContext || contextWorking || (explanation?.status != null && explanation.status !== "draft")} onClick={() => { setShowContext((current) => !current); setShowPlan(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{explanation ? "Edit context" : "Add context"}</button>{canConnectPlan ? <button type="button" disabled={allocationWorking || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{unassigned > 0 ? "Connect to plan" : "Connected"}</button> : null}</div>
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      {isImported ? <button type="button" disabled={!canWriteContext || working || (explanation?.status != null && explanation.status !== "draft")} onClick={() => { setShowContext((current) => !current); setShowPlan(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{explanation ? "Edit context" : "Add context"}</button> : <button type="button" disabled={working} onClick={() => { setShowEdit((current) => !current); setShowPlan(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700">Edit entry</button>}
+      <button type="button" disabled={working || !canConnectPlan || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{unassigned > 0 ? "Connect to plan" : "Connected"}</button>
+    </div>
 
-    {showContext ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-xs font-black text-slate-500">What was this?</p><div className="mt-2 flex flex-wrap gap-2">{contextChoices.map((choice) => <button key={choice.value} type="button" onClick={() => setCategory(choice.value)} className={`rounded-full px-3 py-2 text-xs font-black ${category === choice.value ? "bg-emerald-700 text-white" : "border border-slate-200 bg-white text-slate-600"}`}>{choice.label}</button>)}</div><label className="mt-3 block text-xs font-black text-slate-500">Anything to add? <span className="font-normal">Optional</span><textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal text-slate-800" /></label><button type="button" disabled={contextWorking} onClick={() => void saveContext()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Save context</button></div> : null}
+    {showContext ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-xs font-black text-slate-500">What was this?</p><div className="mt-2 flex flex-wrap gap-2">{contextChoices.map((choice) => <button key={choice.value} type="button" onClick={() => setCategory(choice.value)} className={`rounded-full px-3 py-2 text-xs font-black ${category === choice.value ? "bg-emerald-700 text-white" : "border border-slate-200 bg-white text-slate-600"}`}>{choice.label}</button>)}</div><label className="mt-3 block text-xs font-black text-slate-500">Anything to add? <span className="font-normal">Optional</span><textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal text-slate-800" /></label><button type="button" disabled={working} onClick={() => void saveContext()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Save context</button></div> : null}
 
-    {showPlan ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-xs font-black text-slate-500">Which part of your plan?</p><p className="mt-1 text-xs text-slate-500">{formatMoney(unassigned)} not connected yet</p><div className="mt-3 grid grid-cols-2 gap-2">{budgetLines.map((line) => <button key={line.id} type="button" disabled={allocationWorking} onClick={() => void connect(line)} className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-left text-sm font-black text-slate-700 disabled:opacity-50">{line.category_name}</button>)}</div></div> : null}
+    {showPlan ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-sm font-black">Which part of your plan?</p><p className="mt-1 text-xs font-semibold text-slate-500">{formatMoney(unassigned)} not connected yet</p><div className="mt-3 grid grid-cols-2 gap-2">{budgetLines.map((line) => <button key={line.id} type="button" disabled={working} onClick={() => void connect(line)} className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-left text-sm font-black text-slate-700 disabled:opacity-50">{line.category_name}</button>)}</div></div> : null}
+
+    {showEdit && !isImported ? <form onSubmit={saveManual} className="mt-3 rounded-2xl bg-slate-50 p-3"><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setEditDirection("outflow")} className={`rounded-full px-3 py-2.5 text-sm font-black ${editDirection === "outflow" ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>Money out</button><button type="button" onClick={() => setEditDirection("inflow")} className={`rounded-full px-3 py-2.5 text-sm font-black ${editDirection === "inflow" ? "bg-emerald-700 text-white" : "bg-white text-slate-600"}`}>Money in</button></div><input type="date" value={editDate} onChange={(event) => setEditDate(event.target.value)} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-3" /><div className="mt-3 flex items-center rounded-xl border border-slate-200 bg-white px-3"><span className="font-black text-slate-400">$</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={editAmount} onChange={(event) => setEditAmount(event.target.value)} className="w-full bg-transparent px-2 py-3 text-xl font-black outline-none" /></div><input value={editDescription} onChange={(event) => setEditDescription(event.target.value)} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-3" /><div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" disabled={working} className="rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white">Save</button><button type="button" disabled={working} onClick={() => void removeManual()} className="rounded-full border border-rose-200 bg-white px-4 py-2.5 text-sm font-black text-rose-700">Remove</button></div></form> : null}
 
     {notice ? <p className="mt-3 text-xs font-bold text-slate-600">{notice}</p> : null}
   </article>;
@@ -121,7 +160,7 @@ export default function MoneyCandidatePage() {
     budgetPeriods,
     budgetLines,
     financialActivity,
-    transactions,
+    financialActivityAllocations,
     loading,
     errorMessage,
     refresh,
@@ -134,32 +173,28 @@ export default function MoneyCandidatePage() {
   const {
     explanationByTransactionId,
     canWrite,
-    workingTransactionId,
     createDraft,
     updateDraft,
   } = useParticipantTransactionExplanations();
-  const {
-    allocationsByTransactionId,
-    workingTransactionId: allocationWorkingTransactionId,
-    allocateTransaction,
-  } = useParticipantTransactionAllocations();
 
-  const [newBudgetDraft, setNewBudgetDraft] = useState({
-    periodStart: "",
-    periodEnd: "",
-    expectedIncome: "",
-    notes: "",
-  });
+  const [newBudgetDraft, setNewBudgetDraft] = useState({ periodStart: "", periodEnd: "", expectedIncome: "", notes: "" });
   const [budgetNotice, setBudgetNotice] = useState("");
   const [showActivity, setShowActivity] = useState(false);
+  const [showAddActivity, setShowAddActivity] = useState(false);
+  const [activityDirection, setActivityDirection] = useState<"inflow" | "outflow">("outflow");
+  const [activityDate, setActivityDate] = useState("");
+  const [activityAmount, setActivityAmount] = useState("");
+  const [activityDescription, setActivityDescription] = useState("");
+  const [activityNotice, setActivityNotice] = useState("");
+  const [activityWorking, setActivityWorking] = useState(false);
 
   const activePeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
   const draftPeriod = budgetPeriods.find((period) => period.status === "draft") ?? null;
   const activeLines = activePeriod ? budgetLines.filter((line) => line.budget_period_id === activePeriod.id && line.is_active) : [];
   const draftLines = draftPeriod ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id && line.is_active) : [];
-  const currentTransactions = activePeriod ? transactions.filter((transaction) => transaction.posted_date >= activePeriod.period_start && transaction.posted_date <= activePeriod.period_end).slice(0, 8) : [];
-  const activityTransactions = currentTransactions.length > 0 ? currentTransactions : transactions.slice(0, 8);
-  const showingRecentActivity = currentTransactions.length === 0 && activityTransactions.length > 0;
+  const currentActivity = activePeriod ? financialActivity.filter((activity) => activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end).slice(0, 12) : [];
+  const activityRows = currentActivity.length > 0 ? currentActivity : financialActivity.slice(0, 12);
+  const showingRecentActivity = currentActivity.length === 0 && activityRows.length > 0;
 
   const planned = activeLines.reduce((sum, line) => sum + toNumber(line.planned_amount), 0);
   const out = activeLines.reduce((sum, line) => sum + toNumber(line.derived_actual_amount), 0);
@@ -173,36 +208,14 @@ export default function MoneyCandidatePage() {
   async function handleCreateBudgetDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBudgetNotice("");
-
-    if (!activeProgramId) {
-      setBudgetNotice("THRIVE could not identify one active program for this plan.");
-      return;
-    }
-    if (!newBudgetDraft.periodStart || !newBudgetDraft.periodEnd) {
-      setBudgetNotice("Choose a start and end date.");
-      return;
-    }
-    if (newBudgetDraft.periodStart > newBudgetDraft.periodEnd) {
-      setBudgetNotice("The start date needs to come before the end date.");
-      return;
-    }
-
+    if (!activeProgramId) { setBudgetNotice("THRIVE could not identify one active program for this plan."); return; }
+    if (!newBudgetDraft.periodStart || !newBudgetDraft.periodEnd) { setBudgetNotice("Choose a start and end date."); return; }
+    if (newBudgetDraft.periodStart > newBudgetDraft.periodEnd) { setBudgetNotice("The start date needs to come before the end date."); return; }
     const expectedIncome = Number(newBudgetDraft.expectedIncome);
-    if (!Number.isFinite(expectedIncome) || expectedIncome < 0) {
-      setBudgetNotice("Enter expected income of zero or more.");
-      return;
-    }
-
-    const result = await createBudgetDraft({
-      programId: activeProgramId,
-      periodStart: newBudgetDraft.periodStart,
-      periodEnd: newBudgetDraft.periodEnd,
-      expectedIncome,
-      notes: newBudgetDraft.notes,
-    });
+    if (!Number.isFinite(expectedIncome) || expectedIncome < 0) { setBudgetNotice("Enter expected income of zero or more."); return; }
+    const result = await createBudgetDraft({ programId: activeProgramId, periodStart: newBudgetDraft.periodStart, periodEnd: newBudgetDraft.periodEnd, expectedIncome, notes: newBudgetDraft.notes });
     setBudgetNotice(result.message);
-    if (!result.ok) return;
-    await refresh();
+    if (result.ok) await refresh();
   }
 
   async function createContext(transactionId: string, category: TransactionExplanationCategory, note: string) {
@@ -215,10 +228,47 @@ export default function MoneyCandidatePage() {
     return { ok: result.ok, message: result.message };
   }
 
-  async function connectTransaction(transactionId: string, budgetLineId: string, amount: number) {
-    const result = await allocateTransaction(transactionId, budgetLineId, amount);
-    if (result.ok) await refresh();
-    return result;
+  async function allocateActivity(activity: FinancialActivity, budgetLineId: string, amount: number) {
+    const { error } = await supabase.rpc("allocate_my_financial_activity_v1", {
+      p_activity_record_type: activity.activity_record_type,
+      p_activity_id: activity.activity_id,
+      p_budget_line_id: budgetLineId,
+      p_allocated_amount: amount,
+    });
+    if (error) return { ok: false, message: error.message };
+    await refresh();
+    return { ok: true, message: "Connected to your plan." };
+  }
+
+  async function updateManualActivity(activity: FinancialActivity, date: string, direction: "inflow" | "outflow", amount: number, description: string) {
+    if (activity.activity_record_type !== "manual") return { ok: false, message: "Imported records cannot be edited here." };
+    const { error } = await supabase.rpc("update_my_manual_financial_activity_v1", { p_activity_id: activity.activity_id, p_activity_date: date, p_activity_direction: direction, p_amount: amount, p_description: description });
+    if (error) return { ok: false, message: error.message };
+    await refresh();
+    return { ok: true, message: "Entry updated." };
+  }
+
+  async function archiveManualActivity(activity: FinancialActivity) {
+    if (activity.activity_record_type !== "manual") return { ok: false, message: "Imported records cannot be removed here." };
+    const { error } = await supabase.rpc("archive_my_manual_financial_activity_v1", { p_activity_id: activity.activity_id });
+    if (error) return { ok: false, message: error.message };
+    await refresh();
+    return { ok: true, message: "Entry removed from current activity. History is preserved." };
+  }
+
+  async function addManualActivity(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setActivityNotice("");
+    if (!activeProgramId) { setActivityNotice("THRIVE could not identify one active program."); return; }
+    const amount = Number(activityAmount);
+    if (!activityDate || !Number.isFinite(amount) || amount <= 0 || !activityDescription.trim()) { setActivityNotice("Add a date, amount, and short description."); return; }
+    setActivityWorking(true);
+    const { error } = await supabase.rpc("create_my_manual_financial_activity_v1", { p_program_id: activeProgramId, p_activity_date: activityDate, p_activity_direction: activityDirection, p_amount: amount, p_description: activityDescription.trim() });
+    if (error) { setActivityNotice(error.message); setActivityWorking(false); return; }
+    setActivityDate(""); setActivityAmount(""); setActivityDescription(""); setActivityDirection("outflow"); setShowAddActivity(false);
+    await refresh();
+    setActivityNotice("Activity added.");
+    setActivityWorking(false);
   }
 
   return <AuthGate><main className="min-h-screen bg-[radial-gradient(circle_at_12%_10%,rgba(167,243,208,0.30),transparent_28%),radial-gradient(circle_at_88%_16%,rgba(254,240,138,0.25),transparent_24%),linear-gradient(180deg,#edf7f1_0%,#eef5f7_48%,#edf1f4_100%)] px-3 pb-40 pt-3 text-slate-950 sm:px-6 sm:pt-6"><section className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
@@ -238,9 +288,11 @@ export default function MoneyCandidatePage() {
 
       <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Your categories</p><h2 className="mt-2 text-3xl font-black">Where the money is going</h2></div><span className="text-sm font-black text-slate-500">{activeLines.length}</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{activeLines.map((line) => { const linePlan = toNumber(line.planned_amount); const lineOut = toNumber(line.derived_actual_amount); const lineLeft = toNumber(line.derived_remaining_amount); const linePercent = linePlan > 0 ? Math.max(0, Math.min(100, Math.round((lineOut / linePlan) * 100))) : 0; const lineOver = lineOut > linePlan; return <article key={line.id} className="rounded-[1.5rem] border border-slate-100 bg-white/85 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{line.category_name}</p><p className={`mt-1 text-sm font-bold ${lineOver ? "text-amber-800" : "text-slate-500"}`}>{lineOver ? `${formatMoney(lineOut - linePlan)} over` : `${formatMoney(lineLeft)} left`}</p></div><p className="shrink-0 text-sm font-black text-slate-500">{formatMoney(linePlan)}</p></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${lineOver ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${linePercent}%` }} /></div><div className="mt-3 grid grid-cols-3 gap-1 text-center"><div><p className="text-[9px] font-black uppercase text-slate-400">Plan</p><p className="text-xs font-black">{formatMoney(linePlan)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Used</p><p className="text-xs font-black">{formatMoney(lineOut)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Left</p><p className="text-xs font-black">{formatMoney(lineLeft)}</p></div></div></article>; })}</div></section>
 
-      <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Account activity</p><h2 className="mt-2 text-3xl font-black">Review what happened</h2></div><span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-black text-slate-500">{transactions.length}</span></div><p className="mt-2 text-sm font-semibold text-slate-500">See imported activity, add your context, and connect eligible transactions to this plan.</p><button type="button" onClick={() => setShowActivity((current) => !current)} className="mt-5 w-full rounded-full bg-emerald-700 px-5 py-4 text-lg font-black text-white">{showActivity ? "Close activity" : "Review account activity"}</button>
+      <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Money activity</p><h2 className="mt-2 text-3xl font-black">What happened</h2></div><span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-black text-slate-500">{financialActivity.length}</span></div><p className="mt-2 text-sm font-semibold text-slate-500">Imported activity stays unchanged. Entries you add are labeled and can be edited.</p><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => setShowActivity((current) => !current)} className="rounded-full bg-emerald-700 px-4 py-3.5 text-sm font-black text-white">{showActivity ? "Close activity" : "Review activity"}</button><button type="button" onClick={() => { setShowAddActivity((current) => !current); setShowActivity(true); setActivityNotice(""); }} className="rounded-full border border-emerald-200 bg-white px-4 py-3.5 text-sm font-black text-emerald-800">+ Add activity</button></div>
 
-        {showActivity ? <div className="mt-5 space-y-3">{showingRecentActivity ? <div className="rounded-2xl bg-amber-50 p-4"><p className="text-sm font-black text-amber-950">No imported transactions fall inside this plan period yet.</p><p className="mt-1 text-sm font-semibold text-amber-800">Showing recent imported activity instead. You can add context here. Plan connection appears only when a transaction belongs inside this plan period.</p></div> : null}{activityTransactions.length ? activityTransactions.map((transaction) => { const insidePlan = !!activePeriod && transaction.posted_date >= activePeriod.period_start && transaction.posted_date <= activePeriod.period_end; return <TransactionCard key={transaction.id} transaction={transaction} explanation={explanationByTransactionId.get(transaction.id)} allocations={allocationsByTransactionId.get(transaction.id) ?? []} budgetLines={activeLines} canWriteContext={canWrite} canConnectPlan={insidePlan} contextWorking={workingTransactionId === transaction.id} allocationWorking={allocationWorkingTransactionId === transaction.id} onCreateContext={createContext} onUpdateContext={updateContext} onAllocate={connectTransaction} />; }) : <div className="rounded-2xl bg-slate-50 p-4"><p className="font-black text-slate-700">No imported account activity is available yet.</p><p className="mt-1 text-sm font-semibold text-slate-500">When imported transactions are available, they will appear here without changing the original bank record.</p></div>}</div> : null}
+        {showAddActivity ? <form onSubmit={addManualActivity} className="mt-4 rounded-[1.5rem] bg-emerald-50 p-4"><p className="text-sm font-black">Add what happened</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => setActivityDirection("outflow")} className={`rounded-full px-3 py-3 text-sm font-black ${activityDirection === "outflow" ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>Money out</button><button type="button" onClick={() => setActivityDirection("inflow")} className={`rounded-full px-3 py-3 text-sm font-black ${activityDirection === "inflow" ? "bg-emerald-700 text-white" : "bg-white text-slate-600"}`}>Money in</button></div><input type="date" value={activityDate} onChange={(event) => setActivityDate(event.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" /><div className="mt-3 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="text-xl font-black text-slate-400">$</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={activityAmount} onChange={(event) => setActivityAmount(event.target.value)} className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none" /></div><input value={activityDescription} onChange={(event) => setActivityDescription(event.target.value)} placeholder="Short description" className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" /><div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" disabled={activityWorking} className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-50">Add</button><button type="button" onClick={() => setShowAddActivity(false)} className="rounded-full border border-slate-200 bg-white px-4 py-3 font-black text-slate-600">Cancel</button></div>{activityNotice ? <p className="mt-2 text-sm font-bold text-slate-600">{activityNotice}</p> : null}</form> : null}
+
+        {showActivity ? <div className="mt-5 space-y-3">{showingRecentActivity ? <div className="rounded-2xl bg-amber-50 p-4"><p className="text-sm font-black text-amber-950">No activity falls inside this plan period yet.</p><p className="mt-1 text-sm font-semibold text-amber-800">Showing recent activity instead. Plan connection appears only when an item belongs inside this plan period.</p></div> : null}{activityRows.length ? activityRows.map((activity) => { const insidePlan = !!activePeriod && activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end; const allocations = financialActivityAllocations.filter((item) => item.activity_record_type === activity.activity_record_type && item.activity_id === activity.activity_id); return <ActivityCard key={`${activity.activity_record_type}-${activity.activity_id}`} activity={activity} allocations={allocations} budgetLines={activeLines} explanation={activity.activity_record_type === "imported" ? explanationByTransactionId.get(activity.activity_id) : undefined} canWriteContext={canWrite} canConnectPlan={insidePlan} onCreateContext={createContext} onUpdateContext={updateContext} onAllocate={allocateActivity} onUpdateManual={updateManualActivity} onArchiveManual={archiveManualActivity} />; }) : <div className="rounded-2xl bg-slate-50 p-4"><p className="font-black text-slate-700">No money activity is available yet.</p><p className="mt-1 text-sm font-semibold text-slate-500">Use Add activity to record money in or money out. Imported records will appear here when available.</p></div>}</div> : null}
       </section>
     </> : null}
   </section><MoneyBottomNav /></main></AuthGate>;
