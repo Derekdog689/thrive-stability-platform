@@ -227,6 +227,84 @@ section .sticky.top-3.z-20 > span.text-xs.font-black.uppercase.tracking-wide.tex
   display: none;
 }
 
+/* Alive Layer v0.1
+   Scoped to participant surfaces by the shared fixed participant navigation.
+   Stable/history content stays quiet; current state and guidance carry the motion. */
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > header {
+  animation: thriveSurfaceArrive 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > section,
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > article {
+  animation: thriveSurfaceArrive 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > section:nth-of-type(1),
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > article:nth-of-type(1) {
+  animation-delay: 70ms;
+}
+
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > section:nth-of-type(2),
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > article:nth-of-type(2) {
+  animation-delay: 125ms;
+}
+
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > section:nth-of-type(3),
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > article:nth-of-type(3) {
+  animation-delay: 180ms;
+}
+
+/* Guidance breath: focused/current guidance feels active without flashing. */
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) .thrive-focus-card {
+  animation: thriveSurfaceArrive 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both, thriveGuidanceBreathe 4.2s ease-in-out 700ms infinite;
+}
+
+/* Current-state dots pulse. These exact sizes are used by Wellness, Goals, Money and Support state indicators. */
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) span.h-5.w-5.rounded-full,
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) span.h-3\.5.w-3\.5.rounded-full,
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) span.h-2\.5.w-2\.5.rounded-full {
+  transform-origin: center;
+  animation: thriveSoftPulse 3.2s ease-in-out infinite;
+}
+
+/* Active Goal gets a visible living signal; completed/history cards remain still. */
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) article span.bg-emerald-500.h-3\.5.w-3\.5.rounded-full {
+  animation: thriveEmeraldPulse 2.8s ease-in-out infinite;
+}
+
+/* Needs-you / active-attention Support uses a warmer pulse than normal received state. */
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) article.border-amber-200 {
+  animation: thriveAttentionBreathe 3s ease-in-out infinite;
+}
+
+/* Progress should travel to the new truth instead of teleporting. */
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) div.h-full.rounded-full[style*="width"] {
+  transition: width 720ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 260ms ease, box-shadow 260ms ease;
+}
+
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) div.h-full.rounded-full.bg-emerald-600[style*="width"],
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) div.h-full.rounded-full.bg-emerald-500[style*="width"] {
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.18);
+}
+
+/* Selected/active controls acknowledge touch without turning the page into a game. */
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) button,
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) button:not(:disabled):active,
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) a:active {
+  transform: scale(0.975);
+}
+
+/* Newly visible saved/current-state surfaces get one stronger arrival response, then settle. */
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.bg-slate-950,
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-emerald-100.bg-white\/82,
+main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-amber-200.bg-amber-50\/90 {
+  animation: thriveStateChanged 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
 @keyframes thriveBackgroundDrift {
   from { transform: translate3d(-1%, -1%, 0) scale(1); }
   to { transform: translate3d(1.5%, 1%, 0) scale(1.03); }
@@ -267,6 +345,38 @@ section .sticky.top-3.z-20 > span.text-xs.font-black.uppercase.tracking-wide.tex
   50% { box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1), 0 0 0 7px rgba(16, 185, 129, 0.08); }
 }
 
+@keyframes thriveSurfaceArrive {
+  0% { opacity: 0; transform: translateY(12px) scale(0.992); }
+  70% { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes thriveSoftPulse {
+  0%, 100% { transform: scale(1); filter: saturate(1); }
+  50% { transform: scale(1.12); filter: saturate(1.15); }
+}
+
+@keyframes thriveEmeraldPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); transform: scale(1); }
+  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.11); transform: scale(1.08); }
+}
+
+@keyframes thriveGuidanceBreathe {
+  0%, 100% { box-shadow: 0 18px 50px rgba(15, 23, 42, 0.09); }
+  50% { box-shadow: 0 20px 58px rgba(4, 120, 87, 0.14), 0 0 0 1px rgba(16, 185, 129, 0.08); }
+}
+
+@keyframes thriveAttentionBreathe {
+  0%, 100% { box-shadow: 0 16px 45px rgba(15, 23, 42, 0.07), 0 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: 0 18px 50px rgba(15, 23, 42, 0.09), 0 0 0 5px rgba(245, 158, 11, 0.08); }
+}
+
+@keyframes thriveStateChanged {
+  0% { opacity: 0.65; transform: translateY(8px) scale(0.985); filter: saturate(0.85); }
+  58% { opacity: 1; transform: translateY(-1px) scale(1.006); filter: saturate(1.08); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: saturate(1); }
+}
+
 @media (min-width: 640px) {
   .thrive-glance-compact { min-height: 7rem; border-radius: 1.55rem; padding: 1rem; }
   .thrive-glance-compact span { font-size: 0.62rem; }
@@ -287,7 +397,17 @@ section .sticky.top-3.z-20 > span.text-xs.font-black.uppercase.tracking-wide.tex
   .thrive-glance,
   .thrive-step-arrive,
   .thrive-state-pulse,
-  .thrive-focus-card > div.relative > div.flex > div:first-child {
+  .thrive-focus-card > div.relative > div.flex > div:first-child,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > header,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > section,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section > article,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) span.h-5.w-5.rounded-full,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) span.h-3\.5.w-3\.5.rounded-full,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) span.h-2\.5.w-2\.5.rounded-full,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) article.border-amber-200,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.bg-slate-950,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-emerald-100.bg-white\/82,
+  main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-amber-200.bg-amber-50\/90 {
     animation: none;
   }
 
