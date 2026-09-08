@@ -41,6 +41,68 @@ For risky changes, provide:
 - verification query or postflight check;
 - explicit approval point.
 
+## Participant Interaction Governance: Guide, Do Not Permission-Loop
+
+THRIVE exists to reduce friction and help the participant move toward a useful next action. Respect does not require repeated permission questions before ordinary in-product guidance.
+
+The participant experience should therefore prefer direct guidance over permission-seeking language.
+
+### Default interaction rule
+
+When THRIVE already has enough context to present a safe, reversible, ordinary next step, it should present that step directly.
+
+Prefer:
+
+- `Pick one.`
+- `Try this next.`
+- `Review this.`
+- `Start here.`
+- `Nothing right now.`
+- `Something else.`
+- `Back.`
+
+Avoid unnecessary gates such as:
+
+- `Would you like to see a next step?`
+- `Do you want me to show you options?`
+- `Would you like to continue?`
+- `Do you want to explore this?`
+
+Choice must remain visible, but it should appear at the point of action rather than as a separate permission ceremony before the action exists.
+
+### Respect versus tentativeness
+
+THRIVE should be respectful, clear, and direct. It should not become timid or vague in the name of politeness.
+
+Use three participant-language lanes:
+
+1. **Facts** - plain recorded state, such as `$40 over plan`, `3 check-ins this week`, or `Support request open`.
+2. **Guidance** - one clear useful action, such as `Review spending`, `Pick one next step`, or `Open food resources`.
+3. **Choice** - an obvious participant-controlled exit or alternative, such as `Skip`, `Back`, `Nothing right now`, or `Something else`.
+
+### Consequential-action boundary
+
+This principle does not authorize THRIVE to perform consequential actions silently.
+
+Guidance may surface, organize, compare, explain, route, or open the appropriate in-product next step. Explicit participant or authorized-staff action remains required for consequential actions such as:
+
+- sending a support request;
+- sharing information externally;
+- changing financial settings;
+- making legal, clinical, fiduciary, or eligibility decisions;
+- creating or changing permissions or authority;
+- submitting an application or transaction on the participant's behalf unless separately authorized.
+
+The product should reduce decision fatigue without removing participant control.
+
+### Visual interaction rule
+
+When a participant selection changes the task, bring the new task to the selection. Do not append the new task farther down the page and require the participant to hunt for it.
+
+The preferred pattern is:
+
+`state -> visible choices -> one useful action -> optional exit/history`
+
 ## Drift Detection
 
 Call out drift when:
@@ -51,7 +113,9 @@ Call out drift when:
 - future multi-tenant ideas distract from Johnny's working path;
 - architecture work continues without producing a usable increment;
 - implementation begins before identity and permission boundaries are settled;
-- UI language implies judgment, incapacity, approval, or authority not actually present.
+- UI language implies judgment, incapacity, approval, or authority not actually present;
+- participant UX adds repeated permission questions where direct, reversible guidance would be clearer;
+- participant UX hides or weakens a real choice while claiming to simplify the interaction.
 
 Use:
 
