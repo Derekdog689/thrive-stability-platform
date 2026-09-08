@@ -197,6 +197,16 @@ nav.fixed.inset-x-0.bottom-3.z-50 a > span:last-child {
   letter-spacing: 0.025em !important;
 }
 
+/* Money activity: an already-assigned category is state, not another action. */
+article > div.mt-3.grid.grid-cols-2 > button:nth-child(2):disabled {
+  cursor: default;
+  border-color: rgba(16, 185, 129, 0.16) !important;
+  background: rgba(236, 253, 245, 0.72) !important;
+  color: rgb(6, 95, 70) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
 /* The focus icon signals that the current step is active without inventing a percentage. */
 .thrive-focus-card > div.relative > div.flex > div:first-child {
   animation: thriveActiveStep 2.8s ease-in-out infinite;
