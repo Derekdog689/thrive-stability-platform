@@ -21,6 +21,8 @@ export type ParticipantSupportCategory =
   | "transaction_understanding"
   | "wellness_support"
   | "goal_support"
+  | "appointment_paperwork"
+  | "technology_app"
   | "program_question"
   | "other";
 
