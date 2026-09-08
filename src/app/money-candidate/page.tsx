@@ -33,6 +33,20 @@ const contextChoices: Array<{ value: TransactionExplanationCategory; label: stri
   { value: "other", label: "Other" },
 ];
 
+function localDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function daysUntil(dateKey: string) {
+  const today = new Date(`${localDateKey()}T12:00:00`);
+  const target = new Date(`${dateKey}T12:00:00`);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
 function MoneyBottomNav() {
   const items = [
     { href: "/", label: "Today", icon: "⌂" },
@@ -141,7 +155,7 @@ function ActivityCard({
 
     <div className="mt-3 grid grid-cols-2 gap-2">
       {isImported ? <button type="button" disabled={!canWriteContext || working || (explanation?.status != null && explanation.status !== "draft")} onClick={() => { setShowContext((current) => !current); setShowPlan(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{explanation ? "Edit context" : "Add context"}</button> : <button type="button" disabled={working} onClick={() => { setShowEdit((current) => !current); setShowPlan(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700">Edit entry</button>}
-      <button type="button" disabled={working || !canConnectPlan || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{unassigned > 0 ? "Connect to plan" : "Connected"}</button>
+      <button type="button" disabled={working || !canConnectPlan || activity.activity_direction !== "outflow" || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{activity.activity_direction !== "outflow" ? "Money in" : unassigned > 0 ? "Connect to plan" : "Connected"}</button>
     </div>
 
     {showContext ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-xs font-black text-slate-500">What was this?</p><div className="mt-2 flex flex-wrap gap-2">{contextChoices.map((choice) => <button key={choice.value} type="button" onClick={() => setCategory(choice.value)} className={`rounded-full px-3 py-2 text-xs font-black ${category === choice.value ? "bg-emerald-700 text-white" : "border border-slate-200 bg-white text-slate-600"}`}>{choice.label}</button>)}</div><label className="mt-3 block text-xs font-black text-slate-500">Anything to add? <span className="font-normal">Optional</span><textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal text-slate-800" /></label><button type="button" disabled={working} onClick={() => void saveContext()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Save context</button></div> : null}
@@ -169,6 +183,7 @@ export default function MoneyCandidatePage() {
     working: budgetWorking,
     errorMessage: budgetWriteError,
     createDraft: createBudgetDraft,
+    completeBudget,
   } = useParticipantBudgetBuilder();
   const {
     explanationByTransactionId,
@@ -187,6 +202,7 @@ export default function MoneyCandidatePage() {
   const [activityDescription, setActivityDescription] = useState("");
   const [activityNotice, setActivityNotice] = useState("");
   const [activityWorking, setActivityWorking] = useState(false);
+  const [completingExpired, setCompletingExpired] = useState(false);
 
   const activePeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
   const draftPeriod = budgetPeriods.find((period) => period.status === "draft") ?? null;
@@ -195,6 +211,9 @@ export default function MoneyCandidatePage() {
   const currentActivity = activePeriod ? financialActivity.filter((activity) => activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end).slice(0, 12) : [];
   const activityRows = currentActivity.length > 0 ? currentActivity : financialActivity.slice(0, 12);
   const showingRecentActivity = currentActivity.length === 0 && activityRows.length > 0;
+  const budgetDaysLeft = activePeriod ? daysUntil(activePeriod.period_end) : null;
+  const budgetExpired = activePeriod ? activePeriod.period_end < localDateKey() : false;
+  const budgetEndingSoon = activePeriod && !budgetExpired && budgetDaysLeft !== null && budgetDaysLeft >= 0 && budgetDaysLeft <= 3;
 
   const planned = activeLines.reduce((sum, line) => sum + toNumber(line.planned_amount), 0);
   const out = activeLines.reduce((sum, line) => sum + toNumber(line.derived_actual_amount), 0);
@@ -216,6 +235,22 @@ export default function MoneyCandidatePage() {
     const result = await createBudgetDraft({ programId: activeProgramId, periodStart: newBudgetDraft.periodStart, periodEnd: newBudgetDraft.periodEnd, expectedIncome, notes: newBudgetDraft.notes });
     setBudgetNotice(result.message);
     if (result.ok) await refresh();
+  }
+
+  async function completeExpiredBudget() {
+    if (!activePeriod || !budgetExpired || completingExpired) return;
+    setBudgetNotice("");
+    setCompletingExpired(true);
+    const result = await completeBudget(activePeriod.id);
+    if (!result.ok) {
+      setBudgetNotice(result.message);
+      setCompletingExpired(false);
+      return;
+    }
+    await refresh();
+    setBudgetNotice("Plan completed. Start the next one below.");
+    setCompletingExpired(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function createContext(transactionId: string, category: TransactionExplanationCategory, note: string) {
@@ -276,15 +311,18 @@ export default function MoneyCandidatePage() {
 
     {loading ? <section className="rounded-[2rem] bg-white/75 p-6 shadow-sm">Loading money.</section> : null}
     {errorMessage ? <section role="alert" className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6"><p className="font-black">Money could not be loaded.</p><p className="mt-2 text-sm">{errorMessage}</p></section> : null}
+    {budgetNotice ? <section className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 text-sm font-black text-emerald-950">{budgetNotice}</section> : null}
 
-    {!loading && !errorMessage && !activePeriod && !draftPeriod ? <section className="rounded-[2rem] border border-white/80 bg-white/78 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">New plan</p><h2 className="mt-2 text-3xl font-black">Start with the basics.</h2></div><div className="flex gap-1.5"><span className="h-1.5 w-8 rounded-full bg-emerald-600" /><span className="h-1.5 w-8 rounded-full bg-slate-200" /></div></div><form onSubmit={handleCreateBudgetDraft} className="mt-5 grid gap-4"><div className="grid grid-cols-2 gap-3"><label className="text-sm font-black">Start<input type="date" value={newBudgetDraft.periodStart} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, periodStart: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 font-normal" /></label><label className="text-sm font-black">End<input type="date" value={newBudgetDraft.periodEnd} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, periodEnd: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 font-normal" /></label></div><label className="text-sm font-black">Expected income<div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="font-black text-slate-400">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={newBudgetDraft.expectedIncome} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, expectedIncome: event.target.value }))} className="w-full bg-transparent px-3 py-3 text-xl font-black outline-none" /></div></label><label className="text-sm font-black">Anything to remember? <span className="font-normal text-slate-400">Optional</span><textarea rows={2} value={newBudgetDraft.notes} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, notes: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal" /></label>{(budgetNotice || budgetWriteError) ? <p className="rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-800">{budgetNotice || budgetWriteError}</p> : null}<button type="submit" disabled={budgetWorking || !activeProgramId} className="rounded-full bg-emerald-700 px-5 py-3.5 font-black text-white disabled:opacity-50">Continue to categories</button></form></section> : null}
+    {!loading && !errorMessage && !activePeriod && !draftPeriod ? <section className="rounded-[2rem] border border-white/80 bg-white/78 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">New plan</p><h2 className="mt-2 text-3xl font-black">Start the next plan.</h2></div><div className="flex gap-1.5"><span className="h-1.5 w-8 rounded-full bg-emerald-600" /><span className="h-1.5 w-8 rounded-full bg-slate-200" /></div></div><p className="mt-2 text-sm font-semibold text-slate-500">Start with the dates and money you expect. Categories come next.</p><form onSubmit={handleCreateBudgetDraft} className="mt-5 grid gap-4"><div className="grid grid-cols-2 gap-3"><label className="text-sm font-black">Start<input type="date" value={newBudgetDraft.periodStart} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, periodStart: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 font-normal" /></label><label className="text-sm font-black">End<input type="date" value={newBudgetDraft.periodEnd} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, periodEnd: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 font-normal" /></label></div><label className="text-sm font-black">Expected income<div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="font-black text-slate-400">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={newBudgetDraft.expectedIncome} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, expectedIncome: event.target.value }))} className="w-full bg-transparent px-3 py-3 text-xl font-black outline-none" /></div></label><label className="text-sm font-black">Anything to remember? <span className="font-normal text-slate-400">Optional</span><textarea rows={2} value={newBudgetDraft.notes} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, notes: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal" /></label>{budgetWriteError ? <p className="rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-800">{budgetWriteError}</p> : null}<button type="submit" disabled={budgetWorking || !activeProgramId} className="rounded-full bg-emerald-700 px-5 py-3.5 font-black text-white disabled:opacity-50">Continue to categories</button></form></section> : null}
 
     {!loading && !errorMessage && draftPeriod ? <BudgetDraftCategoryBuilder draftPeriod={draftPeriod} currentLines={draftLines} refresh={refresh} /> : null}
 
     {!loading && !errorMessage && activePeriod ? <>
-      <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/72 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl"><div className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Right now</p><p className="mt-2 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">{formatMoney(Math.max(remaining, 0))}</p><p className="mt-1 text-lg font-bold text-slate-500">left in the plan</p></div><span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-800">Active plan</span></div><div className={`mt-6 flex items-center gap-3 rounded-full border px-4 py-3 ${state.panel}`}><span className={`h-3.5 w-3.5 rounded-full ${state.dot}`} /><p className={`font-black ${state.text}`}>{state.label}</p></div><div className="mt-6 h-3 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${overPlan > 0 ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${usedPercent}%` }} /></div><div className="mt-5 grid grid-cols-3 gap-2 text-center"><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Plan</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(planned)}</p></div><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Out</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(out)}</p></div><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Income in</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(incomeIn)}</p></div></div></div></section>
+      {budgetExpired ? <section className="rounded-[2rem] border border-amber-200 bg-amber-50/90 p-5 shadow-sm sm:p-7"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Plan ended</p><h2 className="mt-2 text-3xl font-black text-amber-950">Your Money plan ended {formatDate(activePeriod.period_end)}.</h2><p className="mt-2 text-sm font-semibold text-amber-900">Review the final numbers, complete this plan, then THRIVE will open the next-plan setup.</p><button type="button" disabled={completingExpired || budgetWorking} onClick={() => void completeExpiredBudget()} className="mt-5 w-full rounded-full bg-amber-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50">{completingExpired ? "Completing plan..." : "Complete plan"}</button></section> : budgetEndingSoon ? <section className="rounded-[2rem] border border-cyan-100 bg-cyan-50/80 p-5 shadow-sm"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-700">Coming up</p><h2 className="mt-2 text-2xl font-black text-cyan-950">Your Money plan {budgetDaysLeft === 0 ? "ends today" : `ends in ${budgetDaysLeft} day${budgetDaysLeft === 1 ? "" : "s"}`}.</h2><p className="mt-2 text-sm font-semibold text-cyan-800">Nothing to do yet. THRIVE will prompt you when it is time to close this plan and start the next one.</p></section> : null}
 
-      <ActiveBudgetEditor activePeriod={activePeriod} currentLines={activeLines} refresh={refresh} />
+      <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/72 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl"><div className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Right now</p><p className="mt-2 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">{formatMoney(Math.max(remaining, 0))}</p><p className="mt-1 text-lg font-bold text-slate-500">left in the plan</p></div><span className={`rounded-full px-3 py-1.5 text-xs font-black ${budgetExpired ? "bg-amber-100 text-amber-900" : "bg-emerald-50 text-emerald-800"}`}>{budgetExpired ? `Ended ${formatDate(activePeriod.period_end)}` : "Active plan"}</span></div><div className={`mt-6 flex items-center gap-3 rounded-full border px-4 py-3 ${state.panel}`}><span className={`h-3.5 w-3.5 rounded-full ${state.dot}`} /><p className={`font-black ${state.text}`}>{state.label}</p></div><div className="mt-6 h-3 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${overPlan > 0 ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${usedPercent}%` }} /></div><div className="mt-5 grid grid-cols-3 gap-2 text-center"><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Plan</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(planned)}</p></div><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Out</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(out)}</p></div><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Income in</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(incomeIn)}</p></div></div></div></section>
+
+      {!budgetExpired ? <ActiveBudgetEditor activePeriod={activePeriod} currentLines={activeLines} refresh={refresh} /> : null}
 
       <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Your categories</p><h2 className="mt-2 text-3xl font-black">Where the money is going</h2></div><span className="text-sm font-black text-slate-500">{activeLines.length}</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{activeLines.map((line) => { const linePlan = toNumber(line.planned_amount); const lineOut = toNumber(line.derived_actual_amount); const lineLeft = toNumber(line.derived_remaining_amount); const linePercent = linePlan > 0 ? Math.max(0, Math.min(100, Math.round((lineOut / linePlan) * 100))) : 0; const lineOver = lineOut > linePlan; return <article key={line.id} className="rounded-[1.5rem] border border-slate-100 bg-white/85 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{line.category_name}</p><p className={`mt-1 text-sm font-bold ${lineOver ? "text-amber-800" : "text-slate-500"}`}>{lineOver ? `${formatMoney(lineOut - linePlan)} over` : `${formatMoney(lineLeft)} left`}</p></div><p className="shrink-0 text-sm font-black text-slate-500">{formatMoney(linePlan)}</p></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${lineOver ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${linePercent}%` }} /></div><div className="mt-3 grid grid-cols-3 gap-1 text-center"><div><p className="text-[9px] font-black uppercase text-slate-400">Plan</p><p className="text-xs font-black">{formatMoney(linePlan)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Used</p><p className="text-xs font-black">{formatMoney(lineOut)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Left</p><p className="text-xs font-black">{formatMoney(lineLeft)}</p></div></div></article>; })}</div></section>
 
