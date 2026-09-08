@@ -52,6 +52,7 @@ function TransactionCard({
   allocations,
   budgetLines,
   canWriteContext,
+  canConnectPlan,
   contextWorking,
   allocationWorking,
   onCreateContext,
@@ -63,6 +64,7 @@ function TransactionCard({
   allocations: ParticipantTransactionAllocation[];
   budgetLines: any[];
   canWriteContext: boolean;
+  canConnectPlan: boolean;
   contextWorking: boolean;
   allocationWorking: boolean;
   onCreateContext: (transactionId: string, category: TransactionExplanationCategory, note: string) => Promise<{ ok: boolean; message: string }>;
@@ -90,7 +92,7 @@ function TransactionCard({
   }
 
   async function connect(line: any) {
-    if (unassigned <= 0) return;
+    if (unassigned <= 0 || !canConnectPlan) return;
     setNotice("");
     const result = await onAllocate(transaction.id, line.id, unassigned);
     setNotice(result.message);
@@ -103,7 +105,7 @@ function TransactionCard({
 
     {activeAllocations.length ? <div className="mt-3 flex flex-wrap gap-2">{activeAllocations.map((item) => <span key={item.allocation_id} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600">{item.budget_category_name} · {formatMoney(item.allocated_amount)}</span>)}</div> : null}
 
-    <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={!canWriteContext || contextWorking || (explanation?.status != null && explanation.status !== "draft")} onClick={() => { setShowContext((current) => !current); setShowPlan(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{explanation ? "Edit context" : "Add context"}</button><button type="button" disabled={allocationWorking || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{unassigned > 0 ? "Connect to plan" : "Connected"}</button></div>
+    <div className={`mt-3 grid gap-2 ${canConnectPlan ? "grid-cols-2" : "grid-cols-1"}`}><button type="button" disabled={!canWriteContext || contextWorking || (explanation?.status != null && explanation.status !== "draft")} onClick={() => { setShowContext((current) => !current); setShowPlan(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{explanation ? "Edit context" : "Add context"}</button>{canConnectPlan ? <button type="button" disabled={allocationWorking || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{unassigned > 0 ? "Connect to plan" : "Connected"}</button> : null}</div>
 
     {showContext ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-xs font-black text-slate-500">What was this?</p><div className="mt-2 flex flex-wrap gap-2">{contextChoices.map((choice) => <button key={choice.value} type="button" onClick={() => setCategory(choice.value)} className={`rounded-full px-3 py-2 text-xs font-black ${category === choice.value ? "bg-emerald-700 text-white" : "border border-slate-200 bg-white text-slate-600"}`}>{choice.label}</button>)}</div><label className="mt-3 block text-xs font-black text-slate-500">Anything to add? <span className="font-normal">Optional</span><textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal text-slate-800" /></label><button type="button" disabled={contextWorking} onClick={() => void saveContext()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Save context</button></div> : null}
 
@@ -149,12 +151,15 @@ export default function MoneyCandidatePage() {
     notes: "",
   });
   const [budgetNotice, setBudgetNotice] = useState("");
+  const [showActivity, setShowActivity] = useState(false);
 
   const activePeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
   const draftPeriod = budgetPeriods.find((period) => period.status === "draft") ?? null;
   const activeLines = activePeriod ? budgetLines.filter((line) => line.budget_period_id === activePeriod.id && line.is_active) : [];
   const draftLines = draftPeriod ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id && line.is_active) : [];
   const currentTransactions = activePeriod ? transactions.filter((transaction) => transaction.posted_date >= activePeriod.period_start && transaction.posted_date <= activePeriod.period_end).slice(0, 8) : [];
+  const activityTransactions = currentTransactions.length > 0 ? currentTransactions : transactions.slice(0, 8);
+  const showingRecentActivity = currentTransactions.length === 0 && activityTransactions.length > 0;
 
   const planned = activeLines.reduce((sum, line) => sum + toNumber(line.planned_amount), 0);
   const out = activeLines.reduce((sum, line) => sum + toNumber(line.derived_actual_amount), 0);
@@ -233,7 +238,10 @@ export default function MoneyCandidatePage() {
 
       <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Your categories</p><h2 className="mt-2 text-3xl font-black">Where the money is going</h2></div><span className="text-sm font-black text-slate-500">{activeLines.length}</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{activeLines.map((line) => { const linePlan = toNumber(line.planned_amount); const lineOut = toNumber(line.derived_actual_amount); const lineLeft = toNumber(line.derived_remaining_amount); const linePercent = linePlan > 0 ? Math.max(0, Math.min(100, Math.round((lineOut / linePlan) * 100))) : 0; const lineOver = lineOut > linePlan; return <article key={line.id} className="rounded-[1.5rem] border border-slate-100 bg-white/85 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{line.category_name}</p><p className={`mt-1 text-sm font-bold ${lineOver ? "text-amber-800" : "text-slate-500"}`}>{lineOver ? `${formatMoney(lineOut - linePlan)} over` : `${formatMoney(lineLeft)} left`}</p></div><p className="shrink-0 text-sm font-black text-slate-500">{formatMoney(linePlan)}</p></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${lineOver ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${linePercent}%` }} /></div><div className="mt-3 grid grid-cols-3 gap-1 text-center"><div><p className="text-[9px] font-black uppercase text-slate-400">Plan</p><p className="text-xs font-black">{formatMoney(linePlan)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Used</p><p className="text-xs font-black">{formatMoney(lineOut)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Left</p><p className="text-xs font-black">{formatMoney(lineLeft)}</p></div></div></article>; })}</div></section>
 
-      <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Account activity</p><h2 className="mt-2 text-3xl font-black">What happened</h2></div><span className="text-sm font-black text-slate-500">{currentTransactions.length}</span></div><p className="mt-2 text-sm font-semibold text-slate-500">Transactions are facts. Add your context or connect them to your plan when useful.</p><div className="mt-5 space-y-3">{currentTransactions.length ? currentTransactions.map((transaction) => <TransactionCard key={transaction.id} transaction={transaction} explanation={explanationByTransactionId.get(transaction.id)} allocations={allocationsByTransactionId.get(transaction.id) ?? []} budgetLines={activeLines} canWriteContext={canWrite} contextWorking={workingTransactionId === transaction.id} allocationWorking={allocationWorkingTransactionId === transaction.id} onCreateContext={createContext} onUpdateContext={updateContext} onAllocate={connectTransaction} />) : <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">No imported account activity is available inside this plan period yet.</p>}</div></section>
+      <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Account activity</p><h2 className="mt-2 text-3xl font-black">Review what happened</h2></div><span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-black text-slate-500">{transactions.length}</span></div><p className="mt-2 text-sm font-semibold text-slate-500">See imported activity, add your context, and connect eligible transactions to this plan.</p><button type="button" onClick={() => setShowActivity((current) => !current)} className="mt-5 w-full rounded-full bg-emerald-700 px-5 py-4 text-lg font-black text-white">{showActivity ? "Close activity" : "Review account activity"}</button>
+
+        {showActivity ? <div className="mt-5 space-y-3">{showingRecentActivity ? <div className="rounded-2xl bg-amber-50 p-4"><p className="text-sm font-black text-amber-950">No imported transactions fall inside this plan period yet.</p><p className="mt-1 text-sm font-semibold text-amber-800">Showing recent imported activity instead. You can add context here. Plan connection appears only when a transaction belongs inside this plan period.</p></div> : null}{activityTransactions.length ? activityTransactions.map((transaction) => { const insidePlan = !!activePeriod && transaction.posted_date >= activePeriod.period_start && transaction.posted_date <= activePeriod.period_end; return <TransactionCard key={transaction.id} transaction={transaction} explanation={explanationByTransactionId.get(transaction.id)} allocations={allocationsByTransactionId.get(transaction.id) ?? []} budgetLines={activeLines} canWriteContext={canWrite} canConnectPlan={insidePlan} contextWorking={workingTransactionId === transaction.id} allocationWorking={allocationWorkingTransactionId === transaction.id} onCreateContext={createContext} onUpdateContext={updateContext} onAllocate={connectTransaction} />; }) : <div className="rounded-2xl bg-slate-50 p-4"><p className="font-black text-slate-700">No imported account activity is available yet.</p><p className="mt-1 text-sm font-semibold text-slate-500">When imported transactions are available, they will appear here without changing the original bank record.</p></div>}</div> : null}
+      </section>
     </> : null}
   </section><MoneyBottomNav /></main></AuthGate>;
 }
