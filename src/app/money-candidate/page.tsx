@@ -65,7 +65,7 @@ function ActivityCard({
   budgetLines,
   explanation,
   canWriteContext,
-  canConnectPlan,
+  canCategorize,
   onCreateContext,
   onUpdateContext,
   onAllocate,
@@ -77,7 +77,7 @@ function ActivityCard({
   budgetLines: any[];
   explanation: ParticipantTransactionExplanation | undefined;
   canWriteContext: boolean;
-  canConnectPlan: boolean;
+  canCategorize: boolean;
   onCreateContext: (transactionId: string, category: TransactionExplanationCategory, note: string) => Promise<{ ok: boolean; message: string }>;
   onUpdateContext: (explanation: ParticipantTransactionExplanation, category: TransactionExplanationCategory, note: string) => Promise<{ ok: boolean; message: string }>;
   onAllocate: (activity: FinancialActivity, budgetLineId: string, amount: number) => Promise<{ ok: boolean; message: string }>;
@@ -101,6 +101,7 @@ function ActivityCard({
   const total = Math.abs(toNumber(activity.signed_amount));
   const unassigned = Math.max(total - assigned, 0);
   const isImported = activity.activity_record_type === "imported";
+  const isOutflow = activity.activity_direction === "outflow";
 
   async function saveContext() {
     if (!isImported) return;
@@ -114,8 +115,8 @@ function ActivityCard({
     setWorking(false);
   }
 
-  async function connect(line: any) {
-    if (!canConnectPlan || unassigned <= 0) return;
+  async function categorize(line: any) {
+    if (!canCategorize || unassigned <= 0) return;
     setWorking(true);
     setNotice("");
     const result = await onAllocate(activity, line.id, unassigned);
@@ -153,14 +154,14 @@ function ActivityCard({
 
     {activeAllocations.length ? <div className="mt-3 flex flex-wrap gap-2">{activeAllocations.map((item) => <span key={item.allocation_id} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600">{item.budget_category_name} · {formatMoney(item.allocated_amount)}</span>)}</div> : null}
 
-    <div className="mt-3 grid grid-cols-2 gap-2">
+    <div className={`mt-3 grid gap-2 ${isOutflow ? "grid-cols-2" : "grid-cols-1"}`}>
       {isImported ? <button type="button" disabled={!canWriteContext || working || (explanation?.status != null && explanation.status !== "draft")} onClick={() => { setShowContext((current) => !current); setShowPlan(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{explanation ? "Edit context" : "Add context"}</button> : <button type="button" disabled={working} onClick={() => { setShowEdit((current) => !current); setShowPlan(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700">Edit entry</button>}
-      <button type="button" disabled={working || !canConnectPlan || activity.activity_direction !== "outflow" || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{activity.activity_direction !== "outflow" ? "Money in" : unassigned > 0 ? "Connect to plan" : "Connected"}</button>
+      {isOutflow ? <button type="button" disabled={working || !canCategorize || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{unassigned > 0 ? "Choose category" : "Categorized"}</button> : null}
     </div>
 
     {showContext ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-xs font-black text-slate-500">What was this?</p><div className="mt-2 flex flex-wrap gap-2">{contextChoices.map((choice) => <button key={choice.value} type="button" onClick={() => setCategory(choice.value)} className={`rounded-full px-3 py-2 text-xs font-black ${category === choice.value ? "bg-emerald-700 text-white" : "border border-slate-200 bg-white text-slate-600"}`}>{choice.label}</button>)}</div><label className="mt-3 block text-xs font-black text-slate-500">Anything to add? <span className="font-normal">Optional</span><textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal text-slate-800" /></label><button type="button" disabled={working} onClick={() => void saveContext()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Save context</button></div> : null}
 
-    {showPlan ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-sm font-black">Which part of your plan?</p><p className="mt-1 text-xs font-semibold text-slate-500">{formatMoney(unassigned)} not connected yet</p><div className="mt-3 grid grid-cols-2 gap-2">{budgetLines.map((line) => <button key={line.id} type="button" disabled={working} onClick={() => void connect(line)} className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-left text-sm font-black text-slate-700 disabled:opacity-50">{line.category_name}</button>)}</div></div> : null}
+    {showPlan ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-sm font-black">Where did this go?</p><p className="mt-1 text-xs font-semibold text-slate-500">Choose the Budget category.</p><div className="mt-3 grid grid-cols-2 gap-2">{budgetLines.map((line) => <button key={line.id} type="button" disabled={working} onClick={() => void categorize(line)} className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-left text-sm font-black text-slate-700 disabled:opacity-50">{line.category_name}</button>)}</div></div> : null}
 
     {showEdit && !isImported ? <form onSubmit={saveManual} className="mt-3 rounded-2xl bg-slate-50 p-3"><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setEditDirection("outflow")} className={`rounded-full px-3 py-2.5 text-sm font-black ${editDirection === "outflow" ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>Money out</button><button type="button" onClick={() => setEditDirection("inflow")} className={`rounded-full px-3 py-2.5 text-sm font-black ${editDirection === "inflow" ? "bg-emerald-700 text-white" : "bg-white text-slate-600"}`}>Money in</button></div><input type="date" value={editDate} onChange={(event) => setEditDate(event.target.value)} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-3" /><div className="mt-3 flex items-center rounded-xl border border-slate-200 bg-white px-3"><span className="font-black text-slate-400">$</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={editAmount} onChange={(event) => setEditAmount(event.target.value)} className="w-full bg-transparent px-2 py-3 text-xl font-black outline-none" /></div><input value={editDescription} onChange={(event) => setEditDescription(event.target.value)} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-3" /><div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" disabled={working} className="rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white">Save</button><button type="button" disabled={working} onClick={() => void removeManual()} className="rounded-full border border-rose-200 bg-white px-4 py-2.5 text-sm font-black text-rose-700">Remove</button></div></form> : null}
 
@@ -200,6 +201,7 @@ export default function MoneyCandidatePage() {
   const [activityDate, setActivityDate] = useState("");
   const [activityAmount, setActivityAmount] = useState("");
   const [activityDescription, setActivityDescription] = useState("");
+  const [activityBudgetLineId, setActivityBudgetLineId] = useState("");
   const [activityNotice, setActivityNotice] = useState("");
   const [activityWorking, setActivityWorking] = useState(false);
   const [completingExpired, setCompletingExpired] = useState(false);
@@ -272,7 +274,7 @@ export default function MoneyCandidatePage() {
     });
     if (error) return { ok: false, message: error.message };
     await refresh();
-    return { ok: true, message: "Connected to your plan." };
+    return { ok: true, message: "Category saved." };
   }
 
   async function updateManualActivity(activity: FinancialActivity, date: string, direction: "inflow" | "outflow", amount: number, description: string) {
@@ -294,15 +296,56 @@ export default function MoneyCandidatePage() {
   async function addManualActivity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActivityNotice("");
-    if (!activeProgramId) { setActivityNotice("THRIVE could not identify one active program."); return; }
+    if (!activeProgramId || !activePeriod) { setActivityNotice("THRIVE could not identify one active Money plan."); return; }
     const amount = Number(activityAmount);
-    if (!activityDate || !Number.isFinite(amount) || amount <= 0 || !activityDescription.trim()) { setActivityNotice("Add a date, amount, and short description."); return; }
+    if (!activityDate || !Number.isFinite(amount) || amount <= 0) { setActivityNotice("Add a date and amount."); return; }
+    if (activityDate < activePeriod.period_start || activityDate > activePeriod.period_end) { setActivityNotice("Choose a date inside this Money plan."); return; }
+    if (activityDirection === "outflow" && !activityBudgetLineId) { setActivityNotice("Choose where the money went."); return; }
+    if (activityDirection === "inflow" && !activityDescription.trim()) { setActivityNotice("Add a short source for the money in."); return; }
+
+    const selectedLine = activeLines.find((line) => line.id === activityBudgetLineId) ?? null;
+    const description = activityDirection === "outflow"
+      ? activityDescription.trim() || selectedLine?.category_name || "Money out"
+      : activityDescription.trim();
+
     setActivityWorking(true);
-    const { error } = await supabase.rpc("create_my_manual_financial_activity_v1", { p_program_id: activeProgramId, p_activity_date: activityDate, p_activity_direction: activityDirection, p_amount: amount, p_description: activityDescription.trim() });
-    if (error) { setActivityNotice(error.message); setActivityWorking(false); return; }
-    setActivityDate(""); setActivityAmount(""); setActivityDescription(""); setActivityDirection("outflow"); setShowAddActivity(false);
+    const createResult = await supabase.rpc("create_my_manual_financial_activity_v1", {
+      p_program_id: activeProgramId,
+      p_activity_date: activityDate,
+      p_activity_direction: activityDirection,
+      p_amount: amount,
+      p_description: description,
+    });
+
+    if (createResult.error) {
+      setActivityNotice(createResult.error.message);
+      setActivityWorking(false);
+      return;
+    }
+
+    if (activityDirection === "outflow") {
+      const allocationResult = await supabase.rpc("allocate_my_financial_activity_v1", {
+        p_activity_record_type: "manual",
+        p_activity_id: createResult.data as string,
+        p_budget_line_id: activityBudgetLineId,
+        p_allocated_amount: amount,
+      });
+      if (allocationResult.error) {
+        await refresh();
+        setActivityNotice(`Activity saved, but its category was not saved: ${allocationResult.error.message}`);
+        setActivityWorking(false);
+        return;
+      }
+    }
+
+    setActivityDate("");
+    setActivityAmount("");
+    setActivityDescription("");
+    setActivityBudgetLineId("");
+    setActivityDirection("outflow");
+    setShowAddActivity(false);
     await refresh();
-    setActivityNotice("Activity added.");
+    setActivityNotice(activityDirection === "outflow" ? "Money out added to your Budget." : "Money in added.");
     setActivityWorking(false);
   }
 
@@ -326,11 +369,15 @@ export default function MoneyCandidatePage() {
 
       <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Your categories</p><h2 className="mt-2 text-3xl font-black">Where the money is going</h2></div><span className="text-sm font-black text-slate-500">{activeLines.length}</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{activeLines.map((line) => { const linePlan = toNumber(line.planned_amount); const lineOut = toNumber(line.derived_actual_amount); const lineLeft = toNumber(line.derived_remaining_amount); const linePercent = linePlan > 0 ? Math.max(0, Math.min(100, Math.round((lineOut / linePlan) * 100))) : 0; const lineOver = lineOut > linePlan; return <article key={line.id} className="rounded-[1.5rem] border border-slate-100 bg-white/85 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{line.category_name}</p><p className={`mt-1 text-sm font-bold ${lineOver ? "text-amber-800" : "text-slate-500"}`}>{lineOver ? `${formatMoney(lineOut - linePlan)} over` : `${formatMoney(lineLeft)} left`}</p></div><p className="shrink-0 text-sm font-black text-slate-500">{formatMoney(linePlan)}</p></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${lineOver ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${linePercent}%` }} /></div><div className="mt-3 grid grid-cols-3 gap-1 text-center"><div><p className="text-[9px] font-black uppercase text-slate-400">Plan</p><p className="text-xs font-black">{formatMoney(linePlan)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Used</p><p className="text-xs font-black">{formatMoney(lineOut)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Left</p><p className="text-xs font-black">{formatMoney(lineLeft)}</p></div></div></article>; })}</div></section>
 
-      <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Money activity</p><h2 className="mt-2 text-3xl font-black">What happened</h2></div><span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-black text-slate-500">{financialActivity.length}</span></div><p className="mt-2 text-sm font-semibold text-slate-500">Imported activity stays unchanged. Entries you add are labeled and can be edited.</p><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => setShowActivity((current) => !current)} className="rounded-full bg-emerald-700 px-4 py-3.5 text-sm font-black text-white">{showActivity ? "Close activity" : "Review activity"}</button><button type="button" onClick={() => { setShowAddActivity((current) => !current); setShowActivity(true); setActivityNotice(""); }} className="rounded-full border border-emerald-200 bg-white px-4 py-3.5 text-sm font-black text-emerald-800">+ Add activity</button></div>
+      <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Money activity</p><h2 className="mt-2 text-3xl font-black">What happened</h2></div><span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-black text-slate-500">{financialActivity.length}</span></div><p className="mt-2 text-sm font-semibold text-slate-500">Money out goes straight to a Budget category. Imported activity stays unchanged.</p><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => setShowActivity((current) => !current)} className="rounded-full bg-emerald-700 px-4 py-3.5 text-sm font-black text-white">{showActivity ? "Close activity" : "Review activity"}</button><button type="button" onClick={() => { setShowAddActivity((current) => !current); setShowActivity(true); setActivityNotice(""); }} className="rounded-full border border-emerald-200 bg-white px-4 py-3.5 text-sm font-black text-emerald-800">+ Add activity</button></div>
 
-        {showAddActivity ? <form onSubmit={addManualActivity} className="mt-4 rounded-[1.5rem] bg-emerald-50 p-4"><p className="text-sm font-black">Add what happened</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => setActivityDirection("outflow")} className={`rounded-full px-3 py-3 text-sm font-black ${activityDirection === "outflow" ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>Money out</button><button type="button" onClick={() => setActivityDirection("inflow")} className={`rounded-full px-3 py-3 text-sm font-black ${activityDirection === "inflow" ? "bg-emerald-700 text-white" : "bg-white text-slate-600"}`}>Money in</button></div><input type="date" value={activityDate} onChange={(event) => setActivityDate(event.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" /><div className="mt-3 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="text-xl font-black text-slate-400">$</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={activityAmount} onChange={(event) => setActivityAmount(event.target.value)} className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none" /></div><input value={activityDescription} onChange={(event) => setActivityDescription(event.target.value)} placeholder="Short description" className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" /><div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" disabled={activityWorking} className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-50">Add</button><button type="button" onClick={() => setShowAddActivity(false)} className="rounded-full border border-slate-200 bg-white px-4 py-3 font-black text-slate-600">Cancel</button></div>{activityNotice ? <p className="mt-2 text-sm font-bold text-slate-600">{activityNotice}</p> : null}</form> : null}
+        {showAddActivity ? <form onSubmit={addManualActivity} className="mt-4 rounded-[1.5rem] bg-emerald-50 p-4"><p className="text-sm font-black">Add what happened</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => { setActivityDirection("outflow"); setActivityBudgetLineId(""); }} className={`rounded-full px-3 py-3 text-sm font-black ${activityDirection === "outflow" ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>Money out</button><button type="button" onClick={() => { setActivityDirection("inflow"); setActivityBudgetLineId(""); }} className={`rounded-full px-3 py-3 text-sm font-black ${activityDirection === "inflow" ? "bg-emerald-700 text-white" : "bg-white text-slate-600"}`}>Money in</button></div><input type="date" min={activePeriod.period_start} max={activePeriod.period_end} value={activityDate} onChange={(event) => setActivityDate(event.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" /><div className="mt-3 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="text-xl font-black text-slate-400">$</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={activityAmount} onChange={(event) => setActivityAmount(event.target.value)} className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none" /></div>
 
-        {showActivity ? <div className="mt-5 space-y-3">{showingRecentActivity ? <div className="rounded-2xl bg-amber-50 p-4"><p className="text-sm font-black text-amber-950">No activity falls inside this plan period yet.</p><p className="mt-1 text-sm font-semibold text-amber-800">Showing recent activity instead. Plan connection appears only when an item belongs inside this plan period.</p></div> : null}{activityRows.length ? activityRows.map((activity) => { const insidePlan = !!activePeriod && activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end; const allocations = financialActivityAllocations.filter((item) => item.activity_record_type === activity.activity_record_type && item.activity_id === activity.activity_id); return <ActivityCard key={`${activity.activity_record_type}-${activity.activity_id}`} activity={activity} allocations={allocations} budgetLines={activeLines} explanation={activity.activity_record_type === "imported" ? explanationByTransactionId.get(activity.activity_id) : undefined} canWriteContext={canWrite} canConnectPlan={insidePlan} onCreateContext={createContext} onUpdateContext={updateContext} onAllocate={allocateActivity} onUpdateManual={updateManualActivity} onArchiveManual={archiveManualActivity} />; }) : <div className="rounded-2xl bg-slate-50 p-4"><p className="font-black text-slate-700">No money activity is available yet.</p><p className="mt-1 text-sm font-semibold text-slate-500">Use Add activity to record money in or money out. Imported records will appear here when available.</p></div>}</div> : null}
+          {activityDirection === "outflow" ? <div className="mt-4"><p className="text-sm font-black">Where did it go?</p><div className="mt-2 grid grid-cols-2 gap-2">{activeLines.map((line) => <button key={line.id} type="button" onClick={() => setActivityBudgetLineId(line.id)} className={`rounded-2xl border px-3 py-3 text-left text-sm font-black ${activityBudgetLineId === line.id ? "border-emerald-700 bg-emerald-700 text-white" : "border-emerald-100 bg-white text-slate-700"}`}>{line.category_name}</button>)}</div><input value={activityDescription} onChange={(event) => setActivityDescription(event.target.value)} placeholder="Anything to remember? Optional" className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" /></div> : <input value={activityDescription} onChange={(event) => setActivityDescription(event.target.value)} placeholder="Where did the money come from?" className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" />}
+
+          <div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" disabled={activityWorking} className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-50">{activityWorking ? "Adding..." : "Add"}</button><button type="button" onClick={() => setShowAddActivity(false)} className="rounded-full border border-slate-200 bg-white px-4 py-3 font-black text-slate-600">Cancel</button></div>{activityNotice ? <p className="mt-2 text-sm font-bold text-slate-600">{activityNotice}</p> : null}</form> : null}
+
+        {showActivity ? <div className="mt-5 space-y-3">{showingRecentActivity ? <div className="rounded-2xl bg-amber-50 p-4"><p className="text-sm font-black text-amber-950">No activity falls inside this plan period yet.</p><p className="mt-1 text-sm font-semibold text-amber-800">Showing recent activity instead. Older unassigned outflows can still be categorized when they belong inside this plan period.</p></div> : null}{activityRows.length ? activityRows.map((activity) => { const insidePlan = !!activePeriod && activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end; const allocations = financialActivityAllocations.filter((item) => item.activity_record_type === activity.activity_record_type && item.activity_id === activity.activity_id); return <ActivityCard key={`${activity.activity_record_type}-${activity.activity_id}`} activity={activity} allocations={allocations} budgetLines={activeLines} explanation={activity.activity_record_type === "imported" ? explanationByTransactionId.get(activity.activity_id) : undefined} canWriteContext={canWrite} canCategorize={insidePlan} onCreateContext={createContext} onUpdateContext={updateContext} onAllocate={allocateActivity} onUpdateManual={updateManualActivity} onArchiveManual={archiveManualActivity} />; }) : <div className="rounded-2xl bg-slate-50 p-4"><p className="font-black text-slate-700">No money activity is available yet.</p><p className="mt-1 text-sm font-semibold text-slate-500">Use Add activity to record money in or money out. Imported records will appear here when available.</p></div>}</div> : null}
       </section>
     </> : null}
   </section><MoneyBottomNav /></main></AuthGate>;
