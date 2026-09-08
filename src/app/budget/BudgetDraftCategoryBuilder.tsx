@@ -1,21 +1,10 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import {
-  BudgetLine,
-  BudgetPeriod,
-  formatMoney,
-  toNumber,
-} from "../useParticipantFinancial";
-import {
-  BudgetCategoryType,
-  useParticipantBudgetBuilder,
-} from "./useParticipantBudgetBuilder";
+import { BudgetLine, BudgetPeriod, formatMoney, toNumber } from "../useParticipantFinancial";
+import { BudgetCategoryType, useParticipantBudgetBuilder } from "./useParticipantBudgetBuilder";
 
-const starterCategories: Array<{
-  name: string;
-  type: BudgetCategoryType;
-}> = [
+const starterCategories: Array<{ name: string; type: BudgetCategoryType }> = [
   { name: "Housing", type: "protected" },
   { name: "Electric", type: "protected" },
   { name: "Internet / cable", type: "protected" },
@@ -31,31 +20,11 @@ const starterCategories: Array<{
   { name: "Emergency cushion", type: "reserve" },
 ];
 
-const categoryTypes: Array<{
-  value: BudgetCategoryType;
-  label: string;
-  detail: string;
-}> = [
-  {
-    value: "protected",
-    label: "Essential",
-    detail: "Something you want to protect first.",
-  },
-  {
-    value: "flexible",
-    label: "Flexible",
-    detail: "Something you can adjust as life changes.",
-  },
-  {
-    value: "support",
-    label: "Support / wellness",
-    detail: "Something connected to stability, care, or support.",
-  },
-  {
-    value: "reserve",
-    label: "Reserve",
-    detail: "Money you want to keep available for later.",
-  },
+const types: Array<{ value: BudgetCategoryType; label: string }> = [
+  { value: "protected", label: "Essential" },
+  { value: "flexible", label: "Flexible" },
+  { value: "support", label: "Support" },
+  { value: "reserve", label: "Reserve" },
 ];
 
 type Props = {
@@ -64,658 +33,111 @@ type Props = {
   refresh: () => Promise<void>;
 };
 
-type EditDraft = {
+type Draft = {
   categoryName: string;
   categoryType: BudgetCategoryType;
   plannedAmount: string;
 };
 
-export default function BudgetDraftCategoryBuilder({
-  draftPeriod,
-  currentLines,
-  refresh,
-}: Props) {
-  const {
-    working,
-    errorMessage,
-    addLine,
-    updateLine,
-    activateBudget,
-  } = useParticipantBudgetBuilder();
+const emptyDraft: Draft = { categoryName: "", categoryType: "protected", plannedAmount: "" };
 
-  const [categoryName, setCategoryName] = useState("");
-  const [categoryType, setCategoryType] =
-    useState<BudgetCategoryType>("protected");
-  const [plannedAmount, setPlannedAmount] = useState("");
+export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, refresh }: Props) {
+  const { working, errorMessage, addLine, updateLine, activateBudget } = useParticipantBudgetBuilder();
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
-  const [editingLineId, setEditingLineId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<EditDraft>({
-    categoryName: "",
-    categoryType: "protected",
-    plannedAmount: "",
-  });
-  const [editNotice, setEditNotice] = useState("");
-  const [activationNotice, setActivationNotice] = useState("");
   const [acknowledgeOverPlan, setAcknowledgeOverPlan] = useState(false);
 
   const expectedIncome = toNumber(draftPeriod.expected_income);
-
-  const plannedTotal = useMemo(
-    () =>
-      currentLines.reduce(
-        (sum, line) => sum + toNumber(line.planned_amount),
-        0,
-      ),
-    [currentLines],
-  );
-
-  const actualTotal = useMemo(
-    () =>
-      currentLines.reduce(
-        (sum, line) => sum + toNumber(line.derived_actual_amount),
-        0,
-      ),
-    [currentLines],
-  );
-
-  const remainingTotal = useMemo(
-    () =>
-      currentLines.reduce(
-        (sum, line) => sum + toNumber(line.derived_remaining_amount),
-        0,
-      ),
-    [currentLines],
-  );
-
-  const abovePlanTotal = Math.max(actualTotal - plannedTotal, 0);
+  const plannedTotal = useMemo(() => currentLines.filter((line) => line.is_active).reduce((sum, line) => sum + toNumber(line.planned_amount), 0), [currentLines]);
   const stillUnplanned = expectedIncome - plannedTotal;
   const isOverPlanned = plannedTotal > expectedIncome;
+  const activeLines = currentLines.filter((line) => line.is_active);
+  const existingNames = new Set(activeLines.map((line) => line.category_name.trim().toLowerCase()));
 
-  const existingNames = useMemo(
-    () =>
-      new Set(
-        currentLines.map((line) =>
-          line.category_name.trim().toLowerCase(),
-        ),
-      ),
-    [currentLines],
-  );
-
-  function chooseStarter(
-    name: string,
-    type: BudgetCategoryType,
-  ) {
-    setCategoryName(name);
-    setCategoryType(type);
-    setPlannedAmount("");
-    setNotice("");
-  }
-
-  async function handleAddCategory(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function saveCategory(event: FormEvent<HTMLFormElement>, line?: BudgetLine) {
     event.preventDefault();
     setNotice("");
+    const name = draft.categoryName.trim();
+    const amount = Number(draft.plannedAmount);
+    if (!name) { setNotice("Choose or name a category."); return; }
+    if (!Number.isFinite(amount) || amount < 0) { setNotice("Enter zero or more."); return; }
+    const duplicate = activeLines.some((candidate) => candidate.id !== line?.id && candidate.category_name.trim().toLowerCase() === name.toLowerCase());
+    if (duplicate) { setNotice("That category is already in your plan."); return; }
 
-    const trimmedName = categoryName.trim();
+    const result = line
+      ? await updateLine({ budgetLineId: line.id, categoryName: name, categoryType: draft.categoryType, plannedAmount: amount, isActive: true, sortOrder: line.sort_order })
+      : await addLine({ budgetPeriodId: draftPeriod.id, categoryName: name, categoryType: draft.categoryType, plannedAmount: amount, sortOrder: currentLines.length });
 
-    if (!trimmedName) {
-      setNotice("Enter a category name.");
-      return;
+    setNotice(result.ok ? "Saved." : result.message);
+    if (!result.ok) return;
+    setDraft(emptyDraft);
+    setEditingId(null);
+    await refresh();
+  }
+
+  async function removeCategory(line: BudgetLine) {
+    const result = await updateLine({ budgetLineId: line.id, categoryName: line.category_name, categoryType: line.category_type as BudgetCategoryType, plannedAmount: toNumber(line.planned_amount), isActive: false, sortOrder: line.sort_order });
+    setNotice(result.ok ? "Removed from this draft." : result.message);
+    if (result.ok) {
+      setEditingId(null);
+      setDraft(emptyDraft);
+      await refresh();
     }
+  }
 
-    if (existingNames.has(trimmedName.toLowerCase())) {
-      setNotice("That category is already part of this plan.");
-      return;
-    }
-
-    const amount = Number(plannedAmount);
-
-    if (!Number.isFinite(amount) || amount < 0) {
-      setNotice("Enter a planned amount of zero or more.");
-      return;
-    }
-
-    const result = await addLine({
-      budgetPeriodId: draftPeriod.id,
-      categoryName: trimmedName,
-      categoryType,
-      plannedAmount: amount,
-      sortOrder: currentLines.length,
-    });
-
+  async function activate() {
+    setNotice("");
+    if (activeLines.length === 0) { setNotice("Add at least one category first."); return; }
+    if (isOverPlanned && !acknowledgeOverPlan) { setNotice(`Your plan is ${formatMoney(plannedTotal - expectedIncome)} above the income you entered.`); return; }
+    const result = await activateBudget(draftPeriod.id, isOverPlanned ? acknowledgeOverPlan : false);
     setNotice(result.message);
-
-    if (!result.ok) {
-      return;
-    }
-
-    setCategoryName("");
-    setCategoryType("protected");
-    setPlannedAmount("");
-    await refresh();
-  }
-
-  function beginEditing(line: BudgetLine) {
-    setEditingLineId(line.id);
-    setEditNotice("");
-    setEditDraft({
-      categoryName: line.category_name,
-      categoryType: line.category_type as BudgetCategoryType,
-      plannedAmount: String(toNumber(line.planned_amount)),
-    });
-  }
-
-  function cancelEditing() {
-    setEditingLineId(null);
-    setEditNotice("");
-  }
-
-  async function handleSaveEdit(
-    event: FormEvent<HTMLFormElement>,
-    line: BudgetLine,
-  ) {
-    event.preventDefault();
-    setEditNotice("");
-
-    const trimmedName = editDraft.categoryName.trim();
-
-    if (!trimmedName) {
-      setEditNotice("Enter a category name.");
-      return;
-    }
-
-    const duplicateName = currentLines.some(
-      (candidate) =>
-        candidate.id !== line.id &&
-        candidate.category_name.trim().toLowerCase() ===
-          trimmedName.toLowerCase(),
-    );
-
-    if (duplicateName) {
-      setEditNotice("That category name is already part of this plan.");
-      return;
-    }
-
-    const amount = Number(editDraft.plannedAmount);
-
-    if (!Number.isFinite(amount) || amount < 0) {
-      setEditNotice("Enter a planned amount of zero or more.");
-      return;
-    }
-
-    const result = await updateLine({
-      budgetLineId: line.id,
-      categoryName: trimmedName,
-      categoryType: editDraft.categoryType,
-      plannedAmount: amount,
-      isActive: true,
-      sortOrder: line.sort_order,
-    });
-
-    setEditNotice(result.message);
-
-    if (!result.ok) {
-      return;
-    }
-
-    setEditingLineId(null);
-    await refresh();
-  }
-
-  async function handleDeactivate(line: BudgetLine) {
-    setEditNotice("");
-
-    const result = await updateLine({
-      budgetLineId: line.id,
-      categoryName: line.category_name,
-      categoryType: line.category_type as BudgetCategoryType,
-      plannedAmount: toNumber(line.planned_amount),
-      isActive: false,
-      sortOrder: line.sort_order,
-    });
-
-    setEditNotice(result.message);
-
-    if (!result.ok) {
-      return;
-    }
-
-    setEditingLineId(null);
-    await refresh();
-  }
-
-  async function handleActivateBudget() {
-    setActivationNotice("");
-
-    if (currentLines.length === 0) {
-      setActivationNotice("Add at least one category before using this plan.");
-      return;
-    }
-
-    if (isOverPlanned && !acknowledgeOverPlan) {
-      setActivationNotice(
-        `Your current plan is ${formatMoney(plannedTotal - expectedIncome)} above the income you entered. Confirm that you want to use it this way first.`,
-      );
-      return;
-    }
-
-    const result = await activateBudget(
-      draftPeriod.id,
-      isOverPlanned ? acknowledgeOverPlan : false,
-    );
-
-    setActivationNotice(result.message);
-
-    if (!result.ok) {
-      return;
-    }
-
-    await refresh();
+    if (result.ok) await refresh();
   }
 
   return (
-    <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
-      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-        Build your draft
-      </p>
-
-      <h2 className="mt-2 text-2xl font-black">
-        Choose the parts of your plan.
-      </h2>
-
-      <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-        Starter categories are optional. Choose one that fits or type your own.
-        You decide the planned amount. THRIVE does not fill in participant dollar
-        amounts for you.
-      </p>
-
-      <div
-        className={`mt-6 grid gap-4 ${
-          abovePlanTotal > 0 ? "sm:grid-cols-2 xl:grid-cols-5" : "sm:grid-cols-3"
-        }`}
-      >
-        <div className="rounded-2xl bg-emerald-700 p-5 text-white">
-          <p className="text-sm font-bold text-emerald-100">Expected income</p>
-          <p className="mt-2 text-3xl font-black">{formatMoney(expectedIncome)}</p>
-        </div>
-
-        <div className="rounded-2xl bg-slate-50 p-5">
-          <p className="text-sm font-bold text-slate-500">Planned so far</p>
-          <p className="mt-2 text-3xl font-black">{formatMoney(plannedTotal)}</p>
-        </div>
-
-        <div className="rounded-2xl bg-slate-50 p-5">
-          <p className="text-sm font-bold text-slate-500">Still unplanned</p>
-          <p className="mt-2 text-3xl font-black">{formatMoney(stillUnplanned)}</p>
-          {stillUnplanned < 0 ? (
-            <p className="mt-2 text-sm font-semibold text-amber-800">
-              Your draft is {formatMoney(Math.abs(stillUnplanned))} above the
-              income you entered. You can keep working on the draft.
-            </p>
-          ) : null}
-        </div>
-
-        {abovePlanTotal > 0 ? (
-          <>
-            <div className="rounded-2xl bg-slate-50 p-5">
-              <p className="text-sm font-bold text-slate-500">Remaining</p>
-              <p className="mt-2 text-3xl font-black">{formatMoney(remainingTotal)}</p>
-            </div>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-              <p className="text-sm font-bold text-amber-800">Above plan by</p>
-              <p className="mt-2 text-3xl font-black text-amber-950">
-                {formatMoney(abovePlanTotal)}
-              </p>
-              <p className="mt-2 text-sm text-amber-900">
-                Recorded activity is above the amount currently planned.
-              </p>
-            </div>
-          </>
-        ) : null}
-      </div>
-
-      <div className="mt-7">
-        <p className="text-sm font-black">Starter categories</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Choosing one only fills the category name and type. It does not save
-          anything until you add it to your plan.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {starterCategories.map((starter) => {
-            const alreadyUsed = existingNames.has(starter.name.toLowerCase());
-            return (
-              <button
-                key={starter.name}
-                type="button"
-                disabled={working || alreadyUsed}
-                onClick={() => chooseStarter(starter.name, starter.type)}
-                className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-900 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {starter.name}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <form
-        onSubmit={handleAddCategory}
-        className="mt-7 grid gap-5 rounded-3xl border border-slate-100 bg-slate-50 p-5 sm:p-6"
-      >
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]">
-          <label className="text-sm font-black">
-            Category name
-            <input
-              type="text"
-              value={categoryName}
-              onChange={(event) => setCategoryName(event.target.value)}
-              disabled={working}
-              placeholder="Type your own or choose above"
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
-            />
-          </label>
-
-          <label className="text-sm font-black">
-            Type
-            <select
-              value={categoryType}
-              onChange={(event) =>
-                setCategoryType(event.target.value as BudgetCategoryType)
-              }
-              disabled={working}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
-            >
-              {categoryTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="text-sm font-black">
-            Planned amount
-            <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4">
-              <span aria-hidden="true" className="font-black text-slate-500">$</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={plannedAmount}
-                onChange={(event) => setPlannedAmount(event.target.value)}
-                disabled={working}
-                required
-                placeholder="0.00"
-                className="w-full bg-transparent px-3 py-3 font-normal outline-none"
-              />
-            </div>
-          </label>
-        </div>
-
-        <p className="text-sm text-slate-600">
-          {categoryTypes.find((type) => type.value === categoryType)?.detail}
-        </p>
-
-        {errorMessage ? (
-          <p role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-950">
-            {errorMessage}
-          </p>
-        ) : null}
-
-        {notice ? (
-          <p role="status" aria-live="polite" className="rounded-2xl bg-white p-4 text-sm font-semibold text-slate-700">
-            {notice}
-          </p>
-        ) : null}
-
+    <section className="rounded-[2rem] border border-white/80 bg-white/78 p-5 pb-28 shadow-sm backdrop-blur-2xl sm:p-7 sm:pb-28">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <button
-            type="submit"
-            disabled={working}
-            className="rounded-2xl bg-emerald-700 px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {working ? "Adding category..." : "Add to my plan"}
-          </button>
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Build your plan</p>
+          <h2 className="mt-1 text-3xl font-black">Pick what matters.</h2>
         </div>
+        <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-800">Draft</span>
+      </div>
+
+      <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Income</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(expectedIncome)}</p></div>
+        <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Planned</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(plannedTotal)}</p></div>
+        <div className={`rounded-2xl p-3 ${stillUnplanned < 0 ? "bg-amber-50" : "bg-emerald-50"}`}><p className={`text-[9px] font-black uppercase tracking-wide ${stillUnplanned < 0 ? "text-amber-700" : "text-emerald-700"}`}>{stillUnplanned < 0 ? "Over" : "Left"}</p><p className={`mt-1 whitespace-nowrap text-lg font-black ${stillUnplanned < 0 ? "text-amber-900" : "text-emerald-900"}`}>{formatMoney(Math.abs(stillUnplanned))}</p></div>
+      </div>
+
+      <div className="mt-6">
+        <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-black">Categories</p><p className="text-xs font-bold text-slate-400">Tap to add</p></div><span className="text-sm font-black text-slate-500">{activeLines.length} selected</span></div>
+        <div className="mt-3 grid grid-cols-2 gap-2">{starterCategories.map((starter) => {
+          const used = existingNames.has(starter.name.toLowerCase());
+          return <button key={starter.name} type="button" disabled={used} onClick={() => { setEditingId(null); setDraft({ categoryName: starter.name, categoryType: starter.type, plannedAmount: "" }); setNotice(""); }} className={`rounded-2xl border px-3 py-3 text-left text-sm font-black ${used ? "border-slate-100 bg-slate-100 text-slate-400" : draft.categoryName === starter.name ? "border-emerald-700 bg-emerald-700 text-white" : "border-emerald-100 bg-emerald-50 text-emerald-950"}`}>{starter.name}</button>;
+        })}</div>
+      </div>
+
+      <form onSubmit={(event) => void saveCategory(event)} className="mt-5 rounded-[1.7rem] bg-slate-50 p-4">
+        <label className="text-sm font-black">Category<input value={draft.categoryName} onChange={(event) => setDraft((current) => ({ ...current, categoryName: event.target.value }))} placeholder="Choose above or type your own" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-lg" /></label>
+        <div className="mt-4 grid grid-cols-2 gap-2">{types.map((type) => <button key={type.value} type="button" onClick={() => setDraft((current) => ({ ...current, categoryType: type.value }))} className={`rounded-full px-3 py-2.5 text-sm font-black ${draft.categoryType === type.value ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>{type.label}</button>)}</div>
+        <label className="mt-4 block text-sm font-black">Amount<div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="text-xl font-black text-slate-400">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={draft.plannedAmount} onChange={(event) => setDraft((current) => ({ ...current, plannedAmount: event.target.value }))} className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none" /></div></label>
+        <button type="submit" disabled={working} className="mt-4 w-full rounded-full bg-emerald-700 px-5 py-3.5 text-base font-black text-white disabled:opacity-50">Add to plan</button>
       </form>
 
-      {currentLines.length > 0 ? (
-        <div className="mt-7">
-          <p className="text-sm font-black">Currently in this draft</p>
-          <div className="mt-3 grid gap-3">
-            {currentLines.map((line) => {
-              const planned = toNumber(line.planned_amount);
-              const actual = toNumber(line.derived_actual_amount);
-              const remaining = toNumber(line.derived_remaining_amount);
-              const abovePlanAmount = Math.max(actual - planned, 0);
-              const isEditing = editingLineId === line.id;
+      {activeLines.length ? <div className="mt-5 space-y-3">{activeLines.map((line) => {
+        const editing = editingId === line.id;
+        if (editing) return <form key={line.id} onSubmit={(event) => void saveCategory(event, line)} className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4"><input value={draft.categoryName} onChange={(event) => setDraft((current) => ({ ...current, categoryName: event.target.value }))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-black" /><div className="mt-3 flex items-center rounded-xl border border-slate-200 bg-white px-3"><span className="font-black text-slate-400">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={draft.plannedAmount} onChange={(event) => setDraft((current) => ({ ...current, plannedAmount: event.target.value }))} className="w-full bg-transparent px-2 py-3 text-xl font-black outline-none" /></div><div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white">Save</button><button type="button" onClick={() => void removeCategory(line)} className="rounded-full border border-rose-200 bg-white px-4 py-3 font-black text-rose-700">Remove</button></div></form>;
+        return <button key={line.id} type="button" onClick={() => { setEditingId(line.id); setDraft({ categoryName: line.category_name, categoryType: line.category_type as BudgetCategoryType, plannedAmount: String(toNumber(line.planned_amount)) }); setNotice(""); }} className="flex w-full items-center justify-between gap-4 rounded-[1.5rem] border border-slate-100 bg-white/90 p-4 text-left"><div><p className="text-lg font-black">{line.category_name}</p><p className="mt-1 text-sm font-bold text-slate-500">{formatMoney(line.planned_amount)}</p></div><span className="rounded-full bg-slate-50 px-3 py-2 text-sm font-black text-slate-500">Change</span></button>;
+      })}</div> : null}
 
-              return (
-                <div key={line.id} className="rounded-2xl border border-slate-100 bg-white p-4">
-                  {isEditing ? (
-                    <form onSubmit={(event) => handleSaveEdit(event, line)} className="grid gap-4">
-                      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]">
-                        <label className="text-sm font-black">
-                          Category name
-                          <input
-                            type="text"
-                            value={editDraft.categoryName}
-                            onChange={(event) =>
-                              setEditDraft((current) => ({ ...current, categoryName: event.target.value }))
-                            }
-                            disabled={working}
-                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
-                          />
-                        </label>
+      {isOverPlanned ? <label className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-950"><input type="checkbox" checked={acknowledgeOverPlan} onChange={(event) => setAcknowledgeOverPlan(event.target.checked)} className="mt-1 h-5 w-5" /><span>Use this plan even though it is {formatMoney(plannedTotal - expectedIncome)} above the income entered.</span></label> : null}
 
-                        <label className="text-sm font-black">
-                          Type
-                          <select
-                            value={editDraft.categoryType}
-                            onChange={(event) =>
-                              setEditDraft((current) => ({
-                                ...current,
-                                categoryType: event.target.value as BudgetCategoryType,
-                              }))
-                            }
-                            disabled={working}
-                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal"
-                          >
-                            {categoryTypes.map((type) => (
-                              <option key={type.value} value={type.value}>{type.label}</option>
-                            ))}
-                          </select>
-                        </label>
+      {notice ? <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm font-bold text-slate-700">{notice}</p> : null}
+      {errorMessage ? <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-800">{errorMessage}</p> : null}
 
-                        <label className="text-sm font-black">
-                          Planned amount
-                          <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4">
-                            <span aria-hidden="true" className="font-black text-slate-500">$</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              inputMode="decimal"
-                              value={editDraft.plannedAmount}
-                              onChange={(event) =>
-                                setEditDraft((current) => ({ ...current, plannedAmount: event.target.value }))
-                              }
-                              disabled={working}
-                              required
-                              className="w-full bg-transparent px-3 py-3 font-normal outline-none"
-                            />
-                          </div>
-                        </label>
-                      </div>
-
-                      {editNotice ? (
-                        <p role="status" aria-live="polite" className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-700">
-                          {editNotice}
-                        </p>
-                      ) : null}
-
-                      <div className="flex flex-wrap gap-3">
-                        <button
-                          type="submit"
-                          disabled={working}
-                          className="rounded-2xl bg-emerald-700 px-5 py-2 font-black text-white disabled:opacity-60"
-                        >
-                          {working ? "Saving..." : "Save changes"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={working}
-                          onClick={cancelEditing}
-                          className="rounded-2xl border border-slate-300 bg-white px-5 py-2 font-black text-slate-700 disabled:opacity-60"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          disabled={working}
-                          onClick={() => void handleDeactivate(line)}
-                          className="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-2 font-black text-amber-950 disabled:opacity-60"
-                        >
-                          Remove from current plan
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-black">{line.category_name}</p>
-                          <p className="mt-1 text-xs font-semibold capitalize text-slate-500">
-                            {line.category_type.replaceAll("_", " ")}
-                          </p>
-                        </div>
-                        <p className="font-black">{formatMoney(planned)} planned</p>
-                      </div>
-
-                      <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-                        <div className="rounded-xl bg-slate-50 p-3">
-                          <p className="font-semibold text-slate-500">Recorded</p>
-                          <p className="mt-1 font-black">{formatMoney(actual)}</p>
-                        </div>
-                        <div className="rounded-xl bg-slate-50 p-3">
-                          <p className="font-semibold text-slate-500">Remaining</p>
-                          <p className="mt-1 font-black">{formatMoney(remaining)}</p>
-                        </div>
-                        <div className={abovePlanAmount > 0 ? "rounded-xl border border-amber-200 bg-amber-50 p-3" : "rounded-xl bg-slate-50 p-3"}>
-                          <p className={abovePlanAmount > 0 ? "font-semibold text-amber-800" : "font-semibold text-slate-500"}>Above plan by</p>
-                          <p className={abovePlanAmount > 0 ? "mt-1 font-black text-amber-950" : "mt-1 font-black"}>
-                            {formatMoney(abovePlanAmount)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {abovePlanAmount > 0 ? (
-                        <p className="mt-3 text-sm leading-6 text-amber-900">
-                          Recorded activity is {formatMoney(abovePlanAmount)} above the amount currently planned for {line.category_name}.
-                        </p>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        disabled={working}
-                        onClick={() => beginEditing(line)}
-                        className="mt-4 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-900 disabled:opacity-60"
-                      >
-                        Edit category
-                      </button>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <p className="mt-7 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-          No categories have been added to this draft yet.
-        </p>
-      )}
-
-      <section className="mt-8 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-        <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
-          Ready when you are
-        </p>
-        <h3 className="mt-2 text-xl font-black text-slate-950">
-          Use this plan for this Budget period?
-        </h3>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
-          Activating the plan keeps your categories and planned amounts in place and marks this Budget period as active. You can keep reviewing the plan as account activity is recorded.
-        </p>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl bg-white p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Expected income</p>
-            <p className="mt-1 text-xl font-black">{formatMoney(expectedIncome)}</p>
-          </div>
-          <div className="rounded-2xl bg-white p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Planned</p>
-            <p className="mt-1 text-xl font-black">{formatMoney(plannedTotal)}</p>
-          </div>
-          <div className="rounded-2xl bg-white p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-              {isOverPlanned ? "Above income by" : "Still unplanned"}
-            </p>
-            <p className="mt-1 text-xl font-black">
-              {formatMoney(Math.abs(stillUnplanned))}
-            </p>
-          </div>
-        </div>
-
-        {currentLines.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-white p-4 text-sm font-semibold text-slate-700">
-            Add at least one category before using this plan.
-          </p>
-        ) : null}
-
-        {isOverPlanned ? (
-          <label className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-            <input
-              type="checkbox"
-              checked={acknowledgeOverPlan}
-              onChange={(event) => setAcknowledgeOverPlan(event.target.checked)}
-              disabled={working}
-              className="mt-1 h-4 w-4"
-            />
-            <span>
-              I understand this plan is {formatMoney(plannedTotal - expectedIncome)} above the income I entered, and I want to use it this way for now.
-            </span>
-          </label>
-        ) : (
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            You do not have to assign every dollar before using the plan. Unplanned money can remain available.
-          </p>
-        )}
-
-        {activationNotice ? (
-          <p
-            role="status"
-            aria-live="polite"
-            className="mt-4 rounded-2xl bg-white p-4 text-sm font-semibold text-slate-700"
-          >
-            {activationNotice}
-          </p>
-        ) : null}
-
-        <button
-          type="button"
-          disabled={
-            working ||
-            currentLines.length === 0 ||
-            (isOverPlanned && !acknowledgeOverPlan)
-          }
-          onClick={() => void handleActivateBudget()}
-          className="mt-5 rounded-2xl bg-emerald-700 px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {working ? "Activating plan..." : "Use this plan"}
-        </button>
-      </section>
+      <button type="button" disabled={working || activeLines.length === 0} onClick={() => void activate()} className="mt-5 w-full rounded-full bg-emerald-700 px-5 py-4 text-lg font-black text-white disabled:opacity-40">Use this plan</button>
     </section>
   );
 }
