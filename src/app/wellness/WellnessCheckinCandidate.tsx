@@ -10,6 +10,32 @@ function formatValue(value: string | null | undefined) {
   return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
+function nextStepLabel(value: string | null | undefined) {
+  const labels: Record<string, string> = {
+    review_today_plan: "Keep it going",
+    choose_one_task: "Do one useful thing",
+    take_a_break: "Take a break",
+    food_water_rest: "Handle a basic need",
+    contact_supportive_person: "Talk to someone",
+    ask_for_help: "Ask THRIVE for help",
+    other: "Something else",
+    nothing_right_now: "Nothing right now",
+  };
+  return value ? labels[value] ?? formatValue(value) : null;
+}
+
+function detailSentence(label: string, value: string) {
+  const plainValue = formatValue(value).toLowerCase();
+  if (label === "Stress") return `Stress feels ${plainValue}.`;
+  if (label === "Sleep") return `Sleep feels ${plainValue}.`;
+  if (label === "Energy") return `Energy feels ${plainValue}.`;
+  if (label === "Confidence") return `Confidence feels ${plainValue}.`;
+  if (label === "Routine") return `Routine feels ${plainValue}.`;
+  if (label === "Recovery") return `Recovery support feels ${plainValue}.`;
+  if (label === "Support") return `Support feels ${plainValue}.`;
+  return `${label}: ${formatValue(value)}`;
+}
+
 function dateLabel(dateKey: string, today: string) {
   if (dateKey === today) return "Today";
   const [year, month, day] = dateKey.split("-").map(Number);
@@ -110,41 +136,70 @@ export default function WellnessCheckinCandidate() {
     ["Routine", todayCheckin.routine],
     ["Recovery", todayCheckin.recovery_support],
     ["Support", todayCheckin.support_needed],
-  ].filter(([, value]) => Boolean(value)) : [];
+  ].filter(([, value]) => Boolean(value)) as [string, string][] : [];
+
+  const primaryTodayDetail = todayDetails[0] ?? null;
+  const secondaryTodayDetails = todayDetails.slice(1);
 
   return (
     <div className="space-y-6">
       {todayCheckin && !focusMode && !justSaved ? (
-        <section className="rounded-3xl border border-emerald-100 bg-white/82 p-5 shadow-sm backdrop-blur-xl sm:p-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Today</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">Your check-in</h2>
+        <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/64 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl">
+          <div className="relative p-5 sm:p-8">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-emerald-100/70 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-amber-100/50 blur-3xl" />
+
+            <div className="relative">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Today</p>
+                <span className="rounded-full border border-emerald-100 bg-white/76 px-3 py-1.5 text-xs font-black text-emerald-800 shadow-sm backdrop-blur-xl">Your check-in</span>
+              </div>
+
+              <div className="mt-5 flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/78 shadow-sm">
+                  <span className="h-5 w-5 rounded-full bg-emerald-500 shadow-[0_0_0_8px_rgba(16,185,129,0.10)]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-black uppercase tracking-wide text-slate-500">How today feels</p>
+                  <h2 className="mt-1 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">{formatValue(todayCheckin.overall_day)}</h2>
+                </div>
+              </div>
+
+              {primaryTodayDetail ? (
+                <p className="mt-5 text-xl font-bold leading-7 text-slate-700">{detailSentence(primaryTodayDetail[0], primaryTodayDetail[1])}</p>
+              ) : null}
+
+              {secondaryTodayDetails.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {secondaryTodayDetails.map(([label, value]) => (
+                    <span key={label} className="rounded-full border border-white/80 bg-white/68 px-3 py-2 text-xs font-bold text-slate-600 backdrop-blur-xl">{detailSentence(label, value)}</span>
+                  ))}
+                </div>
+              ) : null}
+
+              {todayCheckin.chosen_next_step ? (
+                <div className="mt-6 rounded-[1.6rem] border border-emerald-200/80 bg-emerald-700 p-1 shadow-[0_14px_32px_rgba(4,120,87,0.20)]">
+                  <div className="flex items-center gap-4 rounded-[1.35rem] bg-emerald-700 px-4 py-4 text-white">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/14 text-xl">→</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">Next</p>
+                      <p className="mt-1 text-xl font-black leading-6">{nextStepLabel(todayCheckin.chosen_next_step)}</p>
+                    </div>
+                    <span className="text-2xl font-black text-emerald-100">›</span>
+                  </div>
+                </div>
+              ) : null}
+
+              {todayCheckin.participant_note ? (
+                <details className="mt-4 rounded-2xl border border-white/80 bg-white/62 backdrop-blur-xl">
+                  <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-slate-700">Your note <span className="ml-1 text-emerald-700">⌄</span></summary>
+                  <p className="border-t border-white/80 px-4 pb-4 pt-3 leading-7 text-slate-700">{todayCheckin.participant_note}</p>
+                </details>
+              ) : null}
+
+              <button type="button" onClick={() => { setDraft(emptyDraft); setActionMessage(""); setJustSaved(false); setIsCheckingInAgain(true); }} className="mt-5 rounded-full border border-emerald-200 bg-white/72 px-4 py-2.5 text-sm font-black text-emerald-900 shadow-sm transition hover:bg-white">Check in again</button>
             </div>
-            <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-900">{formatValue(todayCheckin.overall_day)}</div>
           </div>
-
-          {todayDetails.length > 0 ? (
-            <div className="mt-5 flex flex-wrap gap-2">
-              {todayDetails.map(([label, value]) => <span key={label} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">{label}: {formatValue(value)}</span>)}
-            </div>
-          ) : null}
-
-          {todayCheckin.chosen_next_step ? (
-            <div className="mt-5 rounded-2xl bg-emerald-50 p-4">
-              <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Next step</p>
-              <p className="mt-1 text-lg font-black text-emerald-950">{formatValue(todayCheckin.chosen_next_step)}</p>
-            </div>
-          ) : null}
-
-          {todayCheckin.participant_note ? (
-            <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50">
-              <summary className="cursor-pointer list-none p-4 font-black text-slate-800">Your note</summary>
-              <p className="border-t border-slate-100 px-4 pb-4 pt-3 leading-7 text-slate-700">{todayCheckin.participant_note}</p>
-            </details>
-          ) : null}
-
-          <button type="button" onClick={() => { setDraft(emptyDraft); setActionMessage(""); setJustSaved(false); setIsCheckingInAgain(true); }} className="mt-5 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-800">Check in again</button>
         </section>
       ) : null}
 
@@ -205,7 +260,7 @@ export default function WellnessCheckinCandidate() {
                         <span className="font-black text-slate-950">{checkinTime}</span>
                         <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800">{formatValue(checkin.overall_day)}</span>
                       </div>
-                      {checkin.chosen_next_step ? <p className="mt-3 text-sm font-bold text-slate-700">Next: {formatValue(checkin.chosen_next_step)}</p> : null}
+                      {checkin.chosen_next_step ? <p className="mt-3 text-sm font-bold text-slate-700">Next: {nextStepLabel(checkin.chosen_next_step)}</p> : null}
                       {checkin.participant_note ? <details className="mt-3"><summary className="cursor-pointer text-sm font-black text-emerald-800">Read note</summary><p className="mt-2 text-sm leading-6 text-slate-700">{checkin.participant_note}</p></details> : null}
                     </article>
                   );
