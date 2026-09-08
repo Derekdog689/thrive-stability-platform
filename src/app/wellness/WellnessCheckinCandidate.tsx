@@ -24,6 +24,56 @@ function nextStepLabel(value: string | null | undefined) {
   return value ? labels[value] ?? formatValue(value) : null;
 }
 
+function nextStepRoute(value: string | null | undefined) {
+  if (value === "contact_supportive_person" || value === "ask_for_help") return "/support";
+  return null;
+}
+
+function nextStepIcon(value: string | null | undefined) {
+  const icons: Record<string, string> = {
+    review_today_plan: "✓",
+    choose_one_task: "◎",
+    take_a_break: "Ⅱ",
+    food_water_rest: "◇",
+    contact_supportive_person: "♡",
+    ask_for_help: "♡",
+    other: "+",
+    nothing_right_now: "·",
+  };
+  return value ? icons[value] ?? "•" : "•";
+}
+
+function overallVisual(value: string | null | undefined) {
+  const key = value?.toLowerCase().replaceAll(" ", "_") ?? "";
+  const visuals: Record<string, { dot: string; ring: string; badge: string; text: string }> = {
+    good: {
+      dot: "bg-emerald-500",
+      ring: "shadow-[0_0_0_8px_rgba(16,185,129,0.10)]",
+      badge: "bg-emerald-50 text-emerald-800",
+      text: "text-emerald-800",
+    },
+    okay: {
+      dot: "bg-sky-500",
+      ring: "shadow-[0_0_0_8px_rgba(14,165,233,0.10)]",
+      badge: "bg-sky-50 text-sky-800",
+      text: "text-sky-800",
+    },
+    not_sure: {
+      dot: "bg-slate-400",
+      ring: "shadow-[0_0_0_8px_rgba(148,163,184,0.14)]",
+      badge: "bg-slate-100 text-slate-700",
+      text: "text-slate-700",
+    },
+    hard: {
+      dot: "bg-amber-500",
+      ring: "shadow-[0_0_0_8px_rgba(245,158,11,0.12)]",
+      badge: "bg-amber-50 text-amber-900",
+      text: "text-amber-900",
+    },
+  };
+  return visuals[key] ?? visuals.not_sure;
+}
+
 function detailSentence(label: string, value: string) {
   const plainValue = formatValue(value).toLowerCase();
   if (label === "Stress") return `Stress feels ${plainValue}.`;
@@ -140,6 +190,8 @@ export default function WellnessCheckinCandidate() {
 
   const primaryTodayDetail = todayDetails[0] ?? null;
   const secondaryTodayDetails = todayDetails.slice(1);
+  const todayOverallVisual = overallVisual(todayCheckin?.overall_day);
+  const todayNextRoute = nextStepRoute(todayCheckin?.chosen_next_step);
 
   return (
     <div className="space-y-6">
@@ -157,11 +209,11 @@ export default function WellnessCheckinCandidate() {
 
               <div className="mt-5 flex items-center gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/78 shadow-sm">
-                  <span className="h-5 w-5 rounded-full bg-emerald-500 shadow-[0_0_0_8px_rgba(16,185,129,0.10)]" />
+                  <span className={`h-5 w-5 rounded-full ${todayOverallVisual.dot} ${todayOverallVisual.ring}`} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-wide text-slate-500">How today feels</p>
-                  <h2 className="mt-1 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">{formatValue(todayCheckin.overall_day)}</h2>
+                  <h2 className={`mt-1 text-4xl font-black tracking-tight sm:text-5xl ${todayOverallVisual.text}`}>{formatValue(todayCheckin.overall_day)}</h2>
                 </div>
               </div>
 
@@ -178,16 +230,26 @@ export default function WellnessCheckinCandidate() {
               ) : null}
 
               {todayCheckin.chosen_next_step ? (
-                <div className="mt-6 rounded-[1.6rem] border border-emerald-200/80 bg-emerald-700 p-1 shadow-[0_14px_32px_rgba(4,120,87,0.20)]">
-                  <div className="flex items-center gap-4 rounded-[1.35rem] bg-emerald-700 px-4 py-4 text-white">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/14 text-xl">→</div>
+                todayNextRoute ? (
+                  <Link href={todayNextRoute} className="mt-6 flex items-center gap-4 rounded-[1.6rem] border border-emerald-200/80 bg-emerald-700 px-5 py-5 text-white shadow-[0_14px_32px_rgba(4,120,87,0.20)] transition hover:bg-emerald-800">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/14 text-xl">{nextStepIcon(todayCheckin.chosen_next_step)}</div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">Next</p>
                       <p className="mt-1 text-xl font-black leading-6">{nextStepLabel(todayCheckin.chosen_next_step)}</p>
                     </div>
                     <span className="text-2xl font-black text-emerald-100">›</span>
+                  </Link>
+                ) : (
+                  <div className="mt-6 rounded-[1.6rem] border border-emerald-100 bg-emerald-50/82 px-5 py-5 text-emerald-950 shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-emerald-800">{nextStepIcon(todayCheckin.chosen_next_step)}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Next</p>
+                        <p className="mt-1 text-xl font-black leading-6">{nextStepLabel(todayCheckin.chosen_next_step)}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )
               ) : null}
 
               {todayCheckin.participant_note ? (
@@ -254,11 +316,12 @@ export default function WellnessCheckinCandidate() {
               <div className="mt-3 space-y-3">
                 {selectedDayRows.map((checkin) => {
                   const checkinTime = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date(checkin.created_at));
+                  const historyOverallVisual = overallVisual(checkin.overall_day);
                   return (
                     <article key={checkin.id} className="rounded-2xl bg-white p-4 shadow-sm">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-black text-slate-950">{checkinTime}</span>
-                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800">{formatValue(checkin.overall_day)}</span>
+                        <span className={`rounded-full px-3 py-1 text-xs font-black ${historyOverallVisual.badge}`}>{formatValue(checkin.overall_day)}</span>
                       </div>
                       {checkin.chosen_next_step ? <p className="mt-3 text-sm font-bold text-slate-700">Next: {nextStepLabel(checkin.chosen_next_step)}</p> : null}
                       {checkin.participant_note ? <details className="mt-3"><summary className="cursor-pointer text-sm font-black text-emerald-800">Read note</summary><p className="mt-2 text-sm leading-6 text-slate-700">{checkin.participant_note}</p></details> : null}
