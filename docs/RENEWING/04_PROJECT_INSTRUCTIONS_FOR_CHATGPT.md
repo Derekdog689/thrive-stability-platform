@@ -19,6 +19,16 @@ Always preserve these boundaries:
 13. Existing documented authority may cover routine DSS support. Expanded access or external sharing requires separate authority or consent.
 14. At the start of each thread, restate the verified state, frozen boundaries, and exact next gate.
 15. At the end of each working pass, provide build status, `git diff --check`, `git status`, commit checkpoint, and the next gate. Do not push unless approved.
+16. Participant UX should guide toward the next safe, reversible, ordinary action instead of repeatedly asking permission to provide guidance.
+17. Keep participant choice visible through direct exits and alternatives such as `Skip`, `Back`, `Nothing right now`, and `Something else`; do not turn those choices into separate permission ceremonies.
+18. Direct guidance does not authorize silent consequential action. External sharing, submissions, transactions, authority changes, clinical/legal/fiduciary decisions, and other consequential actions still require the appropriate explicit participant or authorized-staff action.
+19. When a participant selection changes the task, bring the new task to the selection rather than appending it farther down the page and forcing the participant to hunt for it.
+
+Participant interaction shorthand:
+
+`state -> visible choices -> one useful action -> optional exit/history`
+
+Prefer respectful directness over tentative language when the system already has enough context to present a safe next step.
 
 When drift appears, say:
 
