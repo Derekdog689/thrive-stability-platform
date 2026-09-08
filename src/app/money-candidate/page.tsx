@@ -9,11 +9,11 @@ function MoneyBottomNav() {
     { href: "/", label: "Today", icon: "⌂" },
     { href: "/wellness", label: "Wellness", icon: "☼" },
     { href: "/goals", label: "Goals", icon: "◎" },
-    { href: "/money-candidate", label: "Money", icon: "$" },
+    { href: "/budget", label: "Money", icon: "$" },
     { href: "/support", label: "Support", icon: "♡" },
   ];
 
-  return <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[1.8rem] border border-white/70 bg-white/90 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.16)] backdrop-blur-2xl sm:bottom-5"><div className="grid grid-cols-5 gap-1">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-center transition ${item.href === "/money-candidate" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-900"}`}><span className="text-xl font-black leading-none">{item.icon}</span><span className="mt-1 truncate text-[10px] font-black uppercase tracking-wide sm:text-xs">{item.label}</span></Link>)}</div></nav>;
+  return <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[1.8rem] border border-white/70 bg-white/90 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.16)] backdrop-blur-2xl sm:bottom-5"><div className="grid grid-cols-5 gap-1">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-center transition ${item.href === "/budget" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-900"}`}><span className="text-xl font-black leading-none">{item.icon}</span><span className="mt-1 truncate text-[10px] font-black uppercase tracking-wide sm:text-xs">{item.label}</span></Link>)}</div></nav>;
 }
 
 export default function MoneyCandidatePage() {
@@ -46,10 +46,8 @@ export default function MoneyCandidatePage() {
       </div></section>
 
       <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Your plan</p><h2 className="mt-2 text-3xl font-black">Where the money is going</h2></div><span className="text-sm font-black text-slate-500">{activeLines.length} categories</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{activeLines.map((line) => { const linePlan = toNumber(line.planned_amount); const lineOut = toNumber(line.derived_actual_amount); const lineLeft = toNumber(line.derived_remaining_amount); const linePercent = linePlan > 0 ? Math.max(0, Math.min(100, Math.round((lineOut / linePlan) * 100))) : 0; const lineOver = lineOut > linePlan; return <article key={line.id} className="rounded-[1.5rem] border border-slate-100 bg-white/80 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{line.category_name}</p><p className={`mt-1 text-sm font-bold ${lineOver ? "text-amber-800" : "text-slate-500"}`}>{lineOver ? `${formatMoney(lineOut - linePlan)} over` : `${formatMoney(lineLeft)} left`}</p></div><p className="shrink-0 text-sm font-black text-slate-500">{formatMoney(linePlan)}</p></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${lineOver ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${linePercent}%` }} /></div></article>; })}</div></section>
-
-      <Link href="/budget" className="flex items-center justify-between rounded-[2rem] border border-emerald-200 bg-emerald-700 p-5 text-white shadow-[0_16px_36px_rgba(4,120,87,0.18)]"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">Plan details</p><p className="mt-1 text-xl font-black">Open your Budget</p></div><span className="text-3xl font-black">›</span></Link>
     </> : null}
 
-    {!loading && !errorMessage && !activePeriod ? <section className="rounded-[2rem] border border-white/80 bg-white/72 p-6 shadow-sm backdrop-blur-xl"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Money</p><h2 className="mt-2 text-3xl font-black">No active plan yet.</h2><p className="mt-3 text-slate-600">Start with a plan, then THRIVE can show what remains and what has been recorded against it.</p><Link href="/budget" className="mt-5 inline-flex rounded-full bg-emerald-700 px-5 py-3 font-black text-white">Start a plan</Link></section> : null}
+    {!loading && !errorMessage && !activePeriod ? <section className="rounded-[2rem] border border-white/80 bg-white/72 p-6 shadow-sm backdrop-blur-xl"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Money</p><h2 className="mt-2 text-3xl font-black">No active plan yet.</h2><p className="mt-3 text-slate-600">Start with a plan, then THRIVE can show what remains and what has been recorded against it.</p></section> : null}
   </section><MoneyBottomNav /></main></AuthGate>;
 }
