@@ -52,20 +52,26 @@ export default function ActiveBudgetEditor({ activePeriod, currentLines, refresh
   const [periodNotice, setPeriodNotice] = useState("");
   const [addingLine, setAddingLine] = useState(false);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [replacingLineId, setReplacingLineId] = useState<string | null>(null);
   const [lineDraft, setLineDraft] = useState<LineDraft>(emptyLineDraft);
   const [lineNotice, setLineNotice] = useState("");
 
   const activeLines = useMemo(() => currentLines.filter((line) => line.is_active), [currentLines]);
   const plannedTotal = activeLines.reduce((sum, line) => sum + toNumber(line.planned_amount), 0);
   const unplannedAmount = Math.max(toNumber(activePeriod.expected_income) - plannedTotal, 0);
-  const existingNames = new Set(currentLines.map((line) => line.category_name.trim().toLowerCase()));
+  const existingNames = new Set(currentLines.filter((line) => line.is_active).map((line) => line.category_name.trim().toLowerCase()));
+
+  function resetLineWork() {
+    setAddingLine(false);
+    setEditingLineId(null);
+    setReplacingLineId(null);
+    setLineDraft(emptyLineDraft);
+    setLineNotice("");
+  }
 
   function closeEditor() {
     setOpen(false);
-    setAddingLine(false);
-    setEditingLineId(null);
-    setLineDraft(emptyLineDraft);
-    setLineNotice("");
+    resetLineWork();
     setPeriodNotice("");
   }
 
@@ -81,24 +87,38 @@ export default function ActiveBudgetEditor({ activePeriod, currentLines, refresh
     if (result.ok) await refresh();
   }
 
-  async function saveLine(event: FormEvent<HTMLFormElement>, line?: BudgetLine) {
+  async function addNewLine(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const categoryName = lineDraft.categoryName.trim();
     const plannedAmount = Number(lineDraft.plannedAmount);
     if (!categoryName) { setLineNotice("Choose or name a category."); return; }
     if (!Number.isFinite(plannedAmount) || plannedAmount < 0) { setLineNotice("Enter zero or more."); return; }
-    const duplicate = currentLines.some((candidate) => candidate.id !== line?.id && candidate.category_name.trim().toLowerCase() === categoryName.toLowerCase());
-    if (duplicate) { setLineNotice("That category is already in your plan."); return; }
+    if (existingNames.has(categoryName.toLowerCase())) { setLineNotice("That category is already in your plan."); return; }
 
-    const result = line
-      ? await updateLine({ budgetLineId: line.id, categoryName, categoryType: lineDraft.categoryType, plannedAmount, isActive: true, sortOrder: line.sort_order })
-      : await addLine({ budgetPeriodId: activePeriod.id, categoryName, categoryType: lineDraft.categoryType, plannedAmount, sortOrder: currentLines.length });
+    const result = await addLine({ budgetPeriodId: activePeriod.id, categoryName, categoryType: lineDraft.categoryType, plannedAmount, sortOrder: currentLines.length });
+    setLineNotice(result.ok ? "Added." : result.message);
+    if (!result.ok) return;
+    resetLineWork();
+    await refresh();
+  }
+
+  async function saveAmount(event: FormEvent<HTMLFormElement>, line: BudgetLine) {
+    event.preventDefault();
+    const plannedAmount = Number(lineDraft.plannedAmount);
+    if (!Number.isFinite(plannedAmount) || plannedAmount < 0) { setLineNotice("Enter zero or more."); return; }
+
+    const result = await updateLine({
+      budgetLineId: line.id,
+      categoryName: line.category_name,
+      categoryType: line.category_type as BudgetCategoryType,
+      plannedAmount,
+      isActive: true,
+      sortOrder: line.sort_order,
+    });
 
     setLineNotice(result.ok ? "Saved." : result.message);
     if (!result.ok) return;
-    setEditingLineId(null);
-    setAddingLine(false);
-    setLineDraft(emptyLineDraft);
+    resetLineWork();
     await refresh();
   }
 
@@ -107,10 +127,51 @@ export default function ActiveBudgetEditor({ activePeriod, currentLines, refresh
     const result = await updateLine({ budgetLineId: line.id, categoryName: line.category_name, categoryType: line.category_type as BudgetCategoryType, plannedAmount: toNumber(line.planned_amount), isActive: false, sortOrder: line.sort_order });
     setLineNotice(result.ok ? "Removed from this plan." : result.message);
     if (result.ok) {
-      setEditingLineId(null);
-      setLineDraft(emptyLineDraft);
+      resetLineWork();
       await refresh();
     }
+  }
+
+  async function replaceLine(line: BudgetLine, replacement: { name: string; type: BudgetCategoryType }) {
+    if (existingNames.has(replacement.name.toLowerCase())) {
+      setLineNotice("That category is already in your plan.");
+      return;
+    }
+
+    const confirmed = window.confirm(`Replace ${line.category_name} with ${replacement.name}? ${line.category_name} will stay in history.`);
+    if (!confirmed) return;
+
+    setLineNotice("");
+    const addResult = await addLine({
+      budgetPeriodId: activePeriod.id,
+      categoryName: replacement.name,
+      categoryType: replacement.type,
+      plannedAmount: toNumber(line.planned_amount),
+      sortOrder: line.sort_order,
+    });
+
+    if (!addResult.ok) {
+      setLineNotice(addResult.message);
+      return;
+    }
+
+    const removeResult = await updateLine({
+      budgetLineId: line.id,
+      categoryName: line.category_name,
+      categoryType: line.category_type as BudgetCategoryType,
+      plannedAmount: toNumber(line.planned_amount),
+      isActive: false,
+      sortOrder: line.sort_order,
+    });
+
+    if (!removeResult.ok) {
+      setLineNotice(`The new category was added, but ${line.category_name} could not be removed. ${removeResult.message}`);
+      await refresh();
+      return;
+    }
+
+    resetLineWork();
+    await refresh();
   }
 
   async function complete() {
@@ -158,19 +219,24 @@ export default function ActiveBudgetEditor({ activePeriod, currentLines, refresh
         {periodNotice ? <p className="mt-2 text-sm font-bold text-slate-600">{periodNotice}</p> : null}
       </form>
 
-      <div className="mt-6 flex items-center justify-between gap-3"><div><p className="text-sm font-black">Categories</p><p className="text-xs font-bold text-slate-400">2 of 2</p></div><button type="button" onClick={() => { setAddingLine(true); setEditingLineId(null); setLineDraft(emptyLineDraft); setLineNotice(""); }} className="rounded-full bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-800">+ Add</button></div>
+      <div className="mt-6 flex items-center justify-between gap-3"><div><p className="text-sm font-black">Categories</p><p className="text-xs font-bold text-slate-400">2 of 2</p></div><button type="button" onClick={() => { resetLineWork(); setAddingLine(true); }} className="rounded-full bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-800">+ Add</button></div>
 
-      {addingLine ? <form onSubmit={(event) => void saveLine(event)} className="mt-4 rounded-[1.7rem] bg-emerald-50 p-4"><p className="text-sm font-black">Pick a category</p><div className="mt-3 grid grid-cols-2 gap-2">{starterCategories.map((starter) => { const used = existingNames.has(starter.name.toLowerCase()); return <button key={starter.name} type="button" disabled={used} onClick={() => setLineDraft({ categoryName: starter.name, categoryType: starter.type, plannedAmount: "" })} className={`rounded-2xl border px-3 py-3 text-left text-sm font-black ${lineDraft.categoryName === starter.name ? "border-emerald-700 bg-emerald-700 text-white" : "border-emerald-100 bg-white text-emerald-950"} disabled:opacity-35`}>{starter.name}</button>; })}</div>
+      {addingLine ? <form onSubmit={(event) => void addNewLine(event)} className="mt-4 rounded-[1.7rem] bg-emerald-50 p-4"><p className="text-sm font-black">Pick a category</p><div className="mt-3 grid grid-cols-2 gap-2">{starterCategories.map((starter) => { const used = existingNames.has(starter.name.toLowerCase()); return <button key={starter.name} type="button" disabled={used} onClick={() => setLineDraft({ categoryName: starter.name, categoryType: starter.type, plannedAmount: "" })} className={`rounded-2xl border px-3 py-3 text-left text-sm font-black ${lineDraft.categoryName === starter.name ? "border-emerald-700 bg-emerald-700 text-white" : "border-emerald-100 bg-white text-emerald-950"} disabled:opacity-35`}>{starter.name}</button>; })}</div>
         <label className="mt-4 block text-sm font-black">Or name your own<input value={lineDraft.categoryName} onChange={(event) => setLineDraft((current) => ({ ...current, categoryName: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-lg" /></label>
         <div className="mt-4 grid grid-cols-2 gap-2">{categoryTypes.map((type) => <button key={type.value} type="button" onClick={() => setLineDraft((current) => ({ ...current, categoryType: type.value }))} className={`rounded-full px-3 py-2.5 text-sm font-black ${lineDraft.categoryType === type.value ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>{type.label}</button>)}</div>
         <label className="mt-4 block text-sm font-black">Amount<div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="text-xl font-black text-slate-400">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={lineDraft.plannedAmount} onChange={(event) => setLineDraft((current) => ({ ...current, plannedAmount: event.target.value }))} className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none" /></div></label>
-        <div className="mt-4 grid grid-cols-2 gap-2"><button type="submit" disabled={working} className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white">Add</button><button type="button" onClick={() => { setAddingLine(false); setLineDraft(emptyLineDraft); }} className="rounded-full border border-slate-200 bg-white px-4 py-3 font-black text-slate-600">Cancel</button></div>
+        <div className="mt-4 grid grid-cols-2 gap-2"><button type="submit" disabled={working} className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white">Add</button><button type="button" onClick={resetLineWork} className="rounded-full border border-slate-200 bg-white px-4 py-3 font-black text-slate-600">Cancel</button></div>
         {lineNotice ? <p className="mt-2 text-sm font-bold text-rose-700">{lineNotice}</p> : null}</form> : null}
 
       <div className="mt-4 space-y-3">{activeLines.map((line) => {
         const editing = editingLineId === line.id;
-        if (editing) return <form key={line.id} onSubmit={(event) => void saveLine(event, line)} className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4"><div className="flex items-center justify-between gap-3"><input value={lineDraft.categoryName} onChange={(event) => setLineDraft((current) => ({ ...current, categoryName: event.target.value }))} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-black" /><button type="button" onClick={() => void removeLine(line)} className="rounded-full px-3 py-2 text-xs font-black text-rose-700">Remove</button></div><div className="mt-3 flex items-center rounded-xl border border-slate-200 bg-white px-3"><span className="font-black text-slate-400">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={lineDraft.plannedAmount} onChange={(event) => setLineDraft((current) => ({ ...current, plannedAmount: event.target.value }))} className="w-full bg-transparent px-2 py-3 text-xl font-black outline-none" /></div><div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white">Save</button><button type="button" onClick={() => { setEditingLineId(null); setLineDraft(emptyLineDraft); }} className="rounded-full border border-slate-200 bg-white px-4 py-3 font-black text-slate-600">Cancel</button></div></form>;
-        return <button key={line.id} type="button" onClick={() => { setEditingLineId(line.id); setAddingLine(false); setLineDraft({ categoryName: line.category_name, categoryType: line.category_type as BudgetCategoryType, plannedAmount: String(toNumber(line.planned_amount)) }); setLineNotice(""); }} className="flex w-full items-center justify-between gap-4 rounded-[1.5rem] border border-slate-100 bg-white/90 p-4 text-left"><div><p className="text-lg font-black">{line.category_name}</p><p className="mt-1 text-sm font-bold text-slate-500">{formatMoney(line.planned_amount)} planned</p></div><span className="rounded-full bg-slate-50 px-3 py-2 text-sm font-black text-slate-500">Change</span></button>;
+        const replacing = replacingLineId === line.id;
+
+        if (editing) return <form key={line.id} onSubmit={(event) => void saveAmount(event, line)} className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wide text-emerald-700">Active category</p><p className="mt-1 text-xl font-black">{line.category_name}</p></div><button type="button" onClick={() => void removeLine(line)} className="rounded-full px-3 py-2 text-xs font-black text-rose-700">Remove</button></div><label className="mt-4 block text-sm font-black">Planned amount<div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-white px-3"><span className="font-black text-slate-400">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={lineDraft.plannedAmount} onChange={(event) => setLineDraft((current) => ({ ...current, plannedAmount: event.target.value }))} className="w-full bg-transparent px-2 py-3 text-xl font-black outline-none" /></div></label><div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white">Save</button><button type="button" onClick={resetLineWork} className="rounded-full border border-slate-200 bg-white px-4 py-3 font-black text-slate-600">Cancel</button></div><button type="button" onClick={() => { setEditingLineId(null); setReplacingLineId(line.id); setLineNotice(""); }} className="mt-3 w-full rounded-full border border-emerald-200 bg-white px-4 py-3 text-sm font-black text-emerald-800">Replace category</button></form>;
+
+        if (replacing) return <div key={line.id} className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wide text-emerald-700">Replace</p><p className="mt-1 text-xl font-black">{line.category_name}</p></div><button type="button" onClick={resetLineWork} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Cancel</button></div><p className="mt-4 text-sm font-black">Choose the new category</p><div className="mt-3 grid grid-cols-2 gap-2">{starterCategories.map((starter) => { const used = existingNames.has(starter.name.toLowerCase()); return <button key={starter.name} type="button" disabled={used || working} onClick={() => void replaceLine(line, starter)} className="rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-left text-sm font-black text-emerald-950 disabled:opacity-35">{starter.name}</button>; })}</div>{lineNotice ? <p className="mt-3 text-sm font-bold text-rose-700">{lineNotice}</p> : null}</div>;
+
+        return <button key={line.id} type="button" onClick={() => { resetLineWork(); setEditingLineId(line.id); setLineDraft({ categoryName: line.category_name, categoryType: line.category_type as BudgetCategoryType, plannedAmount: String(toNumber(line.planned_amount)) }); }} className="flex w-full items-center justify-between gap-4 rounded-[1.5rem] border border-slate-100 bg-white/90 p-4 text-left"><div><p className="text-lg font-black">{line.category_name}</p><p className="mt-1 text-sm font-bold text-slate-500">{formatMoney(line.planned_amount)} planned</p></div><span className="rounded-full bg-slate-50 px-3 py-2 text-sm font-black text-slate-500">Change</span></button>;
       })}</div>
 
       {errorMessage ? <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-800">{errorMessage}</p> : null}
