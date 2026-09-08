@@ -208,6 +208,9 @@ export default function TodayPage() {
   }
 
   const activeBudgetPeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
+  const draftBudgetPeriod = budgetPeriods.find((period) => period.status === "draft") ?? null;
+  const hasCompletedBudget = budgetPeriods.some((period) => period.status === "completed");
+  const needsNextMoneyPlan = !activeBudgetPeriod && !draftBudgetPeriod && hasCompletedBudget;
   const activeBudgetLines = activeBudgetPeriod
     ? budgetLines.filter((line) => line.budget_period_id === activeBudgetPeriod.id && line.is_active)
     : [];
@@ -297,6 +300,17 @@ export default function TodayPage() {
       };
     }
 
+    if (needsNextMoneyPlan) {
+      return {
+        label: "Up next",
+        title: "Start your next Money plan",
+        detail: "Your last plan is complete. Set the dates and expected income for the next one.",
+        href: "/budget",
+        action: "Start Money plan",
+        icon: "money" as IconName,
+      };
+    }
+
     if (currentGoal) {
       return {
         label: "Up next",
@@ -337,6 +351,7 @@ export default function TodayPage() {
     budgetExpired,
     budgetEndingSoon,
     budgetDaysLeft,
+    needsNextMoneyPlan,
     todayCheckin,
     unresolvedSupportRequest,
     currentGoal,
