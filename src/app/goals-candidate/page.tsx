@@ -99,9 +99,9 @@ export default function GoalsCandidatePage() {
   async function changeStatus(goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) {
     const result = await updateGoal(goal.id, { progress_status: status });
     if (!result.ok) { setNotice(result.message); return; }
+    setNotice("");
     if (justSavedGoal?.id === result.row.id) setJustSavedGoal(result.row);
-    if (status === "completed") { setNotice("Goal complete."); setShowHistory(true); return; }
-    setNotice(status === "in_progress" ? "Goal active." : status === "paused" ? "Goal paused." : "Goal updated.");
+    if (status === "completed") setShowHistory(true);
   }
 
   return <AuthGate><main className={`min-h-screen bg-[radial-gradient(circle_at_12%_12%,rgba(167,243,208,0.32),transparent_30%),radial-gradient(circle_at_86%_18%,rgba(254,240,138,0.28),transparent_26%),linear-gradient(180deg,#edf7f1_0%,#eef5f7_48%,#edf1f4_100%)] px-3 pt-3 text-slate-950 sm:px-6 sm:pt-6 ${showCreate ? "pb-44 sm:pb-36" : "pb-28 sm:pb-32"}`}><section className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
@@ -125,7 +125,7 @@ export default function GoalsCandidatePage() {
         {notice ? <p className="mt-5 text-sm font-semibold text-rose-700">{notice}</p> : null}
       </form> : null}
 
-      {notice && !showCreate && !justSavedGoal ? <section role="status" className="rounded-[2rem] border border-emerald-100 bg-emerald-50 p-5"><p className="font-black text-emerald-900">{notice}</p></section> : null}
+      {notice && !showCreate && !justSavedGoal ? <section role="alert" className="rounded-[2rem] border border-rose-200 bg-rose-50 p-5"><p className="font-black text-rose-900">{notice}</p></section> : null}
       {!justSavedGoal && !showCreate ? <section className="rounded-[2rem] border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur-xl"><button type="button" aria-expanded={showHistory} onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-800"><span>Past goals</span><span>{pastGoals.length} {showHistory ? "⌃" : "⌄"}</span></button>{showHistory ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{pastGoals.length === 0 ? <p className="text-sm text-slate-600">No past goals yet.</p> : pastGoals.map((goal) => { const visual = statusVisuals[goal.progress_status]; return <article key={goal.id} className="rounded-2xl bg-slate-50 p-5"><div className="flex items-start justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{goal.goal_area ?? "Goal"}</p><span className={`rounded-full px-3 py-1 text-xs font-black ${visual.badge}`}>{statusLabels[goal.progress_status]}</span></div><h3 className="mt-2 text-lg font-black">{goal.title}</h3><p className="mt-3 text-sm font-bold text-slate-600">Last step: {goal.next_step}</p></article>; })}</div> : null}</section> : null}
     </> : null}
 
