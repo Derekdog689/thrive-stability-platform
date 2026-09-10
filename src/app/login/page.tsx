@@ -66,7 +66,12 @@ export default function LoginPage() {
     setMessage("");
     setError("");
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const emailRedirectTo = window.location.origin;
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo },
+    });
 
     if (error) {
       setError(error.message);
@@ -74,7 +79,7 @@ export default function LoginPage() {
       return;
     }
 
-    setMessage("Account request submitted. Check your email if confirmation is required.");
+    setMessage("Account request submitted. Check your email to confirm your account and return to THRIVE.");
     setLoading(false);
   }
 
