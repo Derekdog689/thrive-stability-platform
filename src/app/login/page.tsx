@@ -122,7 +122,7 @@ export default function LoginPage() {
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Sign in to THRIVE</p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Pick up where you left off.</h2>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Sign in to continue.</h2>
             </div>
 
             {currentUser ? (

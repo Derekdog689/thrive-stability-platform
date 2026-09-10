@@ -11,7 +11,7 @@ type AuthGateProps = {
 
 export default function AuthGate({ children }: AuthGateProps) {
   const router = useRouter();
-  const { purpose, email, errorMessage } = useThriveAccountPurpose();
+  const { purpose, errorMessage } = useThriveAccountPurpose();
 
   useEffect(() => {
     if (purpose === "admin") {
@@ -99,9 +99,11 @@ export default function AuthGate({ children }: AuthGateProps) {
 
   return (
     <>
-      <div className="border-b border-emerald-100 bg-emerald-50 px-6 py-3 text-sm font-semibold text-emerald-900">
-        Signed in as {email ?? "authenticated user"}
-      </div>
+      <style>{`
+        main:has(nav.fixed.inset-x-0.bottom-3.z-50) > section {
+          padding-bottom: calc(12rem + env(safe-area-inset-bottom)) !important;
+        }
+      `}</style>
       {children}
     </>
   );
