@@ -44,22 +44,6 @@ const reflectionGroups: Array<{ key: ReflectionKey; label: string; prompt: strin
   { key: "support_needed", label: "Support", prompt: "Would support help today?", choices: [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }, { label: "Not sure", value: "not_sure" }] },
 ];
 
-const steadyNextStepChoices: Choice[] = [
-  { label: "Keep it going", value: "review_today_plan" },
-  { label: "Do one useful thing", value: "choose_one_task" },
-  { label: "Something else", value: "other" },
-  { label: "Nothing right now", value: "none" },
-];
-
-const supportNextStepChoices: Choice[] = [
-  { label: "Take a break", value: "take_a_break" },
-  { label: "Handle a basic need", value: "food_water_rest" },
-  { label: "Talk to someone", value: "contact_supportive_person" },
-  { label: "Ask THRIVE for help", value: "ask_for_help" },
-  { label: "Something else", value: "other" },
-  { label: "Nothing right now", value: "none" },
-];
-
 function formatValue(value: string | null | undefined) {
   if (!value) return "Not selected";
   return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
@@ -71,19 +55,6 @@ function getOverallAcknowledgement(overallDay: string) {
   if (overallDay === "hard") return "Sounds like today has been a tougher one.";
   if (overallDay === "not_sure") return "That is okay too. You do not have to have the day figured out.";
   return "";
-}
-
-function isSteadyReflection(key: ReflectionKey, value: string) {
-  const steadyValues: Record<ReflectionKey, string[]> = {
-    stress: ["low", "okay"],
-    sleep: ["good", "okay"],
-    energy: ["good", "okay"],
-    confidence: ["good", "okay"],
-    routine: ["on_track"],
-    recovery_support: ["connected", "not_needed"],
-    support_needed: ["no"],
-  };
-  return steadyValues[key].includes(value);
 }
 
 function ChoiceGroup({ label, value, choices, onChange, optional = true }: ChoiceGroupProps) {
@@ -142,8 +113,6 @@ export default function WellnessCheckinPreview({ recentCheckins, draft, onDraftC
   const activeReflection = activeReflectionKey ? reflectionGroups.find((group) => group.key === activeReflectionKey) ?? null : null;
   const activeReflectionValue = activeReflectionKey ? reflections[activeReflectionKey] : "";
   const reflectionValues = selectedReflectionKeys.map((key) => reflections[key]).filter(Boolean);
-  const hasSupportSignal = selectedReflectionKeys.some((key) => reflections[key] && !isSteadyReflection(key, reflections[key]));
-  const contextualNextStepChoices = hasSupportSignal || overallDay === "hard" || overallDay === "not_sure" ? supportNextStepChoices : steadyNextStepChoices;
   const reviewDetails = reflectionGroups.filter((group) => reflections[group.key]);
   const guidance = useMemo(() => buildWellnessGuidance(draft, recentCheckins), [draft, recentCheckins]);
 
@@ -278,12 +247,40 @@ export default function WellnessCheckinPreview({ recentCheckins, draft, onDraftC
           </div>
 
           <h2 className="mt-7 text-2xl font-black">{guidance.prompt}</h2>
-          <div className="mt-5 grid gap-3">
-            {contextualNextStepChoices.map((choice) => {
-              const selected = nextStepChoice === choice.value;
-              return <button key={choice.value} type="button" aria-pressed={selected} onClick={() => selectNextStep(choice.value)} className={`rounded-2xl border px-5 py-4 text-left font-black transition active:scale-[0.985] ${selected ? "border-emerald-600 bg-emerald-100 text-emerald-950" : "border-slate-200 bg-white text-slate-800"}`}>{choice.label}</button>;
-            })}
+          <p className="mt-2 text-sm font-semibold text-slate-500">Based on what you just recorded, these are the closest fits.</p>
+
+          <div className="mt-5">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Recommended</p>
+            <div className="mt-3 grid gap-3">
+              {guidance.recommendedActions.map((action) => {
+                const selected = nextStepChoice === action.value;
+                return (
+                  <button key={action.value} type="button" aria-pressed={selected} onClick={() => selectNextStep(action.value)} className={`rounded-2xl border px-5 py-4 text-left transition active:scale-[0.985] ${selected ? "border-emerald-600 bg-emerald-100 text-emerald-950" : "border-slate-200 bg-white text-slate-800"}`}>
+                    <span className="block font-black">{action.label}</span>
+                    <span className="mt-1 block text-sm font-semibold leading-6 text-slate-500">{action.reason}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {guidance.moreActions.length > 0 ? (
+            <details className="mt-5 rounded-2xl border border-slate-200 bg-slate-50">
+              <summary className="cursor-pointer list-none px-5 py-4 font-black text-slate-800">More options <span className="ml-1 text-emerald-700">⌄</span></summary>
+              <div className="grid gap-3 border-t border-slate-200 p-4">
+                {guidance.moreActions.map((action) => {
+                  const selected = nextStepChoice === action.value;
+                  return (
+                    <button key={action.value} type="button" aria-pressed={selected} onClick={() => selectNextStep(action.value)} className={`rounded-2xl border px-4 py-4 text-left transition active:scale-[0.985] ${selected ? "border-emerald-600 bg-emerald-100 text-emerald-950" : "border-slate-200 bg-white text-slate-800"}`}>
+                      <span className="block font-black">{action.label}</span>
+                      <span className="mt-1 block text-sm font-semibold leading-6 text-slate-500">{action.reason}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
+          ) : null}
+
           <button type="button" disabled={!nextStepChoice} onClick={() => moveToStep(4)} className={`mt-5 w-full rounded-2xl px-5 py-3 font-black ${nextStepChoice ? "bg-emerald-700 text-white" : "cursor-not-allowed bg-slate-200 text-slate-500"}`}>Continue</button>
         </div>
       ) : null}
