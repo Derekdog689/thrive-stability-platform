@@ -102,7 +102,7 @@ function nextStepReturn(value: string): ContextualWellnessReturn {
     kind: "next_step",
     dimension: null,
     headline: `You chose ${label} next.`,
-    detail: "That's the next step you selected in this check-in.",
+    detail: null,
     actionLabel: routesToSupport ? "Open Support" : null,
     actionHref: routesToSupport ? "/support" : null,
   };
