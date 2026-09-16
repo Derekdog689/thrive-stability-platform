@@ -271,7 +271,7 @@ export default function WellnessCheckinCandidate() {
       ) : null}
 
       {focusMode ? (
-        <WellnessCheckinPreview draft={draft} onDraftChange={setDraft} onSaveCandidate={handleSaveCandidate} onUpdateCandidate={handleUpdateCandidate} hasSavedCheckin={false} actionMessage={actionMessage} writeEnabled={writeEnabled} focusOnMount={isCheckingInAgain} />
+        <WellnessCheckinPreview recentCheckins={recentCheckins} draft={draft} onDraftChange={setDraft} onSaveCandidate={handleSaveCandidate} onUpdateCandidate={handleUpdateCandidate} hasSavedCheckin={false} actionMessage={actionMessage} writeEnabled={writeEnabled} focusOnMount={isCheckingInAgain} />
       ) : null}
 
       {justSaved ? (
