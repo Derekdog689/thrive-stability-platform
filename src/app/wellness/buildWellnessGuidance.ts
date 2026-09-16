@@ -1,9 +1,17 @@
 import type { WellnessDraft, WellnessCheckinRow } from "./useWellnessCheckinCandidate";
 
+export type WellnessGuidanceAction = {
+  value: string;
+  label: string;
+  reason: string;
+};
+
 export type WellnessGuidance = {
   headline: string;
   observations: string[];
   prompt: string;
+  recommendedActions: WellnessGuidanceAction[];
+  moreActions: WellnessGuidanceAction[];
 };
 
 type Dimension = {
@@ -34,6 +42,133 @@ function rowValue(row: WellnessCheckinRow, key: keyof WellnessCheckinRow) {
 function draftValue(draft: WellnessDraft, key: keyof WellnessDraft) {
   const value = draft[key];
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function buildActions(draft: WellnessDraft) {
+  const actions: WellnessGuidanceAction[] = [];
+  const seen = new Set<string>();
+
+  function add(action: WellnessGuidanceAction) {
+    if (seen.has(action.value)) return;
+    seen.add(action.value);
+    actions.push(action);
+  }
+
+  if (draft.recoverySupport === "could_use_support") {
+    add({
+      value: "contact_supportive_person",
+      label: "Reconnect with recovery support",
+      reason: "Reach out to someone or something that helps you stay connected.",
+    });
+  }
+
+  if (draft.supportNeeded === "yes" || draft.supportNeeded === "not_sure") {
+    add({
+      value: "ask_for_help",
+      label: "Get help sorting out what needs attention",
+      reason: "Use THRIVE Support when you want another person in the loop.",
+    });
+  }
+
+  if (
+    draft.confidence === "low" ||
+    draft.confidence === "not_sure" ||
+    draft.routine === "off_track" ||
+    draft.routine === "mixed"
+  ) {
+    add({
+      value: "choose_one_task",
+      label: "Pick one small thing to finish",
+      reason: "Shrink the next move instead of trying to solve everything at once.",
+    });
+  }
+
+  if (draft.stress === "high") {
+    add({
+      value: "take_a_break",
+      label: "Take a short reset",
+      reason: "Step away briefly before deciding what deserves your attention next.",
+    });
+  }
+
+  if (draft.sleep === "poor" || draft.energy === "low") {
+    add({
+      value: "food_water_rest",
+      label: "Take care of a basic need first",
+      reason: "Food, water, rest, or a little movement may be the most useful next move.",
+    });
+  }
+
+  if (draft.overallDay === "hard" || draft.overallDay === "not_sure") {
+    add({
+      value: "ask_for_help",
+      label: "Ask THRIVE Support to help you sort this out",
+      reason: "You do not have to decide the whole path before asking for support.",
+    });
+    add({
+      value: "choose_one_task",
+      label: "Choose the next manageable thing",
+      reason: "Focus on one move you can actually complete.",
+    });
+  }
+
+  if (draft.overallDay === "good" || draft.overallDay === "okay") {
+    add({
+      value: "review_today_plan",
+      label: "Review what you want to keep moving today",
+      reason: "Use what is working and decide what deserves attention next.",
+    });
+  }
+
+  const defaults: WellnessGuidanceAction[] = [
+    {
+      value: "choose_one_task",
+      label: "Pick one useful thing",
+      reason: "Choose one concrete task and make that the next move.",
+    },
+    {
+      value: "contact_supportive_person",
+      label: "Talk to someone supportive",
+      reason: "Reach out instead of carrying the whole thing by yourself.",
+    },
+    {
+      value: "ask_for_help",
+      label: "Ask THRIVE Support",
+      reason: "Bring a support person into what you are trying to sort out.",
+    },
+    {
+      value: "food_water_rest",
+      label: "Handle food, water, rest, or movement",
+      reason: "Take care of something basic before adding another task.",
+    },
+    {
+      value: "take_a_break",
+      label: "Pause for a few minutes",
+      reason: "Give yourself a short reset before choosing the next move.",
+    },
+    {
+      value: "review_today_plan",
+      label: "Look over today's plan",
+      reason: "See what is already in motion before adding something new.",
+    },
+    {
+      value: "other",
+      label: "None of these fit",
+      reason: "Keep the check-in, then describe the next step in your own words.",
+    },
+    {
+      value: "none",
+      label: "Save this and come back later",
+      reason: "You can record the check-in without taking another action right now.",
+    },
+  ];
+
+  for (const action of defaults) add(action);
+
+  return {
+    recommendedActions: actions.slice(0, 3),
+    moreActions: actions.slice(3),
+  };
 }
 
 export function buildWellnessGuidance(
@@ -91,9 +226,12 @@ export function buildWellnessGuidance(
     observations.push("You completed the main check-in. There is not enough recent structured information to compare yet.");
   }
 
+  const actionGroups = buildActions(draft);
+
   return {
     headline: latest ? "Here’s what stands out" : "Here’s what you recorded",
     observations,
-    prompt: "What would help you move from here?",
+    prompt: "What sounds useful from here?",
+    ...actionGroups,
   };
 }
