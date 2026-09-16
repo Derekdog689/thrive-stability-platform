@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { WellnessDraft, WellnessWriteResult } from "./useWellnessCheckinCandidate";
+import { buildWellnessGuidance } from "./buildWellnessGuidance";
+import type { WellnessCheckinRow, WellnessDraft, WellnessWriteResult } from "./useWellnessCheckinCandidate";
 
 type Choice = { label: string; value: string };
 type ReflectionKey = "stress" | "sleep" | "energy" | "confidence" | "routine" | "recovery_support" | "support_needed";
 
 type WellnessCheckinPreviewProps = {
+  recentCheckins: WellnessCheckinRow[];
   draft: WellnessDraft;
   onDraftChange: (nextDraft: WellnessDraft) => void;
   onSaveCandidate: () => Promise<WellnessWriteResult>;
@@ -111,7 +113,7 @@ function ChoiceGroup({ label, value, choices, onChange, optional = true }: Choic
   );
 }
 
-export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCandidate, onUpdateCandidate, hasSavedCheckin, actionMessage, writeEnabled, focusOnMount = false }: WellnessCheckinPreviewProps) {
+export default function WellnessCheckinPreview({ recentCheckins, draft, onDraftChange, onSaveCandidate, onUpdateCandidate, hasSavedCheckin, actionMessage, writeEnabled, focusOnMount = false }: WellnessCheckinPreviewProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const [step, setStep] = useState(1);
   const [selectedReflectionKeys, setSelectedReflectionKeys] = useState<ReflectionKey[]>([]);
@@ -143,6 +145,7 @@ export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCan
   const hasSupportSignal = selectedReflectionKeys.some((key) => reflections[key] && !isSteadyReflection(key, reflections[key]));
   const contextualNextStepChoices = hasSupportSignal || overallDay === "hard" || overallDay === "not_sure" ? supportNextStepChoices : steadyNextStepChoices;
   const reviewDetails = reflectionGroups.filter((group) => reflections[group.key]);
+  const guidance = useMemo(() => buildWellnessGuidance(draft, recentCheckins), [draft, recentCheckins]);
 
   function moveToStep(nextStepNumber: number) {
     setStep(Math.min(4, Math.max(1, nextStepNumber)));
@@ -264,7 +267,17 @@ export default function WellnessCheckinPreview({ draft, onDraftChange, onSaveCan
 
       {step === 3 ? (
         <div className="mt-6 thrive-step-arrive">
-          <h2 className="text-2xl font-black">{overallDay === "good" || overallDay === "okay" ? "What’s next?" : "What would help right now?"}</h2>
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">THRIVE noticed</p>
+            <h2 className="mt-2 text-2xl font-black">{guidance.headline}</h2>
+            <div className="mt-4 space-y-3">
+              {guidance.observations.map((observation) => (
+                <p key={observation} className="text-base font-bold leading-7">{observation}</p>
+              ))}
+            </div>
+          </div>
+
+          <h2 className="mt-7 text-2xl font-black">{guidance.prompt}</h2>
           <div className="mt-5 grid gap-3">
             {contextualNextStepChoices.map((choice) => {
               const selected = nextStepChoice === choice.value;
