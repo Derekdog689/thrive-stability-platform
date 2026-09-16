@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { buildContextualWellnessReturn } from "./contextualWellnessReturn";
 import WellnessCheckinPreview from "./WellnessCheckinPreview";
 import { type WellnessDraft, useWellnessCheckinCandidate } from "./useWellnessCheckinCandidate";
 
@@ -192,6 +193,10 @@ export default function WellnessCheckinCandidate() {
   const secondaryTodayDetails = todayDetails.slice(1);
   const todayOverallVisual = overallVisual(todayCheckin?.overall_day);
   const todayNextRoute = nextStepRoute(todayCheckin?.chosen_next_step);
+  const contextualReturn = useMemo(
+    () => buildContextualWellnessReturn(todayCheckin, recentCheckins),
+    [todayCheckin, recentCheckins],
+  );
 
   return (
     <div className="space-y-6">
@@ -272,12 +277,24 @@ export default function WellnessCheckinCandidate() {
       {justSaved ? (
         <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
           <p className="text-xs font-black uppercase tracking-wide text-emerald-300">Saved</p>
-          <h2 className="mt-2 text-2xl font-black sm:text-3xl">What next?</h2>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <Link href="/goals" className="rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300">Continue a goal</Link>
-            <Link href="/budget" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Review money</Link>
-            <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
-            <Link href="/" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Done for now</Link>
+          <h2 className="mt-2 text-2xl font-black sm:text-3xl">{contextualReturn?.headline ?? "Your check-in is saved."}</h2>
+          {contextualReturn?.detail ? (
+            <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-300">{contextualReturn.detail}</p>
+          ) : null}
+          {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
+            <Link href={contextualReturn.actionHref} className="mt-5 inline-flex rounded-full bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300">
+              {contextualReturn.actionLabel}
+            </Link>
+          ) : null}
+
+          <div className="mt-7 border-t border-slate-800 pt-6">
+            <p className="text-xs font-black uppercase tracking-wide text-slate-400">If you want to keep going</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Link href="/goals" className="rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300">Continue a goal</Link>
+              <Link href="/budget" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Review money</Link>
+              <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
+              <Link href="/" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Done for now</Link>
+            </div>
           </div>
         </section>
       ) : null}
