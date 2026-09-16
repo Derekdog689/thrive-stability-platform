@@ -292,7 +292,9 @@ export default function WellnessCheckinCandidate() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Link href="/goals" className="rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300">Continue a goal</Link>
               <Link href="/budget" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Review money</Link>
-              <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
+              {contextualReturn?.actionHref !== "/support" ? (
+                <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
+              ) : null}
               <Link href="/" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Done for now</Link>
             </div>
           </div>
