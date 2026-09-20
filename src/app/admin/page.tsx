@@ -42,7 +42,7 @@ export default function AdminHomePage() {
       return;
     }
 
-    const workspaceId = workspaceId;
+    const workspaceId = membership.workspace_id;
     let cancelled = false;
 
     async function loadSnapshot() {
