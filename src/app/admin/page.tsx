@@ -153,12 +153,12 @@ export default function AdminHomePage() {
 
   return (
     <main className="min-h-screen bg-[#eef4ef] px-4 py-6 text-slate-950 sm:px-6 sm:py-10">
-      <section className="mx-auto max-w-6xl space-y-6">
-        <header className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+      <section className="mx-auto max-w-6xl space-y-5">
+        <header className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-7">
           <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">DSS Enterprises</p>
-          <h1 className="mt-2 text-4xl font-black">THRIVE Admin</h1>
+          <h1 className="mt-1 text-3xl font-black">THRIVE Admin</h1>
           <p className="mt-3 max-w-2xl text-lg leading-7 text-slate-600">
-            See what needs attention, then move into the right workspace.
+            See what needs attention and manage THRIVE.
           </p>
         </header>
 
@@ -167,19 +167,19 @@ export default function AdminHomePage() {
             <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">Needs attention</p>
             <h2 className="mt-1 text-2xl font-black">Current work</h2>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Link href="/admin/support" className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm transition hover:border-emerald-300">
+          <div className="grid gap-3 md:grid-cols-2">
+            <Link href="/admin/support" className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:border-emerald-300">
               <p className="text-sm font-bold uppercase text-emerald-700">Support</p>
-              <p className="mt-2 text-4xl font-black">{summaryLoading ? "…" : snapshot.supportNeedsAction}</p>
-              <p className="mt-2 text-slate-600">requests currently need review or follow-through</p>
-              <p className="mt-5 font-black text-emerald-800">Review support →</p>
+              <p className="mt-1 text-3xl font-black">{summaryLoading ? "…" : snapshot.supportNeedsAction}</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">requests currently need review or follow-through</p>
+              <p className="mt-3 font-black text-emerald-800">Review support →</p>
             </Link>
 
-            <Link href="/admin/app-access" className="rounded-3xl border border-cyan-100 bg-white p-6 shadow-sm transition hover:border-cyan-300">
+            <Link href="/admin/app-access" className="rounded-3xl border border-cyan-100 bg-white p-5 shadow-sm transition hover:border-cyan-300">
               <p className="text-sm font-bold uppercase text-cyan-700">App access</p>
-              <p className="mt-2 text-4xl font-black">{summaryLoading ? "…" : snapshot.accessUnlinkedRaw}</p>
-              <p className="mt-2 text-slate-600">confirmed unlinked accounts need classification or access review</p>
-              <p className="mt-5 font-black text-cyan-800">Review access →</p>
+              <p className="mt-1 text-3xl font-black">{summaryLoading ? "…" : snapshot.accessUnlinkedRaw}</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">confirmed unlinked accounts need classification or access review</p>
+              <p className="mt-3 font-black text-cyan-800">Review access →</p>
             </Link>
           </div>
         </section>
@@ -189,8 +189,8 @@ export default function AdminHomePage() {
             <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Environment</p>
             <h2 className="mt-1 text-2xl font-black">At a glance</h2>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Link href="/admin/supported-people" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link href="/admin/supported-people" className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-bold uppercase text-slate-500">People</p>
               <p className="mt-2 text-2xl font-black">{summaryLoading ? "Loading…" : snapshot.peopleTotal + " records"}</p>
               <p className="mt-2 text-sm text-slate-600">
@@ -198,7 +198,7 @@ export default function AdminHomePage() {
               </p>
             </Link>
 
-            <Link href="/admin/resources" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <Link href="/admin/resources" className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-bold uppercase text-slate-500">Resources</p>
               <p className="mt-2 text-2xl font-black">{summaryLoading ? "Loading…" : snapshot.resourcesVisible + " visible"}</p>
               <p className="mt-2 text-sm text-slate-600">participant-visible resource inventory</p>
@@ -206,13 +206,13 @@ export default function AdminHomePage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Manage</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Link href="/admin/supported-people" className="rounded-2xl border border-slate-200 p-4 font-black hover:border-emerald-300">People →</Link>
-            <Link href="/admin/app-access" className="rounded-2xl border border-slate-200 p-4 font-black hover:border-cyan-300">App access →</Link>
-            <Link href="/admin/support" className="rounded-2xl border border-slate-200 p-4 font-black hover:border-emerald-300">Support →</Link>
-            <Link href="/admin/resources" className="rounded-2xl border border-slate-200 p-4 font-black hover:border-emerald-300">Resources →</Link>
+          <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <Link href="/admin/supported-people" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black hover:border-emerald-300">People →</Link>
+            <Link href="/admin/app-access" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black hover:border-cyan-300">App access →</Link>
+            <Link href="/admin/support" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black hover:border-emerald-300">Support →</Link>
+            <Link href="/admin/resources" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black hover:border-emerald-300">Resources →</Link>
           </div>
         </section>
       </section>
