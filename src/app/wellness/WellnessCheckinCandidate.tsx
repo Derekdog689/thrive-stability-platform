@@ -234,6 +234,23 @@ export default function WellnessCheckinCandidate() {
                 </div>
               ) : null}
 
+              {contextualReturn?.signals.length ? (
+                <div className="mt-5 rounded-[1.5rem] border border-white/80 bg-white/66 p-4 backdrop-blur-xl">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">What THRIVE noticed</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    {contextualReturn.signals.map((signal) => (
+                      <div key={signal.dimension} className="rounded-2xl bg-white/80 px-4 py-3 shadow-sm">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">{signal.label}</p>
+                        <p className="mt-1 text-lg font-black text-slate-950">{formatValue(signal.value)}</p>
+                        {signal.comparisonDetail ? (
+                          <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{signal.comparisonDetail}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               {todayCheckin.chosen_next_step ? (
                 todayNextRoute ? (
                   <Link href={todayNextRoute} className="mt-6 flex items-center gap-4 rounded-[1.6rem] border border-emerald-200/80 bg-emerald-700 px-5 py-5 text-white shadow-[0_14px_32px_rgba(4,120,87,0.20)] transition hover:bg-emerald-800">
@@ -281,22 +298,43 @@ export default function WellnessCheckinCandidate() {
           {contextualReturn?.detail ? (
             <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-300">{contextualReturn.detail}</p>
           ) : null}
-          {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
-            <Link href={contextualReturn.actionHref} className="mt-5 inline-flex rounded-full bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300">
-              {contextualReturn.actionLabel}
-            </Link>
+
+          {contextualReturn?.signals.length ? (
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {contextualReturn.signals.map((signal) => (
+                <div key={signal.dimension} className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">{signal.label}</p>
+                  <p className="mt-1 text-xl font-black text-white">{formatValue(signal.value)}</p>
+                  {signal.comparisonDetail ? (
+                    <p className="mt-2 text-xs font-semibold leading-5 text-slate-400">{signal.comparisonDetail}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           ) : null}
 
           <div className="mt-7 border-t border-slate-800 pt-6">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-400">If you want to keep going</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Link href="/goals" className="rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300">Continue a goal</Link>
-              <Link href="/budget" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Review money</Link>
-              {contextualReturn?.actionHref !== "/support" ? (
-                <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
-              ) : null}
-              <Link href="/" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Done for now</Link>
-            </div>
+            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Ways to continue</p>
+            {contextualReturn?.suggestedActions.length ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {contextualReturn.suggestedActions.map((action) =>
+                  action.href ? (
+                    <Link key={action.key} href={action.href} className="rounded-2xl bg-emerald-400 px-5 py-4 text-slate-950 transition hover:bg-emerald-300">
+                      <span className="block font-black">{action.label}</span>
+                      <span className="mt-1 block text-xs font-bold leading-5 text-slate-700">{action.reason}</span>
+                    </Link>
+                  ) : (
+                    <div key={action.key} className="rounded-2xl border border-slate-700 px-5 py-4">
+                      <span className="block font-black text-white">{action.label}</span>
+                      <span className="mt-1 block text-xs font-semibold leading-5 text-slate-400">{action.reason}</span>
+                    </div>
+                  ),
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm font-semibold text-slate-400">Nothing else is required from this check-in.</p>
+            )}
+            <Link href="/" className="mt-4 inline-flex rounded-full border border-slate-700 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-900">Done for now</Link>
           </div>
         </section>
       ) : null}
