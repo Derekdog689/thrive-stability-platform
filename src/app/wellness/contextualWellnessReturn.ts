@@ -8,18 +8,34 @@ export type ContextualWellnessReturnKind =
   | "mixed"
   | "confirmation";
 
+export type WellnessReturnSignal = {
+  dimension: string;
+  label: string;
+  value: string;
+  comparison: "repeat" | "change" | "mixed" | "current";
+  comparisonDetail: string | null;
+};
+
+export type WellnessReturnAction = {
+  key: string;
+  label: string;
+  reason: string;
+  href: string | null;
+};
+
 export type ContextualWellnessReturn = {
   kind: ContextualWellnessReturnKind;
   dimension: string | null;
   headline: string;
   detail: string | null;
+  signals: WellnessReturnSignal[];
+  suggestedActions: WellnessReturnAction[];
   actionLabel: string | null;
   actionHref: string | null;
 };
 
 type ComparableDimension = {
   key:
-    | "support_needed"
     | "recovery_support"
     | "routine"
     | "stress"
@@ -31,14 +47,13 @@ type ComparableDimension = {
 };
 
 const dimensionPriority: ComparableDimension[] = [
-  { key: "support_needed", label: "support" },
-  { key: "recovery_support", label: "recovery support" },
-  { key: "routine", label: "routine" },
-  { key: "stress", label: "stress" },
-  { key: "sleep", label: "sleep" },
-  { key: "energy", label: "energy" },
-  { key: "confidence", label: "confidence" },
-  { key: "overall_day", label: "overall day" },
+  { key: "recovery_support", label: "Recovery support" },
+  { key: "routine", label: "Routine" },
+  { key: "stress", label: "Stress" },
+  { key: "sleep", label: "Sleep" },
+  { key: "energy", label: "Energy" },
+  { key: "confidence", label: "Confidence" },
+  { key: "overall_day", label: "Overall day" },
 ];
 
 const nextStepLabels: Record<string, string> = {
@@ -82,83 +97,163 @@ function priorRowsForToday(
     });
 }
 
-function supportReturn(): ContextualWellnessReturn {
+function buildSignal(
+  dimension: ComparableDimension,
+  todayValue: string,
+  priorRows: WellnessCheckinRow[],
+): WellnessReturnSignal {
+  const priorValues = priorRows
+    .map((row) => getValue(row, dimension))
+    .filter((value): value is string => Boolean(value));
+
+  const repeatedPriorCount = priorValues.filter(
+    (value) => value === todayValue,
+  ).length;
+
+  if (repeatedPriorCount >= 2) {
+    return {
+      dimension: dimension.key,
+      label: dimension.label,
+      value: plainValue(todayValue),
+      comparison: "repeat",
+      comparisonDetail: "Same on several recent check-ins.",
+    };
+  }
+
+  const mostRecentPriorValue = priorValues[0] ?? null;
+
+  if (mostRecentPriorValue && mostRecentPriorValue !== todayValue) {
+    return {
+      dimension: dimension.key,
+      label: dimension.label,
+      value: plainValue(todayValue),
+      comparison: "change",
+      comparisonDetail: `Last check-in: ${plainValue(mostRecentPriorValue)}.`,
+    };
+  }
+
+  const recentValues = [todayValue, ...priorValues];
+
+  if (recentValues.length >= 3 && new Set(recentValues).size >= 2) {
+    return {
+      dimension: dimension.key,
+      label: dimension.label,
+      value: plainValue(todayValue),
+      comparison: "mixed",
+      comparisonDetail: "Recent check-ins have varied.",
+    };
+  }
+
   return {
-    kind: "support",
-    dimension: "support_needed",
-    headline: "You said support would help today.",
-    detail: "THRIVE can take you to Support when you're ready.",
-    actionLabel: "Open Support",
-    actionHref: "/support",
+    dimension: dimension.key,
+    label: dimension.label,
+    value: plainValue(todayValue),
+    comparison: "current",
+    comparisonDetail: null,
   };
 }
 
-function nextStepReturn(value: string): ContextualWellnessReturn {
-  const label = nextStepLabels[value] ?? plainValue(value);
+function actionFromChosenStep(value: string): WellnessReturnAction {
   const routesToSupport =
     value === "ask_for_help" || value === "contact_supportive_person";
 
   return {
-    kind: "next_step",
-    dimension: null,
-    headline: `You chose ${label} next.`,
-    detail: null,
-    actionLabel: routesToSupport ? "Open Support" : null,
-    actionHref: routesToSupport ? "/support" : null,
+    key: value,
+    label: nextStepLabels[value] ?? plainValue(value),
+    reason: "You selected this during your check-in.",
+    href: routesToSupport ? "/support" : null,
   };
 }
 
-function repeatReturn(
-  dimension: ComparableDimension,
-  todayValue: string,
-): ContextualWellnessReturn {
-  return {
-    kind: "repeat",
-    dimension: dimension.key,
-    headline: `You've selected ${plainValue(todayValue)} for ${dimension.label} on several recent check-ins.`,
-    detail: "THRIVE is only reflecting what you recorded across your recent check-ins.",
-    actionLabel: null,
-    actionHref: null,
-  };
+function buildSuggestedActions(
+  todayCheckin: WellnessCheckinRow,
+): WellnessReturnAction[] {
+  const actions: WellnessReturnAction[] = [];
+
+  function add(action: WellnessReturnAction) {
+    if (!actions.some((existing) => existing.key === action.key)) {
+      actions.push(action);
+    }
+  }
+
+  if (
+    todayCheckin.chosen_next_step &&
+    todayCheckin.chosen_next_step !== "nothing_right_now"
+  ) {
+    add(actionFromChosenStep(todayCheckin.chosen_next_step));
+  }
+
+  if (
+    todayCheckin.support_needed === "yes" ||
+    todayCheckin.recovery_support === "could_use_support"
+  ) {
+    add({
+      key: "ask_for_help",
+      label: "Open Support",
+      reason:
+        todayCheckin.support_needed === "yes"
+          ? "You said support would help today."
+          : "You marked that you could use recovery support.",
+      href: "/support",
+    });
+  }
+
+  if (todayCheckin.stress === "high") {
+    add({
+      key: "take_a_break",
+      label: "Take a break",
+      reason: "You marked stress as high.",
+      href: null,
+    });
+  }
+
+  if (todayCheckin.sleep === "poor" || todayCheckin.energy === "low") {
+    add({
+      key: "food_water_rest",
+      label: "Handle a basic need",
+      reason:
+        todayCheckin.sleep === "poor"
+          ? "You marked sleep as poor."
+          : "You marked energy as low.",
+      href: null,
+    });
+  }
+
+  if (
+    todayCheckin.routine === "off_track" ||
+    todayCheckin.routine === "mixed"
+  ) {
+    add({
+      key: "choose_one_task",
+      label: "Do one useful thing",
+      reason: `You marked routine as ${plainValue(todayCheckin.routine)}.`,
+      href: null,
+    });
+  }
+
+  return actions.slice(0, 3);
 }
 
-function changeReturn(
-  dimension: ComparableDimension,
-  todayValue: string,
-  priorValue: string,
-): ContextualWellnessReturn {
-  return {
-    kind: "change",
-    dimension: dimension.key,
-    headline: `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} is different from your last check-in.`,
-    detail: `${plainValue(priorValue)} → ${plainValue(todayValue)}`,
-    actionLabel: null,
-    actionHref: null,
-  };
-}
+function primaryKind(
+  supportNeeded: string | null,
+  chosenNextStep: string | null,
+  signals: WellnessReturnSignal[],
+): ContextualWellnessReturnKind {
+  if (supportNeeded === "yes") return "support";
 
-function mixedReturn(
-  dimension: ComparableDimension,
-): ContextualWellnessReturn {
-  return {
-    kind: "mixed",
-    dimension: dimension.key,
-    headline: `Your recent check-ins have varied on ${dimension.label}.`,
-    detail: "There isn't one consistent recent pattern in what you recorded.",
-    actionLabel: null,
-    actionHref: null,
-  };
-}
+  const contextualSignal = signals.find(
+    (signal) => signal.comparison !== "current",
+  );
 
-function confirmationReturn(): ContextualWellnessReturn {
-  return {
-    kind: "confirmation",
-    dimension: null,
-    headline: "Your check-in is saved.",
-    detail: "It's here when you want to look back or decide what to work on next.",
-    actionLabel: null,
-    actionHref: null,
-  };
+  if (contextualSignal) {
+    return contextualSignal.comparison;
+  }
+
+  if (chosenNextStep && chosenNextStep !== "nothing_right_now") {
+    return "next_step";
+  }
+
+  return "confirmation";
 }
 
 export function buildContextualWellnessReturn(
@@ -167,64 +262,70 @@ export function buildContextualWellnessReturn(
 ): ContextualWellnessReturn | null {
   if (!todayCheckin) return null;
 
-  if (todayCheckin.support_needed === "yes") {
-    return supportReturn();
-  }
-
-  if (
-    todayCheckin.chosen_next_step &&
-    todayCheckin.chosen_next_step !== "nothing_right_now"
-  ) {
-    return nextStepReturn(todayCheckin.chosen_next_step);
-  }
-
   const priorRows = priorRowsForToday(todayCheckin, recentCheckins);
 
-  for (const dimension of dimensionPriority) {
-    const todayValue = getValue(todayCheckin, dimension);
-    if (!todayValue) continue;
+  const signals = dimensionPriority
+    .map((dimension) => {
+      const todayValue = getValue(todayCheckin, dimension);
+      return todayValue
+        ? buildSignal(dimension, todayValue, priorRows)
+        : null;
+    })
+    .filter((signal): signal is WellnessReturnSignal => Boolean(signal))
+    .sort((a, b) => {
+      const aContext = a.comparison === "current" ? 1 : 0;
+      const bContext = b.comparison === "current" ? 1 : 0;
+      if (aContext !== bContext) return aContext - bContext;
 
-    const priorValues = priorRows
-      .map((row) => getValue(row, dimension))
-      .filter((value): value is string => Boolean(value));
+      const aIndex = dimensionPriority.findIndex(
+        (dimension) => dimension.key === a.dimension,
+      );
+      const bIndex = dimensionPriority.findIndex(
+        (dimension) => dimension.key === b.dimension,
+      );
+      return aIndex - bIndex;
+    })
+    .slice(0, 3);
 
-    const repeatedPriorCount = priorValues.filter(
-      (value) => value === todayValue,
-    ).length;
+  const suggestedActions = buildSuggestedActions(todayCheckin);
+  const chosenStep =
+    todayCheckin.chosen_next_step &&
+    todayCheckin.chosen_next_step !== "nothing_right_now"
+      ? nextStepLabels[todayCheckin.chosen_next_step] ??
+        plainValue(todayCheckin.chosen_next_step)
+      : null;
 
-    if (repeatedPriorCount >= 2) {
-      return repeatReturn(dimension, todayValue);
-    }
-  }
+  const headline =
+    todayCheckin.support_needed === "yes"
+      ? "You said support would help today."
+      : signals.length >= 2
+        ? "A few things stand out from this check-in."
+        : signals.length === 1
+          ? "One thing stands out from this check-in."
+          : "Your check-in is saved.";
 
-  for (const dimension of dimensionPriority) {
-    const todayValue = getValue(todayCheckin, dimension);
-    if (!todayValue) continue;
+  const detail = chosenStep
+    ? `You chose ${chosenStep} next. THRIVE is keeping that choice visible alongside what you recorded.`
+    : signals.length > 0
+      ? "THRIVE is reflecting only what you recorded today and across recent check-ins."
+      : "It's here when you want to look back or decide what to work on next.";
 
-    const mostRecentPriorValue = priorRows
-      .map((row) => getValue(row, dimension))
-      .find((value): value is string => Boolean(value));
+  const directSupportAction = suggestedActions.find(
+    (action) => action.href === "/support",
+  );
 
-    if (mostRecentPriorValue && mostRecentPriorValue !== todayValue) {
-      return changeReturn(dimension, todayValue, mostRecentPriorValue);
-    }
-  }
-
-  for (const dimension of dimensionPriority) {
-    const todayValue = getValue(todayCheckin, dimension);
-    if (!todayValue) continue;
-
-    const recentValues = [
-      todayValue,
-      ...priorRows
-        .map((row) => getValue(row, dimension))
-        .filter((value): value is string => Boolean(value)),
-    ];
-
-    if (new Set(recentValues).size >= 2 && recentValues.length >= 3) {
-      return mixedReturn(dimension);
-    }
-  }
-
-  return confirmationReturn();
+  return {
+    kind: primaryKind(
+      todayCheckin.support_needed,
+      todayCheckin.chosen_next_step,
+      signals,
+    ),
+    dimension: signals[0]?.dimension ?? null,
+    headline,
+    detail,
+    signals,
+    suggestedActions,
+    actionLabel: directSupportAction?.label ?? null,
+    actionHref: directSupportAction?.href ?? null,
+  };
 }
