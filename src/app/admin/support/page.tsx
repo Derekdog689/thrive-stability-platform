@@ -18,6 +18,12 @@ type SupportRequestRow = {
   created_at: string;
 };
 
+type SupportedPersonSummaryRow = {
+  id: string;
+  display_name: string;
+  preferred_name: string | null;
+};
+
 type ParticipantResponseDraft = {
   title: string;
   content: string;
@@ -83,6 +89,22 @@ function labelStatus(value: string) {
   };
 
   return labels[value] ?? value.replaceAll("_", " ");
+}
+
+function displayPersonName(person: SupportedPersonSummaryRow | undefined) {
+  if (!person) return "Participant";
+  return person.preferred_name?.trim() || person.display_name;
+}
+
+function nextActionLabel(status: string) {
+  const labels: Record<string, string> = {
+    submitted: "Acknowledge request",
+    acknowledged: "Start work or respond",
+    in_progress: "Respond, request information, or resolve",
+    waiting_for_participant: "Wait for participant or resume work",
+  };
+
+  return labels[status] ?? "Review request";
 }
 
 function canWriteParticipantVisibleMessage(status: string) {
@@ -334,6 +356,7 @@ export default function AdminSupportPage() {
   } = useAdminAccess();
 
   const [requests, setRequests] = useState<SupportRequestRow[]>([]);
+  const [people, setPeople] = useState<SupportedPersonSummaryRow[]>([]);
   const [participantReplies, setParticipantReplies] = useState<
     ParticipantReplyRow[]
   >([]);
@@ -370,6 +393,7 @@ export default function AdminSupportPage() {
       if (!canAccessAdmin || !membership) {
         if (mounted) {
           setRequests([]);
+          setPeople([]);
           setParticipantReplies([]);
           setParticipantResponses([]);
           setStatusEvents([]);
@@ -381,7 +405,7 @@ export default function AdminSupportPage() {
       setLoadingRequests(true);
       setRequestErrorMessage("");
 
-      const [requestResult, replyResult, responseResult, statusEventResult] =
+      const [requestResult, replyResult, responseResult, statusEventResult, peopleResult] =
         await Promise.all([
           supabase
             .from("support_requests")
@@ -408,6 +432,10 @@ export default function AdminSupportPage() {
             .eq("workspace_id", membership.workspace_id)
             .eq("event_type", "status_changed")
             .order("changed_at", { ascending: true }),
+          supabase
+            .from("supported_people")
+            .select("id, display_name, preferred_name")
+            .eq("workspace_id", membership.workspace_id),
         ]);
 
       if (!mounted) return;
@@ -436,7 +464,14 @@ export default function AdminSupportPage() {
         return;
       }
 
+      if (peopleResult.error) {
+        setRequestErrorMessage(peopleResult.error.message);
+        setLoadingRequests(false);
+        return;
+      }
+
       setRequests((requestResult.data as SupportRequestRow[] | null) ?? []);
+      setPeople((peopleResult.data as SupportedPersonSummaryRow[] | null) ?? []);
       setParticipantReplies(
         (replyResult.data as ParticipantReplyRow[] | null) ?? [],
       );
@@ -865,7 +900,9 @@ export default function AdminSupportPage() {
     );
   }
 
-    const supportActionRequests = requests.filter((request) =>
+  const peopleById = new Map(people.map((person) => [person.id, person]));
+
+  const supportActionRequests = requests.filter((request) =>
     ["submitted", "acknowledged", "in_progress"].includes(request.status),
   );
 
@@ -878,7 +915,7 @@ export default function AdminSupportPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
+    <main className="min-h-screen bg-[#eef4ef] px-4 py-6 text-slate-950 sm:px-6 sm:py-10">
       <section className="mx-auto max-w-5xl">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -889,8 +926,7 @@ export default function AdminSupportPage() {
             <h1 className="mt-2 text-4xl font-black">Support queue</h1>
 
             <p className="mt-3 max-w-2xl leading-7 text-slate-600">
-              Review participant Support requests visible to your authorized
-              workspace role.
+              See who needs a response, what changed, and what Support should do next.
             </p>
           </div>
 
@@ -898,9 +934,30 @@ export default function AdminSupportPage() {
             href="/admin"
             className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700"
           >
-            Back to Review Home
+            Back to Admin
           </Link>
         </div>
+
+        {!loadingRequests && !requestErrorMessage ? (
+          <section className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Needs action</p>
+              <p className="mt-1 text-2xl font-black">{supportActionRequests.length}</p>
+            </div>
+            <div className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Waiting on participant</p>
+              <p className="mt-1 text-2xl font-black">{waitingParticipantRequests.length}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Closed history</p>
+              <p className="mt-1 text-2xl font-black">{closedRequests.length}</p>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600 shadow-sm">
+          Participant-visible updates appear inside THRIVE. Contact preference is recorded on the request, but this workflow does not currently send SMS or email notifications.
+        </section>
 
         {loadingRequests ? (
           <div className="mt-6 rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
@@ -942,7 +999,7 @@ export default function AdminSupportPage() {
                   Reviewer action
                 </p>
                 <h2 className="mt-1 text-2xl font-black text-slate-950">
-                  Needs Support action
+                  Needs action
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
                   Requests that currently need acknowledgment, active review, or
@@ -968,7 +1025,7 @@ export default function AdminSupportPage() {
                   return (
                     <article
                       key={request.id}
-                      className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm"
+                      className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
@@ -976,9 +1033,12 @@ export default function AdminSupportPage() {
                             {request.participant_category.replaceAll("_", " ")}
                           </p>
 
-                          <h2 className="mt-2 text-xl font-black">
-                            Participant Support request
+                          <h2 className="mt-1 text-xl font-black">
+                            {displayPersonName(peopleById.get(request.supported_person_id))}
                           </h2>
+                          <p className="mt-1 text-sm font-semibold text-slate-500">
+                            Next: {nextActionLabel(request.status)}
+                          </p>
                         </div>
 
                         <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-900">
@@ -1273,8 +1333,8 @@ export default function AdminSupportPage() {
                             {request.participant_category.replaceAll("_", " ")}
                           </p>
 
-                          <h2 className="mt-2 text-xl font-black">
-                            Participant Support request
+                          <h2 className="mt-1 text-xl font-black">
+                            {displayPersonName(peopleById.get(request.supported_person_id))}
                           </h2>
                         </div>
 
