@@ -362,7 +362,7 @@ export default function MoneyCandidatePage() {
   }
 
   return <AuthGate><main className="min-h-screen bg-[radial-gradient(circle_at_12%_10%,rgba(167,243,208,0.30),transparent_28%),radial-gradient(circle_at_88%_16%,rgba(254,240,138,0.25),transparent_24%),linear-gradient(180deg,#edf7f1_0%,#eef5f7_48%,#edf1f4_100%)] px-3 pb-40 pt-3 text-slate-950 sm:px-6 sm:pt-6"><section className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
-    <header className="relative overflow-hidden rounded-[2.5rem] border border-white/80 bg-white/46 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-2xl sm:p-9"><div className="pointer-events-none absolute -right-12 top-8 h-48 w-48 rounded-full border-[24px] border-sky-100/65" /><div className="pointer-events-none absolute -left-16 bottom-[-5rem] h-56 w-56 rounded-full bg-emerald-200/45" /><div className="relative"><div className="flex items-center justify-between gap-3"><Link href="/" className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-lg font-black shadow-sm">T</div><div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-800">DSS Enterprises</p><p className="text-sm font-black">THRIVE</p></div></Link><span className="rounded-full bg-white/75 px-4 py-2 text-sm font-black text-emerald-900 shadow-sm">$ Money</span></div><div className="mt-10 max-w-3xl sm:mt-14"><p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-700">Money</p><h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-emerald-950 sm:text-7xl">What does your money look like?</h1><p className="mt-4 text-lg font-bold text-slate-600">See the plan. See what happened.</p></div></div></header>
+    <header className="relative overflow-hidden rounded-[2.5rem] border border-white/80 bg-white/46 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-2xl sm:p-9"><div className="pointer-events-none absolute -right-12 top-8 h-48 w-48 rounded-full border-[24px] border-sky-100/65" /><div className="pointer-events-none absolute -left-16 bottom-[-5rem] h-56 w-56 rounded-full bg-emerald-200/45" /><div className="relative"><div className="flex items-center justify-between gap-3"><Link href="/" className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-lg font-black shadow-sm">T</div><div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-800">DSS Enterprises</p><p className="text-sm font-black">THRIVE</p></div></Link><span className="rounded-full bg-white/75 px-4 py-2 text-sm font-black text-emerald-900 shadow-sm">$ Money</span></div><div className="mt-10 max-w-3xl sm:mt-14"><p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-700">Money</p><h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-emerald-950 sm:text-7xl">What does your money look like?</h1><p className="mt-4 text-xl font-bold text-slate-600">See the picture. Make the next move.</p></div></div></header>
 
     {loading ? <section className="rounded-[2rem] bg-white/75 p-6 shadow-sm">Loading money.</section> : null}
     {errorMessage ? <section role="alert" className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6"><p className="font-black">Money could not be loaded.</p><p className="mt-2 text-sm">{errorMessage}</p></section> : null}
@@ -372,76 +372,88 @@ export default function MoneyCandidatePage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Money right now</p>
-          <h2 className="mt-2 text-3xl font-black text-slate-950">Start with what is true.</h2>
-          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">Review what THRIVE already knows, then choose what you want to do. You do not need to build a Budget just to use Money.</p>
+          <h2 className="mt-2 text-4xl font-black leading-tight text-slate-950">Your money, right now.</h2>
+          <p className="mt-3 max-w-2xl text-lg font-semibold leading-7 text-slate-600">Here’s what THRIVE sees. Pick what you want to do next.</p>
         </div>
         <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-800">{activePeriod ? "Active plan" : draftPeriod ? "Draft plan" : "No active plan"}</span>
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-2xl bg-slate-50 p-3">
-          <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Plan</p>
-          <p className="mt-1 text-sm font-black text-slate-800">{activePeriod ? "Active" : draftPeriod ? "Draft" : "None yet"}</p>
+      <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+        <div className="rounded-2xl border border-white/80 bg-white/82 p-4 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Plan</p>
+          <p className="mt-2 text-xl font-black text-slate-950">{activePeriod ? "Active" : draftPeriod ? "Draft" : "None"}</p>
         </div>
-        <div className="rounded-2xl bg-slate-50 p-3">
-          <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Expected income</p>
-          <p className="mt-1 whitespace-nowrap text-sm font-black text-slate-800">{orientationExpectedIncome === null ? "Not set" : formatMoney(orientationExpectedIncome)}</p>
+        <div className="rounded-2xl border border-white/80 bg-white/82 p-4 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Income</p>
+          <p className="mt-2 whitespace-nowrap text-xl font-black text-slate-950">{orientationExpectedIncome === null ? "Not set" : formatMoney(orientationExpectedIncome)}</p>
         </div>
-        <div className="rounded-2xl bg-slate-50 p-3">
-          <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Recorded activity</p>
-          <p className="mt-1 text-sm font-black text-slate-800">{financialActivity.length}</p>
+        <div className="rounded-2xl border border-white/80 bg-white/82 p-4 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Activity</p>
+          <p className="mt-2 text-xl font-black text-slate-950">{financialActivity.length}</p>
         </div>
       </div>
 
-      {draftPeriod && orientationExpectedIncome === 0 ? <div className="mt-4 rounded-[1.4rem] border border-cyan-100 bg-cyan-50/75 p-4">
-        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Your draft currently says</p>
-        <p className="mt-1 text-lg font-black text-cyan-950">$0 expected income.</p>
-        <p className="mt-1 text-sm font-semibold leading-6 text-cyan-900">That may be right, or it may mean you have not figured it out yet. THRIVE is not treating zero as a mistake.</p>
+      {draftPeriod && orientationExpectedIncome === 0 ? <div className="mt-5 rounded-[1.5rem] border border-cyan-100 bg-cyan-50/85 p-5">
+        <p className="text-sm font-black uppercase tracking-[0.16em] text-cyan-700">Draft check</p>
+        <p className="mt-2 text-2xl font-black text-cyan-950">$0 expected income</p>
+        <p className="mt-2 text-base font-semibold leading-7 text-cyan-900">If that’s right, keep going. If not, change it when you continue the plan.</p>
       </div> : null}
 
-      <div className="mt-5">
-        <p className="text-sm font-black text-slate-700">What do you want to do?</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <button type="button" onClick={() => { setShowActivity(true); setShowOrientationHelp(false); scrollToMoneySection("money-activity"); }} className="rounded-[1.3rem] border border-emerald-100 bg-emerald-50 px-4 py-3.5 text-left">
-            <span className="block text-sm font-black text-emerald-950">See what happened</span>
-            <span className="mt-1 block text-xs font-semibold leading-5 text-emerald-800">Review recorded money activity and your context.</span>
+      <div className="mt-6">
+        <p className="text-lg font-black text-slate-800">What do you want to do?</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <button type="button" onClick={() => { setShowActivity(true); setShowOrientationHelp(false); scrollToMoneySection("money-activity"); }} className="rounded-[1.4rem] border border-emerald-100 bg-emerald-50 px-5 py-5 text-left shadow-sm">
+            <span className="block text-xl font-black text-emerald-950">See what happened</span>
+            <span className="mt-1 block text-base font-semibold leading-6 text-emerald-800">Review money activity.</span>
           </button>
-          <button type="button" onClick={() => { setShowPlanSetup(true); setShowOrientationHelp(false); scrollToMoneySection(activePeriod ? "money-plan" : draftPeriod ? "money-plan" : "money-plan-setup"); }} className="rounded-[1.3rem] border border-sky-100 bg-sky-50 px-4 py-3.5 text-left">
-            <span className="block text-sm font-black text-sky-950">{activePeriod ? "Adjust my plan" : draftPeriod ? "Continue my plan" : "Make a plan"}</span>
-            <span className="mt-1 block text-xs font-semibold leading-5 text-sky-800">Use Budget when planning is what you need.</span>
+          <button type="button" onClick={() => { setShowPlanSetup(true); setShowOrientationHelp(false); scrollToMoneySection(activePeriod ? "money-plan" : draftPeriod ? "money-plan" : "money-plan-setup"); }} className="rounded-[1.4rem] border border-sky-100 bg-sky-50 px-5 py-5 text-left shadow-sm">
+            <span className="block text-xl font-black text-sky-950">{activePeriod ? "Adjust my plan" : draftPeriod ? "Continue my plan" : "Make a plan"}</span>
+            <span className="mt-1 block text-base font-semibold leading-6 text-sky-800">Shape what comes next.</span>
           </button>
-          <Link href="/support" className="rounded-[1.3rem] border border-violet-100 bg-violet-50 px-4 py-3.5 text-left">
-            <span className="block text-sm font-black text-violet-950">Get help with money</span>
-            <span className="mt-1 block text-xs font-semibold leading-5 text-violet-800">Open a human Support thread when that would help.</span>
+          <Link href="/support" className="rounded-[1.4rem] border border-violet-100 bg-violet-50 px-5 py-5 text-left shadow-sm">
+            <span className="block text-xl font-black text-violet-950">Get help with money</span>
+            <span className="mt-1 block text-base font-semibold leading-6 text-violet-800">Open Support.</span>
           </Link>
-          <button type="button" onClick={() => setShowOrientationHelp((current) => !current)} className="rounded-[1.3rem] border border-slate-200 bg-white px-4 py-3.5 text-left">
-            <span className="block text-sm font-black text-slate-800">I’m not sure</span>
-            <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">Start with orientation instead of choosing the right tool.</span>
+          <button type="button" onClick={() => setShowOrientationHelp((current) => !current)} className="rounded-full border border-slate-200 bg-white px-5 py-3.5 text-left">
+            <span className="block text-base font-black text-slate-700">I’m not sure where to start</span>
           </button>
         </div>
       </div>
 
-      {showOrientationHelp ? <div className="mt-4 rounded-[1.4rem] bg-slate-50 p-4">
-        <p className="font-black text-slate-800">A simple place to start</p>
-        <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">{financialActivity.length > 0 ? "Review what happened first. You can decide whether you need a plan after you see the activity." : "There is no recorded activity yet. You can make a plan, ask for help, or come back when something happens."}</p>
+      {showOrientationHelp ? <div className="mt-4 rounded-[1.4rem] bg-slate-50 p-5">
+        <p className="text-lg font-black text-slate-800">Start here</p>
+        <p className="mt-1 text-base font-semibold leading-7 text-slate-600">{financialActivity.length > 0 ? "Look at what happened first. Then decide whether you want to plan, explain something, or ask for help." : "There’s no recorded activity yet. You can make a plan or ask for help when you’re ready."}</p>
       </div> : null}
 
-      {recentActivityPreview.length > 0 && !activePeriod ? <div id="money-activity" className="mt-5 scroll-mt-24 rounded-[1.4rem] bg-white/80 p-4">
+      {recentActivityPreview.length > 0 && !activePeriod ? <div id="money-activity" className="mt-6 scroll-mt-24 rounded-[1.5rem] bg-white/86 p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Recent activity</p>
-            <p className="mt-1 text-lg font-black">What happened</p>
+            <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700">Recent activity</p>
+            <p className="mt-1 text-2xl font-black">What happened</p>
           </div>
           <span className="text-xs font-black text-slate-400">{financialActivity.length} total</span>
         </div>
-        <div className="mt-3 space-y-2">{recentActivityPreview.map((activity) => <div key={`${activity.activity_record_type}-${activity.activity_id}`} className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 px-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-800">{activity.description}</p><p className="mt-1 text-xs font-semibold text-slate-400">{formatDate(activity.activity_date)} · {activity.source_name}</p></div><div className="shrink-0 text-right"><p className="text-sm font-black text-slate-800">{formatMoney(Math.abs(toNumber(activity.signed_amount)))}</p><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">{activity.activity_direction === "inflow" ? "Money in" : "Money out"}</p></div></div>)}</div>
+        <div className="mt-4 space-y-3">{recentActivityPreview.map((activity) => <div key={`${activity.activity_record_type}-${activity.activity_id}`} className="flex items-start justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-4"><div className="min-w-0"><p className="truncate text-base font-black text-slate-800">{activity.description}</p><p className="mt-1 text-sm font-semibold text-slate-500">{formatDate(activity.activity_date)} · {activity.source_name}</p></div><div className="shrink-0 text-right"><p className="text-lg font-black text-slate-800">{formatMoney(Math.abs(toNumber(activity.signed_amount)))}</p><p className="text-xs font-black uppercase tracking-wide text-slate-500">{activity.activity_direction === "inflow" ? "Money in" : "Money out"}</p></div></div>)}</div>
         {explainedImportedCount > 0 ? <p className="mt-3 text-xs font-bold text-slate-500">{explainedImportedCount} imported item{explainedImportedCount === 1 ? "" : "s"} currently have your context.</p> : null}
       </div> : null}
     </section> : null}
 
     {!loading && !errorMessage && !activePeriod && !draftPeriod ? <section id="money-plan-setup" className="scroll-mt-24 rounded-[2rem] border border-white/80 bg-white/78 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">New plan</p><h2 className="mt-2 text-3xl font-black">Start the next plan.</h2></div><div className="flex gap-1.5"><span className="h-1.5 w-8 rounded-full bg-emerald-600" /><span className="h-1.5 w-8 rounded-full bg-slate-200" /></div></div><p className="mt-2 text-sm font-semibold text-slate-500">Start with the dates and money you expect. Categories come next.</p>{showPlanSetup ? <form onSubmit={handleCreateBudgetDraft} className="mt-5 grid gap-4"><div className="grid grid-cols-2 gap-3"><label className="text-sm font-black">Start<input type="date" value={newBudgetDraft.periodStart} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, periodStart: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 font-normal" /></label><label className="text-sm font-black">End<input type="date" value={newBudgetDraft.periodEnd} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, periodEnd: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 font-normal" /></label></div><label className="text-sm font-black">Expected income<div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="font-black text-slate-400">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={newBudgetDraft.expectedIncome} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, expectedIncome: event.target.value }))} className="w-full bg-transparent px-3 py-3 text-xl font-black outline-none" /></div></label><label className="text-sm font-black">Anything to remember? <span className="font-normal text-slate-400">Optional</span><textarea rows={2} value={newBudgetDraft.notes} onChange={(event) => setNewBudgetDraft((current) => ({ ...current, notes: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal" /></label>{budgetWriteError ? <p className="rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-800">{budgetWriteError}</p> : null}<button type="submit" disabled={budgetWorking || !activeProgramId} className="rounded-full bg-emerald-700 px-5 py-3.5 font-black text-white disabled:opacity-50">Continue to categories</button></form> : <button type="button" onClick={() => setShowPlanSetup(true)} className="mt-5 w-full rounded-full border border-emerald-200 bg-white px-5 py-3.5 font-black text-emerald-800">Open plan setup</button>}</section> : null}
 
-    {!loading && !errorMessage && draftPeriod ? <div id="money-plan" className="scroll-mt-24"><BudgetDraftCategoryBuilder draftPeriod={draftPeriod} currentLines={draftLines} refresh={refresh} /></div> : null}
+    {!loading && !errorMessage && draftPeriod ? (
+      showPlanSetup ? (
+        <div id="money-plan" className="scroll-mt-24">
+          <BudgetDraftCategoryBuilder draftPeriod={draftPeriod} currentLines={draftLines} refresh={refresh} />
+        </div>
+      ) : (
+        <section className="rounded-[2rem] border border-sky-100 bg-sky-50/80 p-5 shadow-sm sm:p-7">
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-sky-700">Your draft is waiting</p>
+          <h2 className="mt-2 text-3xl font-black text-sky-950">Continue when you’re ready.</h2>
+          <p className="mt-2 text-base font-semibold leading-7 text-sky-800">The plan stays here. Open it when you want to work on what needs to be covered.</p>
+          <button type="button" onClick={() => { setShowPlanSetup(true); scrollToMoneySection("money-plan"); }} className="mt-4 w-full rounded-full bg-sky-700 px-5 py-4 text-lg font-black text-white">Continue plan</button>
+        </section>
+      )
+    ) : null}
 
     {!loading && !errorMessage && activePeriod ? <>
       {budgetExpired ? <section className="rounded-[2rem] border border-amber-200 bg-amber-50/90 p-5 shadow-sm sm:p-7"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Plan ended</p><h2 className="mt-2 text-3xl font-black text-amber-950">Your Money plan ended {formatDate(activePeriod.period_end)}.</h2><p className="mt-2 text-sm font-semibold text-amber-900">Review the final numbers, complete this plan, then THRIVE will open the next-plan setup.</p><button type="button" disabled={completingExpired || budgetWorking} onClick={() => void completeExpiredBudget()} className="mt-5 w-full rounded-full bg-amber-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50">{completingExpired ? "Completing plan..." : "Complete plan"}</button></section> : budgetEndingSoon ? <section className="rounded-[2rem] border border-cyan-100 bg-cyan-50/80 p-5 shadow-sm"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-700">Coming up</p><h2 className="mt-2 text-2xl font-black text-cyan-950">Your Money plan {budgetDaysLeft === 0 ? "ends today" : `ends in ${budgetDaysLeft} day${budgetDaysLeft === 1 ? "" : "s"}`}.</h2><p className="mt-2 text-sm font-semibold text-cyan-800">Nothing to do yet. THRIVE will prompt you when it is time to close this plan and start the next one.</p></section> : null}
