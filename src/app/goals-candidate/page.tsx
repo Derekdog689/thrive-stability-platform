@@ -107,6 +107,7 @@ export default function GoalsCandidatePage() {
   const [notice, setNotice] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [justSavedGoal, setJustSavedGoal] = useState<ParticipantGoal | null>(null);
+  const [justCompletedGoal, setJustCompletedGoal] = useState<ParticipantGoal | null>(null);
 
   const canCreate = Boolean(participant && participation);
   const selectedArea = useMemo(() => getGoalArea(draft.areaId), [draft.areaId]);
@@ -115,10 +116,33 @@ export default function GoalsCandidatePage() {
   const activeNow = useMemo(() => currentGoals.filter((goal) => goal.progress_status === "in_progress"), [currentGoals]);
   const readyGoals = useMemo(() => currentGoals.filter((goal) => goal.progress_status === "not_started"), [currentGoals]);
   const pausedGoals = useMemo(() => currentGoals.filter((goal) => goal.progress_status === "paused"), [currentGoals]);
-  const pastGoals = useMemo(() => [...activeGoals.filter((goal) => goal.progress_status === "completed"), ...archivedGoals], [activeGoals, archivedGoals]);
+  const completedGoals = useMemo(() => activeGoals.filter((goal) => goal.progress_status === "completed"), [activeGoals]);
+  const pastGoals = useMemo(() => [...completedGoals, ...archivedGoals], [completedGoals, archivedGoals]);
+  const pastGoalAreas = useMemo(() => {
+    const counts = new Map<string, number>();
+    pastGoals.forEach((goal) => {
+      const label = goal.goal_area ?? "Other";
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    });
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  }, [pastGoals]);
 
   function resetCreation() { setDraft(emptyDraft); setStep(1); setShowCreate(false); setNotice(""); }
-  function beginCreation() { setShowCreate(true); setStep(1); setDraft(emptyDraft); setNotice(""); setJustSavedGoal(null); }
+  function beginCreation() { setShowCreate(true); setStep(1); setDraft(emptyDraft); setNotice(""); setJustSavedGoal(null); setJustCompletedGoal(null); }
+  function beginFollowUp(goal: ParticipantGoal) {
+    const area = goalAreas.find((candidate) => candidate.label === goal.goal_area);
+    setShowCreate(true);
+    setNotice("");
+    setJustSavedGoal(null);
+    setJustCompletedGoal(null);
+    if (area) {
+      setDraft({ ...emptyDraft, areaId: area.id, goalArea: area.label });
+      setStep(2);
+      return;
+    }
+    setDraft(emptyDraft);
+    setStep(1);
+  }
   function chooseArea(areaId: string) { const area = getGoalArea(areaId); setDraft({ ...emptyDraft, areaId, goalArea: area?.label ?? "" }); setStep(2); }
   function choosePreset(presetId: string) { const preset = getGoalPreset(draft.areaId, presetId); if (!preset) return; setDraft((current) => ({ ...current, presetId, title: preset.title, nextStep: "" })); setStep(3); }
   function chooseNextStep(nextStep: string) { setDraft((current) => ({ ...current, nextStep })); setStep(4); }
@@ -136,7 +160,10 @@ export default function GoalsCandidatePage() {
     if (!result.ok) { setNotice(result.message); return; }
     setNotice("");
     if (justSavedGoal?.id === result.row.id) setJustSavedGoal(result.row);
-    if (status === "completed") setShowHistory(true);
+    if (status === "completed") {
+      setJustCompletedGoal(result.row);
+      setShowHistory(false);
+    }
   }
 
   return <AuthGate><main className={`min-h-screen bg-[radial-gradient(circle_at_12%_12%,rgba(167,243,208,0.32),transparent_30%),radial-gradient(circle_at_86%_18%,rgba(254,240,138,0.28),transparent_26%),linear-gradient(180deg,#edf7f1_0%,#eef5f7_48%,#edf1f4_100%)] px-3 pt-3 text-slate-950 sm:px-6 sm:pt-6 ${showCreate ? "pb-44 sm:pb-36" : "pb-28 sm:pb-32"}`}><section className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
@@ -148,7 +175,32 @@ export default function GoalsCandidatePage() {
     {!loading && !errorMessage && canCreate ? <>
       {justSavedGoal ? <section className="rounded-[2rem] border border-white/80 bg-white/72 p-6 shadow-sm backdrop-blur-2xl sm:p-8"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Saved</p><h2 className="mt-2 text-3xl font-black">{justSavedGoal.title}</h2><div className="mt-5 rounded-[1.6rem] bg-emerald-700 p-5 text-white shadow-[0_14px_30px_rgba(4,120,87,0.16)]"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">Next</p><p className="mt-2 text-2xl font-black">{justSavedGoal.next_step}</p></div><div className="mt-5 flex flex-wrap gap-3">{justSavedGoal.progress_status === "not_started" ? <button type="button" disabled={working} onClick={() => void changeStatus(justSavedGoal, "in_progress")} className="rounded-full border border-emerald-200 bg-emerald-50 px-5 py-2.5 text-sm font-black text-emerald-900">Start</button> : null}<button type="button" onClick={() => setJustSavedGoal(null)} className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-black">My goals</button><Link href="/" className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-black">Done for now</Link></div></section> : null}
 
-      {!justSavedGoal && currentGoals.length > 0 && !showCreate ? <section className="space-y-4">
+      {justCompletedGoal && !showCreate ? <section className="relative overflow-hidden rounded-[2rem] border border-sky-100 bg-[linear-gradient(145deg,rgba(240,249,255,0.96),rgba(236,253,245,0.94))] p-6 shadow-sm sm:p-8">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-sky-100/70 blur-2xl" />
+        <div className="relative">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-sky-700">Completed</p>
+          <h2 className="mt-2 text-4xl font-black leading-tight text-slate-950">You finished this.</h2>
+          <p className="mt-3 text-2xl font-black leading-8 text-slate-800">{justCompletedGoal.title}</p>
+          <div className="mt-5 rounded-[1.5rem] bg-white/80 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Last step</p>
+            <p className="mt-2 text-lg font-black leading-7 text-slate-800">{justCompletedGoal.next_step}</p>
+          </div>
+          <p className="mt-5 text-lg font-black text-slate-800">What do you want to do next?</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <button type="button" onClick={() => beginFollowUp(justCompletedGoal)} className="rounded-[1.4rem] bg-emerald-700 px-5 py-4 text-left text-white">
+              <span className="block text-lg font-black">Build on this</span>
+              <span className="mt-1 block text-sm font-semibold text-emerald-100">Start a follow-up goal in the same area.</span>
+            </button>
+            <button type="button" onClick={() => { setJustCompletedGoal(null); setShowHistory(true); }} className="rounded-[1.4rem] border border-sky-100 bg-white px-5 py-4 text-left">
+              <span className="block text-lg font-black text-sky-950">See completed goals</span>
+              <span className="mt-1 block text-sm font-semibold text-sky-700">Look back at what you’ve finished.</span>
+            </button>
+          </div>
+          <button type="button" onClick={() => setJustCompletedGoal(null)} className="mt-3 w-full rounded-full border border-slate-200 bg-white/80 px-5 py-3 text-base font-black text-slate-600">Done for now</button>
+        </div>
+      </section> : null}
+
+      {!justSavedGoal && !justCompletedGoal && currentGoals.length > 0 && !showCreate ? <section className="space-y-4">
         <section className="rounded-[2rem] border border-white/80 bg-white/72 p-5 shadow-sm backdrop-blur-xl sm:p-6">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">Goals right now</p>
           <h2 className="mt-2 text-3xl font-black text-slate-950">What’s moving</h2>
@@ -164,7 +216,7 @@ export default function GoalsCandidatePage() {
         <GoalThreadGroup title="Paused" note="Things you chose to set aside for now." goals={pausedGoals} working={working} onStatusChange={changeStatus} />
       </section> : null}
 
-      {!justSavedGoal && !showCreate ? <button type="button" onClick={beginCreation} className="flex w-full items-center justify-between rounded-[2rem] border border-white/80 bg-white/72 p-5 text-left shadow-sm backdrop-blur-xl"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Add</p><p className="mt-1 text-xl font-black">{currentGoals.length ? "Start another goal" : "Start a goal"}</p></div><span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-2xl font-black text-emerald-800">+</span></button> : null}
+      {!justSavedGoal && !justCompletedGoal && !showCreate ? <button type="button" onClick={beginCreation} className="flex w-full items-center justify-between rounded-[2rem] border border-white/80 bg-white/72 p-5 text-left shadow-sm backdrop-blur-xl"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Add</p><p className="mt-1 text-xl font-black">{currentGoals.length ? "Start another goal" : "Start a goal"}</p></div><span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-2xl font-black text-emerald-800">+</span></button> : null}
 
       {!justSavedGoal && showCreate ? <form onSubmit={saveGoal} className="rounded-[2rem] border border-white/80 bg-white/78 p-4 shadow-sm backdrop-blur-2xl sm:p-8"><div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3"><p className="text-sm font-black text-slate-600"><span className="text-emerald-700">{step} of 4</span> · {step === 1 ? "Pick an area" : step === 2 ? "Pick a goal" : step === 3 ? "Pick a first step" : "Review"}</p><div className="flex gap-1.5" aria-hidden="true">{[1,2,3,4].map((value) => <span key={value} className={`h-1.5 w-7 rounded-full ${value <= step ? "bg-emerald-600" : "bg-slate-200"}`} />)}</div></div>
         {step === 1 ? <div className="mt-5"><h2 className="text-3xl font-black">Pick an area.</h2><div className="mt-4 grid grid-cols-2 gap-3">{goalAreas.map((area) => { const visual = goalAreaVisuals[area.id] ?? { symbol: "•", label: area.label }; return <button key={area.id} type="button" onClick={() => chooseArea(area.id)} className="flex min-h-24 flex-col items-center justify-center rounded-[1.5rem] border border-slate-200 bg-white/86 p-3 text-center transition hover:border-emerald-300 hover:bg-emerald-50"><span className="text-2xl font-black">{visual.symbol}</span><span className="mt-2 text-sm font-black sm:text-base">{visual.label}</span></button>; })}</div></div> : null}
@@ -174,8 +226,22 @@ export default function GoalsCandidatePage() {
         {notice ? <p className="mt-5 text-sm font-semibold text-rose-700">{notice}</p> : null}
       </form> : null}
 
-      {notice && !showCreate && !justSavedGoal ? <section role="alert" className="rounded-[2rem] border border-rose-200 bg-rose-50 p-5"><p className="font-black text-rose-900">{notice}</p></section> : null}
-      {!justSavedGoal && !showCreate ? <section className="rounded-[2rem] border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur-xl"><button type="button" aria-expanded={showHistory} onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-800"><span>Past goals</span><span>{pastGoals.length} {showHistory ? "⌃" : "⌄"}</span></button>{showHistory ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{pastGoals.length === 0 ? <p className="text-sm text-slate-600">No past goals yet.</p> : pastGoals.map((goal) => { const visual = statusVisuals[goal.progress_status]; return <article key={goal.id} className="rounded-2xl bg-slate-50 p-5"><div className="flex items-start justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{goal.goal_area ?? "Goal"}</p><span className={`rounded-full px-3 py-1 text-xs font-black ${visual.badge}`}>{statusLabels[goal.progress_status]}</span></div><h3 className="mt-2 text-lg font-black">{goal.title}</h3><p className="mt-3 text-sm font-bold text-slate-600">Last step: {goal.next_step}</p></article>; })}</div> : null}</section> : null}
+      {notice && !showCreate && !justSavedGoal && !justCompletedGoal ? <section role="alert" className="rounded-[2rem] border border-rose-200 bg-rose-50 p-5"><p className="font-black text-rose-900">{notice}</p></section> : null}
+      {!justSavedGoal && !justCompletedGoal && !showCreate ? <section className="rounded-[2rem] border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur-xl">
+        <button type="button" aria-expanded={showHistory} onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between text-left font-black text-slate-800">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.16em] text-sky-700">Progress kept</p>
+            <span className="mt-1 block text-2xl">Completed & past goals</span>
+          </div>
+          <span className="rounded-full bg-slate-50 px-3 py-2 text-sm">{pastGoals.length} {showHistory ? "⌃" : "⌄"}</span>
+        </button>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-sky-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-sky-700">Complete</p><p className="mt-2 text-2xl font-black text-sky-950">{completedGoals.length}</p></div>
+          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-slate-500">Archived</p><p className="mt-2 text-2xl font-black text-slate-950">{archivedGoals.length}</p></div>
+        </div>
+        {pastGoalAreas.length > 0 ? <div className="mt-4 flex flex-wrap gap-2">{pastGoalAreas.slice(0, 6).map(([area, count]) => <span key={area} className="rounded-full bg-white px-3 py-2 text-sm font-black text-slate-600 shadow-sm">{area} · {count}</span>)}</div> : null}
+        {showHistory ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{pastGoals.length === 0 ? <p className="text-sm text-slate-600">No past goals yet.</p> : pastGoals.map((goal) => { const visual = statusVisuals[goal.progress_status]; return <details key={goal.id} className="rounded-2xl bg-slate-50 p-5"><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{goal.goal_area ?? "Goal"}</p><span className={`rounded-full px-3 py-1 text-xs font-black ${visual.badge}`}>{statusLabels[goal.progress_status]}</span></div><h3 className="mt-2 text-lg font-black">{goal.title}</h3></summary><p className="mt-3 text-sm font-bold leading-6 text-slate-600">Last step: {goal.next_step}</p>{goal.why_it_matters ? <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">Why it mattered: {goal.why_it_matters}</p> : null}</details>; })}</div> : null}
+      </section> : null}
     </> : null}
 
     {!showCreate ? <details className="rounded-[2rem] border border-white/80 bg-white/60 shadow-sm backdrop-blur-xl"><summary className="cursor-pointer list-none p-6 font-black text-emerald-900">About goals</summary><p className="border-t border-white/80 px-6 pb-6 pt-5 text-sm leading-7 text-slate-600">Your goals belong to you. THRIVE keeps the next step visible and records what you choose.</p></details> : null}
