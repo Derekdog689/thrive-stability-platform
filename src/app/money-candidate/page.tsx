@@ -213,8 +213,8 @@ export default function MoneyCandidatePage() {
   const activeLines = activePeriod ? budgetLines.filter((line) => line.budget_period_id === activePeriod.id && line.is_active) : [];
   const draftLines = draftPeriod ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id && line.is_active) : [];
   const currentActivity = activePeriod ? financialActivity.filter((activity) => activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end).slice(0, 12) : [];
-  const activityRows = currentActivity.length > 0 ? currentActivity : financialActivity.slice(0, 12);
-  const showingRecentActivity = currentActivity.length === 0 && activityRows.length > 0;
+  const draftActivity = draftPeriod ? financialActivity.filter((activity) => activity.activity_date >= draftPeriod.period_start && activity.activity_date <= draftPeriod.period_end) : [];
+  const activityRows = currentActivity;
   const budgetDaysLeft = activePeriod ? daysUntil(activePeriod.period_end) : null;
   const budgetExpired = activePeriod ? activePeriod.period_end < localDateKey() : false;
   const budgetEndingSoon = activePeriod && !budgetExpired && budgetDaysLeft !== null && budgetDaysLeft >= 0 && budgetDaysLeft <= 3;
@@ -227,8 +227,9 @@ export default function MoneyCandidatePage() {
   const incomeIn = activePeriod ? financialActivity.filter((activity) => activity.activity_direction === "inflow" && activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end).reduce((sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)), 0) : 0;
   const orientationPeriod = activePeriod ?? draftPeriod;
   const orientationExpectedIncome = orientationPeriod ? toNumber(orientationPeriod.expected_income) : null;
-  const explainedImportedCount = Array.from(explanationByTransactionId.values()).filter((item) => item.status !== "archived").length;
-  const recentActivityPreview = financialActivity.slice(0, 4);
+  const orientationActivityCount = activePeriod ? currentActivity.length : draftPeriod ? draftActivity.length : financialActivity.length;
+  const recentActivityPreview = draftPeriod ? draftActivity.slice(0, 4) : financialActivity.slice(0, 4);
+  const recentExplainedCount = recentActivityPreview.filter((activity) => activity.activity_record_type === "imported" && explanationByTransactionId.get(activity.activity_id)?.status !== "archived" && explanationByTransactionId.has(activity.activity_id)).length;
 
   function scrollToMoneySection(id: string) {
     window.requestAnimationFrame(() => {
@@ -389,7 +390,7 @@ export default function MoneyCandidatePage() {
         </div>
         <div className="rounded-2xl border border-white/80 bg-white/82 p-4 shadow-sm">
           <p className="text-xs font-black uppercase tracking-wide text-slate-500">Activity</p>
-          <p className="mt-2 text-xl font-black text-slate-950">{financialActivity.length}</p>
+          <p className="mt-2 text-xl font-black text-slate-950">{orientationActivityCount}</p>
         </div>
       </div>
 
@@ -425,16 +426,21 @@ export default function MoneyCandidatePage() {
         <p className="mt-1 text-base font-semibold leading-7 text-slate-600">{financialActivity.length > 0 ? "Look at what happened first. Then decide whether you want to plan, explain something, or ask for help." : "There’s no recorded activity yet. You can make a plan or ask for help when you’re ready."}</p>
       </div> : null}
 
-      {recentActivityPreview.length > 0 && !activePeriod ? <div id="money-activity" className="mt-6 scroll-mt-24 rounded-[1.5rem] bg-white/86 p-5 shadow-sm">
+      {!activePeriod ? <div id="money-activity" className="mt-6 scroll-mt-24 rounded-[1.5rem] bg-white/86 p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700">Recent activity</p>
+            <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700">{draftPeriod ? "This draft period" : "Recent activity"}</p>
             <p className="mt-1 text-2xl font-black">What happened</p>
           </div>
-          <span className="text-xs font-black text-slate-400">{financialActivity.length} total</span>
+          <span className="text-xs font-black text-slate-400">{draftPeriod ? `${draftActivity.length} in period` : `${financialActivity.length} total`}</span>
         </div>
-        <div className="mt-4 space-y-3">{recentActivityPreview.map((activity) => <div key={`${activity.activity_record_type}-${activity.activity_id}`} className="flex items-start justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-4"><div className="min-w-0"><p className="truncate text-base font-black text-slate-800">{activity.description}</p><p className="mt-1 text-sm font-semibold text-slate-500">{formatDate(activity.activity_date)} · {activity.source_name}</p></div><div className="shrink-0 text-right"><p className="text-lg font-black text-slate-800">{formatMoney(Math.abs(toNumber(activity.signed_amount)))}</p><p className="text-xs font-black uppercase tracking-wide text-slate-500">{activity.activity_direction === "inflow" ? "Money in" : "Money out"}</p></div></div>)}</div>
-        {explainedImportedCount > 0 ? <p className="mt-3 text-xs font-bold text-slate-500">{explainedImportedCount} imported item{explainedImportedCount === 1 ? "" : "s"} currently have your context.</p> : null}
+        {recentActivityPreview.length > 0 ? <>
+          <div className="mt-4 space-y-3">{recentActivityPreview.map((activity) => <div key={`${activity.activity_record_type}-${activity.activity_id}`} className="flex items-start justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-4"><div className="min-w-0"><p className="truncate text-base font-black text-slate-800">{activity.description}</p><p className="mt-1 text-sm font-semibold text-slate-500">{formatDate(activity.activity_date)} · {activity.source_name}</p></div><div className="shrink-0 text-right"><p className="text-lg font-black text-slate-800">{formatMoney(Math.abs(toNumber(activity.signed_amount)))}</p><p className="text-xs font-black uppercase tracking-wide text-slate-500">{activity.activity_direction === "inflow" ? "Money in" : "Money out"}</p></div></div>)}</div>
+          {recentExplainedCount > 0 ? <p className="mt-3 text-xs font-bold text-slate-500">{recentExplainedCount} imported item{recentExplainedCount === 1 ? "" : "s"} in this view {recentExplainedCount === 1 ? "has" : "have"} your context.</p> : null}
+        </> : <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+          <p className="text-lg font-black text-slate-800">{draftPeriod ? "No activity in this draft period yet." : "No money activity is available yet."}</p>
+          <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{draftPeriod ? "Older activity belongs to prior periods and is not shown as part of this draft." : "Activity will appear here when it is recorded or imported."}</p>
+        </div>}
       </div> : null}
     </section> : null}
 
@@ -472,7 +478,7 @@ export default function MoneyCandidatePage() {
 
           <div className="mt-3 grid grid-cols-2 gap-2"><button type="submit" disabled={activityWorking} className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-50">{activityWorking ? "Adding..." : "Add"}</button><button type="button" onClick={() => setShowAddActivity(false)} className="rounded-full border border-slate-200 bg-white px-4 py-3 font-black text-slate-600">Cancel</button></div>{activityNotice ? <p className="mt-2 text-sm font-bold text-slate-600">{activityNotice}</p> : null}</form> : null}
 
-        {showActivity ? <div className="mt-5 space-y-3">{showingRecentActivity ? <div className="rounded-2xl bg-amber-50 p-4"><p className="text-sm font-black text-amber-950">No activity falls inside this plan period yet.</p><p className="mt-1 text-sm font-semibold text-amber-800">Showing recent activity instead. Older unassigned outflows can still be categorized when they belong inside this plan period.</p></div> : null}{activityRows.length ? activityRows.map((activity) => { const insidePlan = !!activePeriod && activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end; const allocations = financialActivityAllocations.filter((item) => item.activity_record_type === activity.activity_record_type && item.activity_id === activity.activity_id); return <ActivityCard key={`${activity.activity_record_type}-${activity.activity_id}`} activity={activity} allocations={allocations} budgetLines={activeLines} explanation={activity.activity_record_type === "imported" ? explanationByTransactionId.get(activity.activity_id) : undefined} canWriteContext={canWrite} canCategorize={insidePlan} onCreateContext={createContext} onUpdateContext={updateContext} onAllocate={allocateActivity} onUpdateManual={updateManualActivity} onArchiveManual={archiveManualActivity} />; }) : <div className="rounded-2xl bg-slate-50 p-4"><p className="font-black text-slate-700">No money activity is available yet.</p><p className="mt-1 text-sm font-semibold text-slate-500">Use Add activity to record money in or money out. Imported records will appear here when available.</p></div>}</div> : null}
+        {showActivity ? <div className="mt-5 space-y-3">{activityRows.length ? activityRows.map((activity) => { const insidePlan = !!activePeriod && activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end; const allocations = financialActivityAllocations.filter((item) => item.activity_record_type === activity.activity_record_type && item.activity_id === activity.activity_id); return <ActivityCard key={`${activity.activity_record_type}-${activity.activity_id}`} activity={activity} allocations={allocations} budgetLines={activeLines} explanation={activity.activity_record_type === "imported" ? explanationByTransactionId.get(activity.activity_id) : undefined} canWriteContext={canWrite} canCategorize={insidePlan} onCreateContext={createContext} onUpdateContext={updateContext} onAllocate={allocateActivity} onUpdateManual={updateManualActivity} onArchiveManual={archiveManualActivity} />; }) : <div className="rounded-2xl bg-slate-50 p-4"><p className="font-black text-slate-700">No activity is recorded inside this Money plan yet.</p><p className="mt-1 text-sm font-semibold text-slate-500">Older activity stays with prior periods. Use Add activity for something that happened during this plan.</p></div>}</div> : null}
       </section>
     </> : null}
   </section><MoneyBottomNav /></main></AuthGate>;
