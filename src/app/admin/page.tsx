@@ -177,8 +177,10 @@ export default function AdminHomePage() {
 
             <Link href="/admin/app-access" className="rounded-3xl border border-cyan-100 bg-white p-5 shadow-sm transition hover:border-cyan-300">
               <p className="text-sm font-bold uppercase text-cyan-700">App access</p>
-              <p className="mt-1 text-3xl font-black">{summaryLoading ? "…" : snapshot.accessUnlinkedRaw}</p>
-              <p className="mt-1 text-sm leading-6 text-slate-600">confirmed unlinked accounts need classification or access review</p>
+              <p className="mt-1 text-2xl font-black">Review accounts</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                {summaryLoading ? "Loading unlinked accounts…" : snapshot.accessUnlinkedRaw + " confirmed unlinked accounts need classification before participant linking"}
+              </p>
               <p className="mt-3 font-black text-cyan-800">Review access →</p>
             </Link>
           </div>
