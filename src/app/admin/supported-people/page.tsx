@@ -505,8 +505,6 @@ export default function SupportedPeopleAdminPage() {
           ) : null}
         </section>
 
-        </section>
-
         <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
           <p className="text-sm font-black uppercase tracking-wide">Lifecycle rule</p>
           <p className="mt-2 max-w-3xl text-sm leading-6">
