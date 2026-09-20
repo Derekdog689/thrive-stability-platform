@@ -1,24 +1,87 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import { useAdminAccess } from "./useAdminAccess";
+
+type AdminSnapshot = {
+  peopleTotal: number;
+  peopleActive: number;
+  peoplePaused: number;
+  accessUnlinkedRaw: number;
+  supportNeedsAction: number;
+  resourcesVisible: number;
+};
+
+const emptySnapshot: AdminSnapshot = {
+  peopleTotal: 0,
+  peopleActive: 0,
+  peoplePaused: 0,
+  accessUnlinkedRaw: 0,
+  supportNeedsAction: 0,
+  resourcesVisible: 0,
+};
 
 export default function AdminHomePage() {
   const router = useRouter();
-  const {
-    state,
-    membership,
-    errorMessage,
-    canAccessSystemAdmin,
-  } = useAdminAccess();
+  const { state, membership, errorMessage, canAccessSystemAdmin } = useAdminAccess();
+  const [snapshot, setSnapshot] = useState<AdminSnapshot>(emptySnapshot);
+  const [summaryLoading, setSummaryLoading] = useState(true);
 
   useEffect(() => {
     if (state === "allowed" && membership?.member_role === "support") {
       router.replace("/admin/support");
     }
   }, [state, membership?.member_role, router]);
+
+  useEffect(() => {
+    if (!canAccessSystemAdmin || !membership) {
+      setSummaryLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSnapshot() {
+      setSummaryLoading(true);
+
+      const [
+        peopleTotalResult,
+        peopleActiveResult,
+        peoplePausedResult,
+        accessResult,
+        supportResult,
+        resourcesResult,
+      ] = await Promise.all([
+        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id),
+        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id).eq("status", "active"),
+        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id).eq("status", "paused"),
+        supabase.rpc("admin_list_unlinked_auth_accounts", { p_workspace_id: membership.workspace_id }),
+        supabase.from("support_requests").select("id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id).in("status", ["submitted", "acknowledged", "in_progress"]),
+        supabase.from("resource_visibility").select("resource_id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id).eq("status", "active"),
+      ]);
+
+      if (cancelled) return;
+
+      setSnapshot({
+        peopleTotal: peopleTotalResult.count ?? 0,
+        peopleActive: peopleActiveResult.count ?? 0,
+        peoplePaused: peoplePausedResult.count ?? 0,
+        accessUnlinkedRaw: Array.isArray(accessResult.data) ? accessResult.data.length : 0,
+        supportNeedsAction: supportResult.count ?? 0,
+        resourcesVisible: resourcesResult.count ?? 0,
+      });
+      setSummaryLoading(false);
+    }
+
+    void loadSnapshot();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canAccessSystemAdmin, membership]);
 
   if (state === "checking") {
     return (
@@ -88,44 +151,69 @@ export default function AdminHomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
-      <section className="mx-auto max-w-5xl">
-        <div className="rounded-3xl border border-emerald-100 bg-white p-8 shadow-sm">
-          <p className="text-sm font-bold uppercase text-emerald-700">DSS Enterprises</p>
+    <main className="min-h-screen bg-[#eef4ef] px-4 py-6 text-slate-950 sm:px-6 sm:py-10">
+      <section className="mx-auto max-w-6xl space-y-6">
+        <header className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">DSS Enterprises</p>
           <h1 className="mt-2 text-4xl font-black">THRIVE Admin</h1>
-          <p className="mt-3 max-w-2xl leading-7 text-slate-600">Manage the THRIVE support environment, supported people, app access, and authorized administrative tools.</p>
-          <p className="mt-4 text-sm font-semibold text-slate-500">Role: {membership?.member_role}</p>
-        </div>
+          <p className="mt-3 max-w-2xl text-lg leading-7 text-slate-600">
+            See what needs attention, then move into the right workspace.
+          </p>
+        </header>
 
-        <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-            <p className="text-sm font-bold uppercase text-emerald-700">Supported people</p>
-            <h2 className="mt-2 text-2xl font-black">Onboarding and participation</h2>
-            <p className="mt-3 leading-6 text-slate-600">Add and review supported people using the installed THRIVE identity and participation model.</p>
-            <Link href="/admin/supported-people" className="mt-5 inline-flex rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white">Open Supported People</Link>
-          </section>
+        <section>
+          <div className="mb-4">
+            <p className="text-sm font-bold uppercase tracking-wide text-emerald-700">Needs attention</p>
+            <h2 className="mt-1 text-2xl font-black">Current work</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Link href="/admin/support" className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm transition hover:border-emerald-300">
+              <p className="text-sm font-bold uppercase text-emerald-700">Support</p>
+              <p className="mt-2 text-4xl font-black">{summaryLoading ? "…" : snapshot.supportNeedsAction}</p>
+              <p className="mt-2 text-slate-600">requests currently need review or follow-through</p>
+              <p className="mt-5 font-black text-emerald-800">Review support →</p>
+            </Link>
 
-          <section className="rounded-3xl border border-cyan-100 bg-white p-6 shadow-sm">
-            <p className="text-sm font-bold uppercase text-cyan-700">App access</p>
-            <h2 className="mt-2 text-2xl font-black">Connect login to person</h2>
-            <p className="mt-3 leading-6 text-slate-600">Review confirmed accounts waiting for access and link one explicitly to an existing supported person.</p>
-            <Link href="/admin/app-access" className="mt-5 inline-flex rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-bold text-white">Open App Access</Link>
-          </section>
+            <Link href="/admin/app-access" className="rounded-3xl border border-cyan-100 bg-white p-6 shadow-sm transition hover:border-cyan-300">
+              <p className="text-sm font-bold uppercase text-cyan-700">App access</p>
+              <p className="mt-2 text-4xl font-black">{summaryLoading ? "…" : snapshot.accessUnlinkedRaw}</p>
+              <p className="mt-2 text-slate-600">confirmed unlinked accounts need classification or access review</p>
+              <p className="mt-5 font-black text-cyan-800">Review access →</p>
+            </Link>
+          </div>
+        </section>
 
-          <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-            <p className="text-sm font-bold uppercase text-emerald-700">Support review</p>
-            <h2 className="mt-2 text-2xl font-black">THRIVE Review</h2>
-            <p className="mt-3 leading-6 text-slate-600">Review participant Support requests and send participant-visible responses.</p>
-            <Link href="/admin/support" className="mt-5 inline-flex rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white">Open THRIVE Review</Link>
-          </section>
+        <section>
+          <div className="mb-4">
+            <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Environment</p>
+            <h2 className="mt-1 text-2xl font-black">At a glance</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Link href="/admin/supported-people" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-bold uppercase text-slate-500">People</p>
+              <p className="mt-2 text-2xl font-black">{summaryLoading ? "Loading…" : snapshot.peopleTotal + " records"}</p>
+              <p className="mt-2 text-sm text-slate-600">
+                {summaryLoading ? " " : snapshot.peopleActive + " active · " + snapshot.peoplePaused + " paused"}
+              </p>
+            </Link>
 
-          <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-            <p className="text-sm font-bold uppercase text-emerald-700">Resources</p>
-            <h2 className="mt-2 text-2xl font-black">Admin maintenance</h2>
-            <p className="mt-3 leading-6 text-slate-600">Review the canonical Resource library, create safe drafts, and manage participant visibility.</p>
-            <Link href="/admin/resources" className="mt-5 inline-flex rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white">Open Resource Library</Link>
-          </section>
-        </div>
+            <Link href="/admin/resources" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-bold uppercase text-slate-500">Resources</p>
+              <p className="mt-2 text-2xl font-black">{summaryLoading ? "Loading…" : snapshot.resourcesVisible + " visible"}</p>
+              <p className="mt-2 text-sm text-slate-600">participant-visible resource inventory</p>
+            </Link>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Manage</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Link href="/admin/supported-people" className="rounded-2xl border border-slate-200 p-4 font-black hover:border-emerald-300">People →</Link>
+            <Link href="/admin/app-access" className="rounded-2xl border border-slate-200 p-4 font-black hover:border-cyan-300">App access →</Link>
+            <Link href="/admin/support" className="rounded-2xl border border-slate-200 p-4 font-black hover:border-emerald-300">Support →</Link>
+            <Link href="/admin/resources" className="rounded-2xl border border-slate-200 p-4 font-black hover:border-emerald-300">Resources →</Link>
+          </div>
+        </section>
       </section>
     </main>
   );
