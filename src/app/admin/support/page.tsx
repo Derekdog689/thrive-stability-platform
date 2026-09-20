@@ -99,9 +99,9 @@ function displayPersonName(person: SupportedPersonSummaryRow | undefined) {
 function nextActionLabel(status: string) {
   const labels: Record<string, string> = {
     submitted: "Acknowledge request",
-    acknowledged: "Start work or respond",
-    in_progress: "Respond, request information, or resolve",
-    waiting_for_participant: "Wait for participant or resume work",
+    acknowledged: "Start work",
+    in_progress: "Send an update",
+    waiting_for_participant: "Review participant reply",
   };
 
   return labels[status] ?? "Review request";
@@ -223,102 +223,41 @@ function TimingGuidance({
       ])
     : null;
 
+  let summary = "Timing details";
+  let detail = "";
+
   if (request.status === "submitted") {
     const targetMs = new Date(request.created_at).getTime() + 60 * 60 * 1000;
     const needsAttention = nowMs > targetMs;
-
-    return (
-      <section
-        className={`mt-4 rounded-2xl border p-4 ${
-          needsAttention
-            ? "border-amber-200 bg-amber-50"
-            : "border-slate-200 bg-slate-50"
-        }`}
-      >
-        <p className="text-sm font-black text-slate-900">
-          Reviewer timing
-        </p>
-        <p className="mt-1 text-sm leading-6 text-slate-700">
-          Received {elapsedLabel(request.created_at, nowMs)} ago.
-          {needsAttention
-            ? " The 1-hour acknowledgment target needs attention."
-            : ` Acknowledgment target: ${remainingLabel(targetMs, nowMs)} remaining.`}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-slate-500">
-          Display only. THRIVE does not change status or send anything automatically.
-        </p>
-      </section>
-    );
-  }
-
-  if (request.status === "waiting_for_participant") {
+    summary = needsAttention ? "Acknowledgment overdue" : "Acknowledgment timing";
+    detail = needsAttention
+      ? "This request has passed the 1-hour acknowledgment target."
+      : "Acknowledgment target: " + remainingLabel(targetMs, nowMs) + " remaining.";
+  } else if (request.status === "waiting_for_participant") {
     if (!latestReplyAt || reviewerActivityAfterReply) {
-      return (
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-black text-slate-900">
-            Reviewer timing
-          </p>
-          <p className="mt-1 text-sm leading-6 text-slate-700">
-            Waiting on the participant. No reviewer response timer is running
-            while the participant owns the next move.
-          </p>
-        </section>
-      );
+      summary = "Waiting on participant";
+      detail =
+        "No reviewer response timer is running while the participant owns the next move.";
+    } else {
+      const targetMs = new Date(latestReplyAt).getTime() + 24 * 60 * 60 * 1000;
+      const needsAttention = nowMs > targetMs;
+      summary = needsAttention ? "Participant reply needs follow-up" : "Participant replied";
+      detail = needsAttention
+        ? "The participant replied and the 24-hour follow-up target has passed."
+        : "Participant reply follow-up target: " +
+          remainingLabel(targetMs, nowMs) +
+          " remaining.";
     }
-
+  } else if (latestReplyAt && !reviewerActivityAfterReply) {
     const targetMs = new Date(latestReplyAt).getTime() + 24 * 60 * 60 * 1000;
     const needsAttention = nowMs > targetMs;
-
-    return (
-      <section
-        className={`mt-4 rounded-2xl border p-4 ${
-          needsAttention
-            ? "border-amber-200 bg-amber-50"
-            : "border-sky-200 bg-sky-50"
-        }`}
-      >
-        <p className="text-sm font-black text-slate-900">
-          Participant replied
-        </p>
-        <p className="mt-1 text-sm leading-6 text-slate-700">
-          Reply received {elapsedLabel(latestReplyAt, nowMs)} ago.
-          {needsAttention
-            ? " Reviewer follow-up timing needs attention."
-            : ` Follow-up target: ${remainingLabel(targetMs, nowMs)} remaining.`}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-slate-500">
-          Target: meaningful reviewer response or action within 24 hours of the participant reply.
-        </p>
-      </section>
-    );
-  }
-
-  if (latestReplyAt && !reviewerActivityAfterReply) {
-    const targetMs = new Date(latestReplyAt).getTime() + 24 * 60 * 60 * 1000;
-    const needsAttention = nowMs > targetMs;
-
-    return (
-      <section
-        className={`mt-4 rounded-2xl border p-4 ${
-          needsAttention
-            ? "border-amber-200 bg-amber-50"
-            : "border-sky-200 bg-sky-50"
-        }`}
-      >
-        <p className="text-sm font-black text-slate-900">
-          Participant follow-up timing
-        </p>
-        <p className="mt-1 text-sm leading-6 text-slate-700">
-          The participant replied {elapsedLabel(latestReplyAt, nowMs)} ago.
-          {needsAttention
-            ? " Reviewer follow-up timing needs attention."
-            : ` Follow-up target: ${remainingLabel(targetMs, nowMs)} remaining.`}
-        </p>
-      </section>
-    );
-  }
-
-  if (acknowledgmentEvent) {
+    summary = needsAttention ? "Participant reply needs follow-up" : "Participant replied";
+    detail = needsAttention
+      ? "The participant replied and the 24-hour follow-up target has passed."
+      : "Participant reply follow-up target: " +
+        remainingLabel(targetMs, nowMs) +
+        " remaining.";
+  } else if (acknowledgmentEvent) {
     const acknowledgmentMinutes = Math.max(
       0,
       Math.round(
@@ -328,23 +267,29 @@ function TimingGuidance({
       ),
     );
 
-    return (
-      <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-black text-slate-900">
-          Communication timing
-        </p>
-        <p className="mt-1 text-sm leading-6 text-slate-700">
-          {acknowledgmentMinutes <= 60
-            ? `Acknowledgment target met in ${acknowledgmentMinutes} min.`
-            : `Acknowledgment occurred after the 1-hour target (${acknowledgmentMinutes} min).`}
-          {" "}Support remains responsible for a meaningful response or visible
-          progress within the normal 24-hour communication standard.
-        </p>
-      </section>
-    );
+    summary =
+      acknowledgmentMinutes <= 60
+        ? "Acknowledgment target met"
+        : "Acknowledgment was late";
+    detail =
+      acknowledgmentMinutes <= 60
+        ? "Acknowledged in " + acknowledgmentMinutes + " minutes."
+        : "Acknowledgment occurred after the 1-hour target. Timing details are retained for review.";
+  } else {
+    return null;
   }
 
-  return null;
+  return (
+    <details className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <summary className="cursor-pointer text-sm font-black text-slate-700">
+        {summary}
+      </summary>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">
+        Display only. THRIVE does not change status or send anything automatically.
+      </p>
+    </details>
+  );
 }
 
 export default function AdminSupportPage() {
@@ -1007,7 +952,7 @@ export default function AdminSupportPage() {
                 </p>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-3">
                 {supportActionRequests.map((request) => {
                   const requestParticipantReplies = participantReplies.filter(
                     (reply) => reply.support_request_id === request.id,
@@ -1025,7 +970,7 @@ export default function AdminSupportPage() {
                   return (
                     <article
                       key={request.id}
-                      className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm"
+                      className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
@@ -1115,32 +1060,30 @@ export default function AdminSupportPage() {
                         nowMs={nowMs}
                       />
 
-                      <div className="mt-5 rounded-2xl bg-slate-50 p-5">
-                        <p className="text-xs font-bold uppercase text-slate-500">
+                      <details className="mt-3 rounded-2xl bg-slate-50 px-4 py-3">
+                        <summary className="cursor-pointer text-sm font-black text-slate-700">
                           Participant message
-                        </p>
-
-                        <p className="mt-2 leading-7 text-slate-800">
+                        </summary>
+                        <p className="mt-3 whitespace-pre-wrap leading-7 text-slate-800">
                           {request.participant_message}
                         </p>
-                      </div>
+                      </details>
 
                       {request.requested_support ? (
-                        <div className="mt-4 rounded-2xl bg-slate-50 p-5">
-                          <p className="text-xs font-bold uppercase text-slate-500">
+                        <details className="mt-2 rounded-2xl bg-slate-50 px-4 py-3">
+                          <summary className="cursor-pointer text-sm font-black text-slate-700">
                             What would be useful
-                          </p>
-
-                          <p className="mt-2 leading-7 text-slate-800">
+                          </summary>
+                          <p className="mt-3 leading-7 text-slate-800">
                             {request.requested_support}
                           </p>
-                        </div>
+                        </details>
                       ) : null}
 
-                      <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
                         <div>
                           <dt className="font-bold text-slate-500">
-                            Follow-up preference
+                            Participant preference
                           </dt>
 
                           <dd className="mt-1 font-semibold text-slate-800">
@@ -1148,6 +1091,11 @@ export default function AdminSupportPage() {
                               ? request.contact_preference.replaceAll("_", " ")
                               : "Not specified"}
                           </dd>
+                        </div>
+
+                        <div>
+                          <dt className="font-bold text-slate-500">THRIVE reply channel</dt>
+                          <dd className="mt-1 font-semibold text-slate-800">In app</dd>
                         </div>
 
                         <div>
@@ -1188,8 +1136,7 @@ export default function AdminSupportPage() {
                           </p>
 
                           <p className="mt-1 text-sm leading-6 text-slate-600">
-                            Write the message the participant should see, then
-                            choose what that message means for the request.
+                            Replies are participant-visible inside THRIVE.
                           </p>
 
                           <input
@@ -1307,7 +1254,7 @@ export default function AdminSupportPage() {
                 </p>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-3">
                 {waitingParticipantRequests.map((request) => {
                   const requestParticipantReplies = participantReplies.filter(
                     (reply) => reply.support_request_id === request.id,
@@ -1325,7 +1272,7 @@ export default function AdminSupportPage() {
                   return (
                     <article
                       key={request.id}
-                      className="rounded-3xl border border-amber-200 bg-white p-6 shadow-sm"
+                      className="rounded-3xl border border-amber-200 bg-white p-4 shadow-sm"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
@@ -1384,36 +1331,41 @@ export default function AdminSupportPage() {
                         nowMs={nowMs}
                       />
 
-                      <div className="mt-5 rounded-2xl bg-slate-50 p-5">
-                        <p className="text-xs font-bold uppercase text-slate-500">
+                      <details className="mt-3 rounded-2xl bg-slate-50 px-4 py-3">
+                        <summary className="cursor-pointer text-sm font-black text-slate-700">
                           Participant message
-                        </p>
-                        <p className="mt-2 leading-7 text-slate-800">
+                        </summary>
+                        <p className="mt-3 whitespace-pre-wrap leading-7 text-slate-800">
                           {request.participant_message}
                         </p>
-                      </div>
+                      </details>
 
                       {request.requested_support ? (
-                        <div className="mt-4 rounded-2xl bg-slate-50 p-5">
-                          <p className="text-xs font-bold uppercase text-slate-500">
+                        <details className="mt-2 rounded-2xl bg-slate-50 px-4 py-3">
+                          <summary className="cursor-pointer text-sm font-black text-slate-700">
                             What would be useful
-                          </p>
-                          <p className="mt-2 leading-7 text-slate-800">
+                          </summary>
+                          <p className="mt-3 leading-7 text-slate-800">
                             {request.requested_support}
                           </p>
-                        </div>
+                        </details>
                       ) : null}
 
-                      <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
                         <div>
                           <dt className="font-bold text-slate-500">
-                            Follow-up preference
+                            Participant preference
                           </dt>
                           <dd className="mt-1 font-semibold text-slate-800">
                             {request.contact_preference
                               ? request.contact_preference.replaceAll("_", " ")
                               : "Not specified"}
                           </dd>
+                        </div>
+
+                        <div>
+                          <dt className="font-bold text-slate-500">THRIVE reply channel</dt>
+                          <dd className="mt-1 font-semibold text-slate-800">In app</dd>
                         </div>
 
                         <div>
@@ -1597,16 +1549,21 @@ export default function AdminSupportPage() {
                         </div>
                       ) : null}
 
-                      <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
                         <div>
                           <dt className="font-bold text-slate-500">
-                            Follow-up preference
+                            Participant preference
                           </dt>
                           <dd className="mt-1 font-semibold text-slate-800">
                             {request.contact_preference
                               ? request.contact_preference.replaceAll("_", " ")
                               : "Not specified"}
                           </dd>
+                        </div>
+
+                        <div>
+                          <dt className="font-bold text-slate-500">THRIVE reply channel</dt>
+                          <dd className="mt-1 font-semibold text-slate-800">In app</dd>
                         </div>
 
                         <div>
