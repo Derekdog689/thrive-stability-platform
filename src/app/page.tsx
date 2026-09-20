@@ -7,6 +7,7 @@ import { useParticipantGoals } from "./goals/useParticipantGoals";
 import { useParticipantSupport } from "./support/useParticipantSupport";
 import { useWellnessCheckinCandidate } from "./wellness/useWellnessCheckinCandidate";
 import { toNumber, useParticipantFinancial } from "./useParticipantFinancial";
+import { buildNowSignals } from "./buildNowSignals";
 import { supabase } from "@/lib/supabaseClient";
 
 type IconName = "today" | "wellness" | "goal" | "money" | "support" | "arrow";
@@ -103,7 +104,7 @@ function TodayBottomNav() {
 
 export default function TodayPage() {
   const { participantName, financialActivity, budgetPeriods, budgetLines, loading: financialLoading, errorMessage: financialErrorMessage } = useParticipantFinancial();
-  const { todayCheckin, recentCheckins, loading: wellnessLoading, errorMessage: wellnessErrorMessage } = useWellnessCheckinCandidate();
+  const { todayCheckin, recentCheckins, today: wellnessToday, loading: wellnessLoading, errorMessage: wellnessErrorMessage } = useWellnessCheckinCandidate();
   const { goals, activeGoals, loading: goalsLoading, errorMessage: goalsErrorMessage } = useParticipantGoals();
   const { requests, loading: supportLoading, errorMessage: supportErrorMessage } = useParticipantSupport();
 
@@ -172,6 +173,54 @@ export default function TodayPage() {
   const currentGoal = activeGoals.find((goal) => goal.progress_status === "in_progress") ?? activeGoals.find((goal) => goal.progress_status === "not_started") ?? null;
   const unresolvedSupportRequest = requests.find((request) => !["completed", "withdrawn", "archived"].includes(request.status)) ?? null;
   const supportNeedsParticipant = unresolvedSupportRequest?.status === "waiting_for_participant";
+  const openGoalCount = activeGoals.filter(
+    (goal) => !["completed", "archived"].includes(goal.progress_status),
+  ).length;
+
+  const nowSignals = useMemo(
+    () =>
+      buildNowSignals({
+        today: wellnessToday,
+        recentCheckins,
+        openGoalCount,
+        supportStatus: unresolvedSupportRequest?.status ?? null,
+        draftMoneyPlan: draftBudgetPeriod
+          ? {
+              periodStart: draftBudgetPeriod.period_start,
+              periodEnd: draftBudgetPeriod.period_end,
+              expectedIncome: toNumber(draftBudgetPeriod.expected_income),
+            }
+          : null,
+        activeMoneyPlan: activeBudgetPeriod
+          ? {
+              periodEnd: activeBudgetPeriod.period_end,
+              budgetExpired,
+              budgetEndingSoon,
+              budgetDaysLeft,
+              expectedIncome,
+              moneyOutThisPeriod,
+              moneyPlanTotal,
+              overPlan,
+            }
+          : null,
+      }),
+    [
+      wellnessToday,
+      recentCheckins,
+      openGoalCount,
+      unresolvedSupportRequest?.status,
+      draftBudgetPeriod,
+      activeBudgetPeriod,
+      budgetExpired,
+      budgetEndingSoon,
+      budgetDaysLeft,
+      expectedIncome,
+      moneyOutThisPeriod,
+      moneyPlanTotal,
+      overPlan,
+    ],
+  );
+  const hasMoneySignal = nowSignals.some((item) => item.href === "/budget");
 
   const loading = financialLoading || wellnessLoading || goalsLoading || supportLoading;
   const errorMessage = financialErrorMessage || wellnessErrorMessage || goalsErrorMessage || supportErrorMessage;
@@ -204,7 +253,7 @@ export default function TodayPage() {
   const weekCheckinCount = weekDays.filter((day) => day.checkin).length;
 
   if (loading) {
-    return <AuthGate><main className="min-h-screen bg-[#edf5ef] px-4 py-10 text-slate-950"><div className="mx-auto max-w-2xl rounded-[2rem] border border-white/70 bg-white/70 p-8 shadow-sm backdrop-blur-xl"><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">THRIVE Today</p><h1 className="mt-3 text-3xl font-black">Getting things ready...</h1></div></main></AuthGate>;
+    return <AuthGate><main className="min-h-screen bg-[#edf5ef] px-4 py-10 text-slate-950"><div className="mx-auto max-w-2xl rounded-[2rem] border border-white/70 bg-white/70 p-8 shadow-sm backdrop-blur-xl"><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">THRIVE Now</p><h1 className="mt-3 text-3xl font-black">Getting things ready...</h1></div></main></AuthGate>;
   }
 
   return (
@@ -225,9 +274,38 @@ export default function TodayPage() {
 
           {errorMessage ? <section role="alert" className="mt-3 rounded-3xl border border-rose-200 bg-rose-50/90 p-4 text-rose-950 shadow-sm"><p className="font-black">Some parts of Today could not be loaded.</p></section> : null}
 
-          {budgetExpired && activeBudgetPeriod ? (
+          {!isNewParticipant && nowSignals.length > 0 ? (
+            <section className="mt-3 rounded-[1.8rem] border border-white/75 bg-white/50 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl sm:p-6">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Now</p>
+                  <h2 className="mt-1 text-2xl font-black text-emerald-950 sm:text-3xl">What’s happening</h2>
+                </div>
+                <span className="rounded-full border border-white/80 bg-white/65 px-3 py-1.5 text-xs font-black text-slate-600">{nowSignals.length} signal{nowSignals.length === 1 ? "" : "s"}</span>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {nowSignals.map((item) => (
+                  <article key={item.id} className="rounded-[1.4rem] border border-white/85 bg-white/72 p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{item.eyebrow}</p>
+                    <h3 className="mt-2 text-lg font-black leading-6 text-slate-950">{item.title}</h3>
+                    {item.detail ? <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{item.detail}</p> : null}
+                    <details className="mt-3 rounded-xl border border-slate-100 bg-slate-50/80">
+                      <summary className="cursor-pointer list-none px-3 py-2 text-xs font-black text-slate-600">Why THRIVE is showing this <span className="ml-1 text-emerald-700">⌄</span></summary>
+                      <p className="border-t border-slate-100 px-3 py-2.5 text-xs font-semibold leading-5 text-slate-500">{item.why}</p>
+                    </details>
+                    <Link href={item.href} className="mt-3 inline-flex items-center text-sm font-black text-emerald-800">
+                      Open {item.href === "/budget" ? "Money" : item.href === "/wellness" ? "Wellness" : item.href === "/goals" ? "Goals" : "Support"} <span className="ml-1">›</span>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {!hasMoneySignal && budgetExpired && activeBudgetPeriod ? (
             <Link href="/budget" onClick={() => markAreaVisited("budget")} className="mt-3 flex items-center justify-between gap-4 rounded-[1.6rem] border border-amber-200 bg-amber-50/88 p-4 text-amber-950 shadow-sm transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/80 text-amber-800"><Icon name="money" className="h-6 w-6" /></div><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">Money plan ended</p><p className="mt-1 font-black">Finish the plan and start the next one.</p></div></div><Icon name="arrow" className="h-5 w-5 shrink-0" /></Link>
-          ) : budgetEndingSoon && activeBudgetPeriod ? (
+          ) : !hasMoneySignal && budgetEndingSoon && activeBudgetPeriod ? (
             <Link href="/budget" onClick={() => markAreaVisited("budget")} className="mt-3 flex items-center justify-between gap-4 rounded-[1.6rem] border border-cyan-100 bg-cyan-50/80 p-4 text-cyan-950 shadow-sm transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/80 text-cyan-800"><Icon name="money" className="h-6 w-6" /></div><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Coming up</p><p className="mt-1 font-black">{budgetDaysLeft === 0 ? "Your Money plan ends today." : `Your Money plan ends in ${budgetDaysLeft} day${budgetDaysLeft === 1 ? "" : "s"}.`}</p></div></div><Icon name="arrow" className="h-5 w-5 shrink-0" /></Link>
           ) : null}
 
