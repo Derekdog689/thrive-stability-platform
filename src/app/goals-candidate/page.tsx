@@ -98,6 +98,16 @@ function guidanceCopy(job: GoalGuidanceJob, choice: Exclude<GoalGuidanceChoice, 
   return { title: "Think it through", body: "What would make this next step easier to start?" };
 }
 
+function goalSupportHref(goal: ParticipantGoal) {
+  const params = new URLSearchParams({
+    from: "goal",
+    goalTitle: goal.title,
+    goalNext: goal.next_step,
+  });
+  if (goal.why_it_matters?.trim()) params.set("goalWhy", goal.why_it_matters.trim());
+  return `/support?${params.toString()}`;
+}
+
 function GoalThreadCard({ goal, working, onStatusChange }: { goal: ParticipantGoal; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void> }) {
   const visual = statusVisuals[goal.progress_status];
   const [guidanceChoice, setGuidanceChoice] = useState<GoalGuidanceChoice>(null);
@@ -142,7 +152,7 @@ function GoalThreadCard({ goal, working, onStatusChange }: { goal: ParticipantGo
         </div> : null}
         <div className="mt-3 flex flex-wrap gap-2">
           <Link href="/resources" className="rounded-full border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-800">Find a resource</Link>
-          <Link href="/support" className="rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-black text-violet-800">Ask for support</Link>
+          <Link href={goalSupportHref(goal)} className="rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-black text-violet-800">Ask for support</Link>
         </div>
       </div> : null}
 
