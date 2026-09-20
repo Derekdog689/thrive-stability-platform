@@ -70,12 +70,17 @@ type Draft = {
 const emptyDraft: Draft = { categoryName: "", categoryType: "protected", plannedAmount: "" };
 
 export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, refresh }: Props) {
-  const { working, errorMessage, addLine, updateLine, activateBudget } = useParticipantBudgetBuilder();
+  const { working, errorMessage, updatePeriod, addLine, updateLine, activateBudget } = useParticipantBudgetBuilder();
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [acknowledgeOverPlan, setAcknowledgeOverPlan] = useState(false);
   const [showMoreCategories, setShowMoreCategories] = useState(false);
+  const [moneyAvailable, setMoneyAvailable] = useState(String(toNumber(draftPeriod.expected_income)));
+  const [incomeConfirmed, setIncomeConfirmed] = useState(
+    currentLines.some((line) => line.is_active) || toNumber(draftPeriod.expected_income) > 0,
+  );
+  const [incomeNotice, setIncomeNotice] = useState("");
 
   const expectedIncome = toNumber(draftPeriod.expected_income);
   const plannedTotal = useMemo(
@@ -86,6 +91,32 @@ export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, 
   const isOverPlanned = plannedTotal > expectedIncome;
   const activeLines = currentLines.filter((line) => line.is_active);
   const existingNames = new Set(activeLines.map((line) => line.category_name.trim().toLowerCase()));
+
+  async function saveMoneyAvailable(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIncomeNotice("");
+
+    const amount = Number(moneyAvailable);
+    if (!Number.isFinite(amount) || amount < 0) {
+      setIncomeNotice("Enter zero or more.");
+      return;
+    }
+
+    const result = await updatePeriod({
+      budgetPeriodId: draftPeriod.id,
+      expectedIncome: amount,
+      notes: draftPeriod.notes ?? "",
+    });
+
+    if (!result.ok) {
+      setIncomeNotice(result.message);
+      return;
+    }
+
+    await refresh();
+    setIncomeConfirmed(true);
+    setIncomeNotice(amount === 0 ? "$0 saved. Continue if that is right for this plan." : "Money available saved.");
+  }
 
   function chooseCategory(name: string, type: BudgetCategoryType) {
     setEditingId(null);
@@ -170,33 +201,80 @@ export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, 
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700">Continue your plan</p>
-          <h2 className="mt-2 text-4xl font-black leading-tight text-slate-950">What needs to be covered?</h2>
+          <h2 className="mt-2 text-4xl font-black leading-tight text-slate-950">
+            {incomeConfirmed ? "What needs to be covered?" : "How much money is coming in?"}
+          </h2>
           <p className="mt-3 max-w-xl text-base font-semibold leading-7 text-slate-600">
-            Pick what matters first. You can add more later.
+            {incomeConfirmed
+              ? "Pick what matters first. You can add more later."
+              : "Enter what you expect for this plan. Zero is okay if that is accurate."}
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800">Draft</span>
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Income</p>
-          <p className="mt-2 whitespace-nowrap text-xl font-black">{formatMoney(expectedIncome)}</p>
-        </div>
-        <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Planned</p>
-          <p className="mt-2 whitespace-nowrap text-xl font-black">{formatMoney(plannedTotal)}</p>
-        </div>
-        <div className={`rounded-2xl p-4 ${stillUnplanned < 0 ? "bg-amber-50" : "bg-emerald-50"}`}>
-          <p className={`text-xs font-black uppercase tracking-wide ${stillUnplanned < 0 ? "text-amber-800" : "text-emerald-800"}`}>
-            {stillUnplanned < 0 ? "Over" : "Left"}
+      {!incomeConfirmed ? (
+        <form onSubmit={saveMoneyAvailable} className="mt-6 rounded-[1.7rem] border border-sky-100 bg-sky-50/80 p-5">
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-sky-700">Step 1 · Money available</p>
+          <label className="mt-3 block text-xl font-black text-sky-950">
+            Expected income
+            <div className="mt-3 flex items-center rounded-2xl border border-sky-200 bg-white px-4">
+              <span className="text-3xl font-black text-sky-400">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={moneyAvailable}
+                onChange={(event) => setMoneyAvailable(event.target.value)}
+                className="w-full bg-transparent px-3 py-4 text-3xl font-black text-slate-950 outline-none"
+              />
+            </div>
+          </label>
+          <p className="mt-3 text-base font-semibold leading-6 text-sky-800">
+            Use the amount you expect during this plan period. You can change it later.
           </p>
-          <p className={`mt-2 whitespace-nowrap text-xl font-black ${stillUnplanned < 0 ? "text-amber-950" : "text-emerald-950"}`}>
-            {formatMoney(Math.abs(stillUnplanned))}
-          </p>
-        </div>
-      </div>
+          {incomeNotice ? <p className="mt-3 rounded-2xl bg-white/75 p-3 text-base font-bold text-sky-900">{incomeNotice}</p> : null}
+          <button
+            type="submit"
+            disabled={working}
+            className="mt-4 w-full rounded-full bg-sky-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50"
+          >
+            Save & continue
+          </button>
+        </form>
+      ) : (
+        <>
+          <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Income</p>
+              <p className="mt-2 whitespace-nowrap text-xl font-black">{formatMoney(expectedIncome)}</p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Planned</p>
+              <p className="mt-2 whitespace-nowrap text-xl font-black">{formatMoney(plannedTotal)}</p>
+            </div>
+            <div className={`rounded-2xl p-4 ${stillUnplanned < 0 ? "bg-amber-50" : "bg-emerald-50"}`}>
+              <p className={`text-xs font-black uppercase tracking-wide ${stillUnplanned < 0 ? "text-amber-800" : "text-emerald-800"}`}>
+                {stillUnplanned < 0 ? "Over" : "Left"}
+              </p>
+              <p className={`mt-2 whitespace-nowrap text-xl font-black ${stillUnplanned < 0 ? "text-amber-950" : "text-emerald-950"}`}>
+                {formatMoney(Math.abs(stillUnplanned))}
+              </p>
+            </div>
+          </div>
 
+          <button
+            type="button"
+            onClick={() => { setMoneyAvailable(String(expectedIncome)); setIncomeNotice(""); setIncomeConfirmed(false); }}
+            className="mt-3 w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-base font-black text-slate-600"
+          >
+            Change money available
+          </button>
+        </>
+      )}
+
+      {incomeConfirmed ? <>
       <div className="mt-7">
         {visibleGroups.map((group) => (
           <div key={group.title} className="mt-5 first:mt-0">
@@ -383,6 +461,7 @@ export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, 
       >
         Use this plan
       </button>
+      </> : null}
     </section>
   );
 }
