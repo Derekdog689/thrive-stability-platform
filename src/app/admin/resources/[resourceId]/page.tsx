@@ -152,6 +152,10 @@ export default function ResourceMaintenancePage() {
   const [working, setWorking] = useState<string | null>(null);
   const [pageError, setPageError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showAuthorityForm, setShowAuthorityForm] = useState(false);
+  const [showAccessForm, setShowAccessForm] = useState(false);
+  const [showGuidanceForm, setShowGuidanceForm] = useState(false);
+  const [showVerificationForm, setShowVerificationForm] = useState(false);
 
   const [orgName, setOrgName] = useState("");
   const [orgType, setOrgType] = useState("government");
@@ -317,6 +321,7 @@ export default function ResourceMaintenancePage() {
     setOrgName("");
     setOrgWebsite("");
     setNotice("Authority organization linked to this Resource.");
+    setShowAuthorityForm(false);
     await loadData();
   }
 
@@ -362,6 +367,7 @@ export default function ResourceMaintenancePage() {
     setPathPhone("");
     setPathEmail("");
     setNotice("Official access path added. The Resource is still unpublished until activation.");
+    setShowAccessForm(false);
     await loadData();
   }
 
@@ -393,6 +399,7 @@ export default function ResourceMaintenancePage() {
     setGuidanceHeading("");
     setGuidanceContent("");
     setNotice("THRIVE guidance added. It does not publish the Resource by itself.");
+    setShowGuidanceForm(false);
     await loadData();
   }
 
@@ -431,6 +438,7 @@ export default function ResourceMaintenancePage() {
     setVerificationNote("");
     setNextReviewOn("");
     setNotice("Verification record saved as an Admin-authored factual check.");
+    setShowVerificationForm(false);
     await loadData();
   }
 
@@ -566,57 +574,110 @@ export default function ResourceMaintenancePage() {
               })}
             </div>
           ) : null}
-          <form onSubmit={addOrganization} className="mt-5 grid min-w-0 gap-4 sm:grid-cols-2">
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Organization name<input className={fieldClass} value={orgName} onChange={(e) => setOrgName(e.target.value)} required placeholder="Official organization name" /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Organization type<select className={fieldClass} value={orgType} onChange={(e) => setOrgType(e.target.value)}>{organizationTypes.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Role<select className={fieldClass} value={orgRole} onChange={(e) => setOrgRole(e.target.value)}>{organizationRoles.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Official website<input className={fieldClass} value={orgWebsite} onChange={(e) => setOrgWebsite(e.target.value)} inputMode="url" placeholder="https://..." /></label>
-            <button disabled={working === "organization" || !orgName.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "organization" ? "Saving..." : "Add authority organization"}</button>
-          </form>
+          <button type="button" onClick={() => setShowAuthorityForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
+            {showAuthorityForm ? "Close" : activeRoles.length > 0 ? "+ Add authority" : "+ Add authority organization"}
+          </button>
+          {showAuthorityForm ? (
+            <form onSubmit={addOrganization} className="mt-4 grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Organization name<input className={fieldClass} value={orgName} onChange={(e) => setOrgName(e.target.value)} required placeholder="Official organization name" /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Organization type<select className={fieldClass} value={orgType} onChange={(e) => setOrgType(e.target.value)}>{organizationTypes.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Role<select className={fieldClass} value={orgRole} onChange={(e) => setOrgRole(e.target.value)}>{organizationRoles.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Official website<input className={fieldClass} value={orgWebsite} onChange={(e) => setOrgWebsite(e.target.value)} inputMode="url" placeholder="https://..." /></label>
+              <button disabled={working === "organization" || !orgName.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "organization" ? "Saving..." : "Add authority organization"}</button>
+            </form>
+          ) : null}
         </section>
 
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
           <p className="text-sm font-bold uppercase text-emerald-700">2 · Access</p>
           <h2 className="mt-2 text-2xl font-black">How can someone reach the official source?</h2>
           {activePaths.length > 0 ? <div className="mt-4 grid gap-3">{activePaths.map((path) => <div key={path.id} className="rounded-2xl bg-slate-50 p-4"><p className="font-black">{path.label}</p><p className="mt-1 text-sm text-slate-600">{labelFor(accessPathTypes,path.path_type)}{path.is_primary ? " · primary" : ""}</p><p className="mt-2 break-all text-sm text-slate-500">{path.url || path.phone || path.email}</p></div>)}</div> : null}
-          <form onSubmit={addAccessPath} className="mt-5 grid min-w-0 gap-4 sm:grid-cols-2">
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Path type<select className={fieldClass} value={pathType} onChange={(e) => setPathType(e.target.value)}>{accessPathTypes.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Authority organization<select className={fieldClass} value={pathOrganizationId} onChange={(e) => setPathOrganizationId(e.target.value)}><option value="">Not linked</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.organization_name}</option>)}</select></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Label<input className={fieldClass} value={pathLabel} onChange={(e) => setPathLabel(e.target.value)} required placeholder="Apply online, official information page, call..." /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Plain-language instruction<textarea className={fieldClass} value={pathInstruction} onChange={(e) => setPathInstruction(e.target.value)} rows={2} placeholder="Optional short instruction for the participant" /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">URL<input className={fieldClass} value={pathUrl} onChange={(e) => setPathUrl(e.target.value)} inputMode="url" placeholder="https://..." /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Phone<input className={fieldClass} value={pathPhone} onChange={(e) => setPathPhone(e.target.value)} inputMode="tel" placeholder="Optional" /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Email<input className={fieldClass} value={pathEmail} onChange={(e) => setPathEmail(e.target.value)} inputMode="email" placeholder="Optional" /></label>
-            <button disabled={working === "path" || !pathLabel.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "path" ? "Saving..." : "Add official access path"}</button>
-          </form>
+          <button type="button" onClick={() => setShowAccessForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
+            {showAccessForm ? "Close" : activePaths.length > 0 ? "+ Add access path" : "+ Add official access path"}
+          </button>
+          {showAccessForm ? (
+            <form onSubmit={addAccessPath} className="mt-4 grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Path type<select className={fieldClass} value={pathType} onChange={(e) => setPathType(e.target.value)}>{accessPathTypes.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Authority organization<select className={fieldClass} value={pathOrganizationId} onChange={(e) => setPathOrganizationId(e.target.value)}><option value="">Not linked</option>{organizations.map((org) => <option key={org.id} value={org.id}>{org.organization_name}</option>)}</select></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Label<input className={fieldClass} value={pathLabel} onChange={(e) => setPathLabel(e.target.value)} required placeholder="Apply online, official information page, call..." /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Plain-language instruction<textarea className={fieldClass} value={pathInstruction} onChange={(e) => setPathInstruction(e.target.value)} rows={2} placeholder="Optional short instruction for the participant" /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">URL<input className={fieldClass} value={pathUrl} onChange={(e) => setPathUrl(e.target.value)} inputMode="url" placeholder="https://..." /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Phone<input className={fieldClass} value={pathPhone} onChange={(e) => setPathPhone(e.target.value)} inputMode="tel" placeholder="Optional" /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Email<input className={fieldClass} value={pathEmail} onChange={(e) => setPathEmail(e.target.value)} inputMode="email" placeholder="Optional" /></label>
+              <button disabled={working === "path" || !pathLabel.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "path" ? "Saving..." : "Add official access path"}</button>
+            </form>
+          ) : null}
         </section>
 
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
           <p className="text-sm font-bold uppercase text-emerald-700">3 · Guidance</p>
           <h2 className="mt-2 text-2xl font-black">What should THRIVE explain?</h2>
           {activeGuidance.length > 0 ? <div className="mt-4 grid gap-3">{activeGuidance.map((section) => <div key={section.id} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase text-emerald-700">{labelFor(guidanceTypes,section.section_type)}</p><p className="mt-1 font-black">{section.heading}</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{section.content}</p></div>)}</div> : null}
-          <form onSubmit={addGuidance} className="mt-5 grid min-w-0 gap-4 sm:grid-cols-2">
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Section type<select className={fieldClass} value={guidanceType} onChange={(e) => setGuidanceType(e.target.value)}>{guidanceTypes.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Source access path<select className={fieldClass} value={guidanceSourcePathId} onChange={(e) => setGuidanceSourcePathId(e.target.value)}><option value="">Not linked</option>{activePaths.map((path) => <option key={path.id} value={path.id}>{path.label}</option>)}</select></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Heading<input className={fieldClass} value={guidanceHeading} onChange={(e) => setGuidanceHeading(e.target.value)} required placeholder="Start here" /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Guidance<textarea className={fieldClass} value={guidanceContent} onChange={(e) => setGuidanceContent(e.target.value)} required rows={4} placeholder="Plain-language participant guidance based on verified facts" /></label>
-            <button disabled={working === "guidance" || !guidanceHeading.trim() || !guidanceContent.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "guidance" ? "Saving..." : "Add THRIVE guidance"}</button>
-          </form>
+          <button type="button" onClick={() => setShowGuidanceForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
+            {showGuidanceForm ? "Close" : activeGuidance.length > 0 ? "+ Add guidance" : "+ Add THRIVE guidance"}
+          </button>
+          {showGuidanceForm ? (
+            <form onSubmit={addGuidance} className="mt-4 grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Section type<select className={fieldClass} value={guidanceType} onChange={(e) => setGuidanceType(e.target.value)}>{guidanceTypes.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Source access path<select className={fieldClass} value={guidanceSourcePathId} onChange={(e) => setGuidanceSourcePathId(e.target.value)}><option value="">Not linked</option>{activePaths.map((path) => <option key={path.id} value={path.id}>{path.label}</option>)}</select></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Heading<input className={fieldClass} value={guidanceHeading} onChange={(e) => setGuidanceHeading(e.target.value)} required placeholder="Start here" /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Guidance<textarea className={fieldClass} value={guidanceContent} onChange={(e) => setGuidanceContent(e.target.value)} required rows={4} placeholder="Plain-language participant guidance based on verified facts" /></label>
+              <button disabled={working === "guidance" || !guidanceHeading.trim() || !guidanceContent.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "guidance" ? "Saving..." : "Add THRIVE guidance"}</button>
+            </form>
+          ) : null}
         </section>
 
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
           <p className="text-sm font-bold uppercase text-emerald-700">4 · Verification</p>
           <h2 className="mt-2 text-2xl font-black">Record what Admin actually checked</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">This records a factual verification event. It does not establish participant eligibility, need, urgency, or recommendation.</p>
-          {verifications.length > 0 ? <div className="mt-4 grid gap-3">{verifications.map((verification) => <div key={verification.id} className="rounded-2xl bg-slate-50 p-4"><p className="font-black">{labelFor(verificationScopes,verification.verification_scope)} · {verification.verification_status}</p><p className="mt-1 text-sm text-slate-600">Verified {verification.verified_on}{verification.next_review_on ? ` · review by ${verification.next_review_on}` : ""}</p>{verification.verification_note ? <p className="mt-2 text-sm leading-6 text-slate-600">{verification.verification_note}</p> : null}</div>)}</div> : null}
-          <form onSubmit={addVerification} className="mt-5 grid min-w-0 gap-4 sm:grid-cols-2">
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">What was checked?<select className={fieldClass} value={verificationScope} onChange={(e) => setVerificationScope(e.target.value)}>{verificationScopes.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Verified on<input className={fieldClass} type="date" value={verifiedOn} onChange={(e) => setVerifiedOn(e.target.value)} required /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Source URL<input className={fieldClass} value={verificationSourceUrl} onChange={(e) => setVerificationSourceUrl(e.target.value)} inputMode="url" placeholder="Optional official source used for the check" /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Verification note<textarea className={fieldClass} value={verificationNote} onChange={(e) => setVerificationNote(e.target.value)} rows={3} placeholder="What was actually verified?" /></label>
-            <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Next review<input className={fieldClass} type="date" value={nextReviewOn} onChange={(e) => setNextReviewOn(e.target.value)} /></label>
-            <button disabled={working === "verification" || !verifiedOn} className="w-fit self-end rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">{working === "verification" ? "Saving..." : "Record verification"}</button>
-          </form>
+          {verifications.length > 0 ? (
+            <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-500">Last checked</p>
+                  <p className="mt-1 font-black">{verifications[0].verified_on}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-500">What was checked</p>
+                  <p className="mt-1 font-black">{labelFor(verificationScopes, verifications[0].verification_scope)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-500">Next review</p>
+                  <p className="mt-1 font-black">{verifications[0].next_review_on ?? "Not scheduled"}</p>
+                </div>
+              </div>
+              {verifications[0].verification_note ? <p className="mt-4 text-sm leading-6 text-slate-600">{verifications[0].verification_note}</p> : null}
+              {verifications.length > 1 ? (
+                <details className="mt-4 border-t border-slate-200 pt-4">
+                  <summary className="cursor-pointer text-sm font-bold text-slate-700">Previous verification history ({verifications.length - 1})</summary>
+                  <div className="mt-3 grid gap-3">
+                    {verifications.slice(1).map((verification) => (
+                      <div key={verification.id} className="rounded-xl bg-white p-3">
+                        <p className="font-bold">{labelFor(verificationScopes, verification.verification_scope)} · {verification.verification_status}</p>
+                        <p className="mt-1 text-sm text-slate-600">Verified {verification.verified_on}{verification.next_review_on ? ` · review by ${verification.next_review_on}` : ""}</p>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-950">No Admin verification has been recorded yet.</p>
+          )}
+          <button type="button" onClick={() => setShowVerificationForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
+            {showVerificationForm ? "Close" : "+ Record new verification"}
+          </button>
+          {showVerificationForm ? (
+            <form onSubmit={addVerification} className="mt-4 grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">What was checked?<select className={fieldClass} value={verificationScope} onChange={(e) => setVerificationScope(e.target.value)}>{verificationScopes.map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Verified on<input className={fieldClass} type="date" value={verifiedOn} onChange={(e) => setVerifiedOn(e.target.value)} required /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Source URL<input className={fieldClass} value={verificationSourceUrl} onChange={(e) => setVerificationSourceUrl(e.target.value)} inputMode="url" placeholder="Optional official source used for the check" /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Verification note<textarea className={fieldClass} value={verificationNote} onChange={(e) => setVerificationNote(e.target.value)} rows={3} placeholder="What was actually verified?" /></label>
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Next review<input className={fieldClass} type="date" value={nextReviewOn} onChange={(e) => setNextReviewOn(e.target.value)} /></label>
+              <button disabled={working === "verification" || !verifiedOn} className="w-fit self-end rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">{working === "verification" ? "Saving..." : "Record verification"}</button>
+            </form>
+          ) : null}
         </section>
 
         <section className={`rounded-3xl border p-5 shadow-sm sm:p-6 ${activationReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
