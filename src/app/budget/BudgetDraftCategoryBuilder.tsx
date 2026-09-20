@@ -274,7 +274,8 @@ export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, 
         </>
       )}
 
-      {incomeConfirmed ? <div className="mt-7">
+      {incomeConfirmed ? <>
+      <div className="mt-7">
         {visibleGroups.map((group) => (
           <div key={group.title} className="mt-5 first:mt-0">
             <div className="flex items-end justify-between gap-3">
@@ -460,7 +461,7 @@ export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, 
       >
         Use this plan
       </button>
-      </div> : null}
+      </> : null}
     </section>
   );
 }
