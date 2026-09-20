@@ -66,6 +66,8 @@ export default function SupportedPeopleAdminPage() {
   const [displayName, setDisplayName] = useState("");
   const [preferredName, setPreferredName] = useState("");
   const [externalReference, setExternalReference] = useState("");
+  const [showAddPerson, setShowAddPerson] = useState(false);
+  const [rosterFilter, setRosterFilter] = useState<"all" | "active" | "paused" | "no_access" | "beta_test">("all");
 
   const loadData = useCallback(async () => {
     if (!canAccessSystemAdmin || !membership) {
@@ -145,6 +147,23 @@ export default function SupportedPeopleAdminPage() {
       ]),
     );
   }, [participations]);
+
+  const filteredPeople = useMemo(() => {
+    return people.filter((person) => {
+      if (rosterFilter === "active") return person.status === "active";
+      if (rosterFilter === "paused") return person.status === "paused";
+      if (rosterFilter === "no_access") return !person.auth_user_id;
+      if (rosterFilter === "beta_test") {
+        return Boolean(person.external_reference);
+      }
+      return true;
+    });
+  }, [people, rosterFilter]);
+
+  const activeCount = people.filter((person) => person.status === "active").length;
+  const pausedCount = people.filter((person) => person.status === "paused").length;
+  const noAccessCount = people.filter((person) => !person.auth_user_id).length;
+  const betaTestCount = people.filter((person) => Boolean(person.external_reference)).length;
 
   async function createSupportedPerson(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -418,56 +437,74 @@ export default function SupportedPeopleAdminPage() {
         ) : null}
 
         <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-          <p className="text-sm font-bold uppercase text-emerald-700">Add person</p>
-          <h2 className="mt-2 text-2xl font-black">Start with what Admin knows</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            THRIVE supplies the workspace, program, supported-person role,
-            creation lineage, and timestamps. No authentication account is created here.
-          </p>
-
-          <form onSubmit={createSupportedPerson} className="mt-6 grid gap-5">
-            <label className="grid gap-2 text-sm font-bold text-slate-700">
-              Display name
-              <input
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                maxLength={160}
-                required
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base font-normal text-slate-950 outline-none focus:border-emerald-600"
-                placeholder="Full or operational display name"
-              />
-            </label>
-
-            <label className="grid gap-2 text-sm font-bold text-slate-700">
-              Preferred name
-              <input
-                value={preferredName}
-                onChange={(event) => setPreferredName(event.target.value)}
-                maxLength={120}
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base font-normal text-slate-950 outline-none focus:border-emerald-600"
-                placeholder="Optional"
-              />
-            </label>
-
-            <label className="grid gap-2 text-sm font-bold text-slate-700">
-              External reference
-              <input
-                value={externalReference}
-                onChange={(event) => setExternalReference(event.target.value)}
-                maxLength={160}
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base font-normal text-slate-950 outline-none focus:border-emerald-600"
-                placeholder="Optional operational reference"
-              />
-            </label>
-
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold uppercase text-emerald-700">Add person</p>
+              <h2 className="mt-1 text-2xl font-black">Create a supported-person record</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Use this only when a new participant identity actually needs to be created.
+              </p>
+            </div>
             <button
-              type="submit"
-              disabled={creating || !displayName.trim()}
-              className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              type="button"
+              onClick={() => setShowAddPerson((current) => !current)}
+              className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-900"
             >
-              {creating ? "Adding person..." : "Add supported person"}
+              {showAddPerson ? "Close" : "+ Add person"}
             </button>
-          </form>
+          </div>
+
+          {showAddPerson ? (
+            <form onSubmit={createSupportedPerson} className="mt-6 grid gap-5 border-t border-slate-200 pt-6">
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                Display name
+                <input
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  maxLength={160}
+                  required
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base font-normal text-slate-950 outline-none focus:border-emerald-600"
+                  placeholder="Full or operational display name"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                Preferred name
+                <input
+                  value={preferredName}
+                  onChange={(event) => setPreferredName(event.target.value)}
+                  maxLength={120}
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base font-normal text-slate-950 outline-none focus:border-emerald-600"
+                  placeholder="Optional"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                External reference
+                <input
+                  value={externalReference}
+                  onChange={(event) => setExternalReference(event.target.value)}
+                  maxLength={160}
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base font-normal text-slate-950 outline-none focus:border-emerald-600"
+                  placeholder="Optional operational reference"
+                />
+              </label>
+
+              <p className="text-xs leading-5 text-slate-500">
+                App access remains separate. Creating this record does not create a login.
+              </p>
+
+              <button
+                type="submit"
+                disabled={creating || !displayName.trim()}
+                className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {creating ? "Adding person..." : "Add supported person"}
+              </button>
+            </form>
+          ) : null}
+        </section>
+
         </section>
 
         <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
@@ -481,10 +518,34 @@ export default function SupportedPeopleAdminPage() {
         <section>
           <div className="mb-4">
             <p className="text-sm font-bold uppercase text-emerald-700">Current people</p>
-            <h2 className="mt-1 text-3xl font-black">Supported People</h2>
+            <h2 className="mt-1 text-3xl font-black">People</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              {people.length} record{people.length === 1 ? "" : "s"} in this THRIVE workspace.
+              {people.length} records · {activeCount} active · {pausedCount} paused · {noAccessCount} without app access
             </p>
+          </div>
+
+          <div className="mb-5 flex flex-wrap gap-2">
+            {[
+              ["all", "All", people.length],
+              ["active", "Active", activeCount],
+              ["paused", "Paused", pausedCount],
+              ["no_access", "No access", noAccessCount],
+              ["beta_test", "Beta / test reference", betaTestCount],
+            ].map(([value, label, count]) => (
+              <button
+                key={String(value)}
+                type="button"
+                onClick={() => setRosterFilter(value as typeof rosterFilter)}
+                className={
+                  "rounded-full border px-4 py-2 text-sm font-bold " +
+                  (rosterFilter === value
+                    ? "border-emerald-700 bg-emerald-700 text-white"
+                    : "border-slate-300 bg-white text-slate-700")
+                }
+              >
+                {String(label)} · {String(count)}
+              </button>
+            ))}
           </div>
 
           {people.length === 0 ? (
@@ -493,7 +554,7 @@ export default function SupportedPeopleAdminPage() {
             </div>
           ) : (
             <div className="grid gap-4">
-              {people.map((person) => {
+              {filteredPeople.map((person) => {
                 const participation = participationByPerson.get(person.id);
                 const needsActivation = !participation;
                 const personWorking = workingAction === `person:${person.id}`;
@@ -563,7 +624,11 @@ export default function SupportedPeopleAdminPage() {
                           : "Activate in THRIVE Stability Support"}
                       </button>
                     ) : (
-                      <div className="mt-6 grid gap-5 border-t border-slate-200 pt-5 lg:grid-cols-2">
+                      <details className="mt-6 border-t border-slate-200 pt-5">
+                        <summary className="cursor-pointer list-none text-sm font-black text-emerald-800">
+                          Manage lifecycle
+                        </summary>
+                        <div className="mt-5 grid gap-5 lg:grid-cols-2">
                         <section>
                           <p className="text-sm font-black text-slate-900">Supported-person status</p>
                           <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -619,7 +684,8 @@ export default function SupportedPeopleAdminPage() {
                             ))}
                           </div>
                         </section>
-                      </div>
+                        </div>
+                      </details>
                     )}
                   </article>
                 );
