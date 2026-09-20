@@ -47,8 +47,62 @@ function GoalsBottomNav() {
   return <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[1.8rem] border border-white/70 bg-white/90 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.16)] backdrop-blur-2xl sm:bottom-5"><div className="grid grid-cols-5 gap-1">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-center transition ${item.href === "/goals" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-900"}`}><span className="text-xl font-black leading-none">{item.icon}</span><span className="mt-1 truncate text-[10px] font-black uppercase tracking-wide sm:text-xs">{item.label}</span></Link>)}</div></nav>;
 }
 
+type GoalGuidanceJob = "do" | "understand" | "practice" | "decide" | "connect";
+type GoalGuidanceChoice = "example" | "smaller" | "think" | null;
+
+function goalGuidanceJob(goal: ParticipantGoal): GoalGuidanceJob {
+  const text = `${goal.title} ${goal.next_step} ${goal.why_it_matters ?? ""}`.toLowerCase();
+
+  if (/track|routine|practice|repeat|daily|three days|each day|consisten/.test(text)) return "practice";
+  if (/choose|decide|compare|option|which|priorit/.test(text)) return "decide";
+  if (goal.goal_area === "Relationships and support" || /ask for help|reach out|support|contact|call|talk to|connect/.test(text)) return "connect";
+  if (/understand|why|figure out|learn|make sense|not sure|unclear/.test(text)) return "understand";
+  return "do";
+}
+
+function matchingPresetSteps(goal: ParticipantGoal) {
+  for (const area of goalAreas) {
+    const preset = area.presets.find((candidate) => candidate.title === goal.title);
+    if (!preset) continue;
+    return preset.nextSteps.filter((step) => step !== goal.next_step && step !== "Write my own next step").slice(0, 3);
+  }
+  return [] as string[];
+}
+
+function guidanceCopy(job: GoalGuidanceJob, choice: Exclude<GoalGuidanceChoice, null>, goal: ParticipantGoal) {
+  const alternatives = matchingPresetSteps(goal);
+
+  if (choice === "example") {
+    if (alternatives.length > 0) {
+      return { title: "One way to move this", body: alternatives[0] };
+    }
+    if (job === "understand") return { title: "Start with one question", body: "What feels unclear about this right now?" };
+    if (job === "practice") return { title: "Keep it simple", body: "Choose one action you can repeat once today." };
+    if (job === "decide") return { title: "Name the choice", body: "Write down the two options you are actually deciding between." };
+    if (job === "connect") return { title: "Make the ask concrete", body: "Name the person or kind of help you want to reach." };
+    return { title: "One useful move", body: "Choose the smallest action that would count as progress today." };
+  }
+
+  if (choice === "smaller") {
+    if (job === "practice") return { title: "Make it smaller", body: "Track one action once today. You do not need a whole system yet." };
+    if (job === "understand") return { title: "Make it smaller", body: "Answer only this: what part of this feels most unclear?" };
+    if (job === "decide") return { title: "Make it smaller", body: "Choose one decision to make now and leave the rest for later." };
+    if (job === "connect") return { title: "Make it smaller", body: "Choose one person or one support path to contact first." };
+    return { title: "Make it smaller", body: "Shrink the next step until it feels doable in one short sitting." };
+  }
+
+  if (job === "understand") return { title: "Think it through", body: "What were you hoping would be different if this goal moved forward?" };
+  if (job === "practice") return { title: "Think it through", body: "What single action would you want to notice yourself repeating?" };
+  if (job === "decide") return { title: "Think it through", body: "What matters most for this decision right now: time, money, effort, or support?" };
+  if (job === "connect") return { title: "Think it through", body: "What kind of help would actually make the next step easier?" };
+  return { title: "Think it through", body: "What would make this next step easier to start?" };
+}
+
 function GoalThreadCard({ goal, working, onStatusChange }: { goal: ParticipantGoal; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void> }) {
   const visual = statusVisuals[goal.progress_status];
+  const [guidanceChoice, setGuidanceChoice] = useState<GoalGuidanceChoice>(null);
+  const job = goalGuidanceJob(goal);
+  const guidance = guidanceChoice ? guidanceCopy(job, guidanceChoice, goal) : null;
 
   return <details className="group overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/78 shadow-sm backdrop-blur-xl">
     <summary className="cursor-pointer list-none p-5">
@@ -73,6 +127,25 @@ function GoalThreadCard({ goal, working, onStatusChange }: { goal: ParticipantGo
 
     <div className="border-t border-slate-100 px-5 pb-5 pt-4">
       {goal.why_it_matters ? <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Why it matters</p><p className="mt-2 text-base font-semibold leading-7 text-slate-700">{goal.why_it_matters}</p></div> : null}
+
+      {goal.progress_status === "in_progress" ? <div className="mt-4 rounded-[1.4rem] border border-emerald-100 bg-emerald-50/70 p-4">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">THRIVE can help</p>
+        <p className="mt-2 text-base font-semibold leading-6 text-slate-700">Pick one kind of help. You do not need to figure out the whole goal at once.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <button type="button" onClick={() => setGuidanceChoice("example")} className="rounded-2xl bg-white px-4 py-3 text-left text-sm font-black text-slate-800 shadow-sm">Give me an example</button>
+          <button type="button" onClick={() => setGuidanceChoice("smaller")} className="rounded-2xl bg-white px-4 py-3 text-left text-sm font-black text-slate-800 shadow-sm">Make this smaller</button>
+          <button type="button" onClick={() => setGuidanceChoice("think")} className="rounded-2xl bg-white px-4 py-3 text-left text-sm font-black text-slate-800 shadow-sm">Help me think it through</button>
+        </div>
+        {guidance ? <div className="mt-3 rounded-2xl bg-white p-4 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">{guidance.title}</p>
+          <p className="mt-2 text-lg font-black leading-7 text-slate-900">{guidance.body}</p>
+        </div> : null}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href="/resources" className="rounded-full border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-800">Find a resource</Link>
+          <Link href="/support" className="rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-black text-violet-800">Ask for support</Link>
+        </div>
+      </div> : null}
+
       <div className="mt-4 flex flex-wrap gap-2.5">
         {goal.progress_status === "not_started" ? <button type="button" disabled={working} onClick={() => void onStatusChange(goal, "in_progress")} className="rounded-full bg-emerald-700 px-5 py-3 text-sm font-black text-white disabled:opacity-60">Start</button> : null}
         {goal.progress_status === "in_progress" ? <><button type="button" disabled={working} onClick={() => void onStatusChange(goal, "completed")} className="rounded-full bg-emerald-700 px-5 py-3 text-sm font-black text-white disabled:opacity-60">Done</button><button type="button" disabled={working} onClick={() => void onStatusChange(goal, "paused")} className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 disabled:opacity-60">Pause</button></> : null}
