@@ -42,6 +42,7 @@ export default function AdminHomePage() {
       return;
     }
 
+    const workspaceId = workspaceId;
     let cancelled = false;
 
     async function loadSnapshot() {
@@ -55,12 +56,12 @@ export default function AdminHomePage() {
         supportResult,
         resourcesResult,
       ] = await Promise.all([
-        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id),
-        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id).eq("status", "active"),
-        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id).eq("status", "paused"),
-        supabase.rpc("admin_list_unlinked_auth_accounts", { p_workspace_id: membership.workspace_id }),
-        supabase.from("support_requests").select("id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id).in("status", ["submitted", "acknowledged", "in_progress"]),
-        supabase.from("resource_visibility").select("resource_id", { count: "exact", head: true }).eq("workspace_id", membership.workspace_id).eq("status", "active"),
+        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("status", "active"),
+        supabase.from("supported_people").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("status", "paused"),
+        supabase.rpc("admin_list_unlinked_auth_accounts", { p_workspace_id: workspaceId }),
+        supabase.from("support_requests").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).in("status", ["submitted", "acknowledged", "in_progress"]),
+        supabase.from("resource_visibility").select("resource_id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("status", "active"),
       ]);
 
       if (cancelled) return;
