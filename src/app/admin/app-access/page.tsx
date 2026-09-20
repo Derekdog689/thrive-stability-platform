@@ -36,6 +36,11 @@ function formatDate(value: string | null | undefined) {
   });
 }
 
+function isTechnicalTestAccount(account: AuthAccountRow) {
+  const email = account.email?.toLowerCase() ?? "";
+  return email.includes("+thrive-rls-");
+}
+
 export default function AdminAppAccessPage() {
   const {
     state,
@@ -97,6 +102,16 @@ export default function AdminAppAccessPage() {
     [people],
   );
 
+  const technicalTestAccounts = useMemo(
+    () => accounts.filter(isTechnicalTestAccount),
+    [accounts],
+  );
+
+  const reviewAccounts = useMemo(
+    () => accounts.filter((account) => !isTechnicalTestAccount(account)),
+    [accounts],
+  );
+
   async function linkAccount(account: AuthAccountRow) {
     if (!canAccessSystemAdmin || !membership) return;
 
@@ -114,7 +129,7 @@ export default function AdminAppAccessPage() {
     if (
       typeof window !== "undefined" &&
       !window.confirm(
-        `Link ${email} to ${personName}? This gives this login access to this THRIVE participant record. Supported-person status and program participation will not change.`,
+        "Link " + email + " to " + personName + "? This gives this login access to this THRIVE participant record. Supported-person status and program participation will not change.",
       )
     ) {
       return;
@@ -138,13 +153,103 @@ export default function AdminAppAccessPage() {
       return;
     }
 
-    setNotice(`${email} is now linked to ${personName}. App access changed only; lifecycle status and program participation were not changed.`);
+    setNotice(
+      email +
+        " is now linked to " +
+        personName +
+        ". App access changed only; lifecycle status and program participation were not changed.",
+    );
     setSelectedPersonByAccount((current) => {
       const next = { ...current };
       delete next[account.auth_user_id];
       return next;
     });
     await loadData();
+  }
+
+  function renderAccountCard(account: AuthAccountRow, compact = false) {
+    const selectedPersonId = selectedPersonByAccount[account.auth_user_id] ?? "";
+    const working = workingAccountId === account.auth_user_id;
+
+    return (
+      <article
+        key={account.auth_user_id}
+        className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Confirmed login
+            </p>
+            <h3 className="mt-2 break-words text-lg font-black text-slate-950 sm:text-xl">
+              {account.email || "Email unavailable"}
+            </h3>
+            {compact ? null : (
+              <p className="mt-2 break-all text-xs font-semibold text-slate-400">
+                {account.auth_user_id}
+              </p>
+            )}
+          </div>
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-900">
+            Not linked
+          </span>
+        </div>
+
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="font-bold text-slate-500">Confirmed</dt>
+            <dd className="mt-1 font-semibold text-slate-900">
+              {formatDate(account.email_confirmed_at)}
+            </dd>
+          </div>
+          <div>
+            <dt className="font-bold text-slate-500">Account created</dt>
+            <dd className="mt-1 font-semibold text-slate-900">
+              {formatDate(account.created_at)}
+            </dd>
+          </div>
+        </dl>
+
+        {compact ? null : (
+          <div className="mt-5 border-t border-slate-200 pt-5">
+            <label className="grid gap-2 text-sm font-black text-slate-800">
+              Link to supported person
+              <select
+                value={selectedPersonId}
+                onChange={(event) =>
+                  setSelectedPersonByAccount((current) => ({
+                    ...current,
+                    [account.auth_user_id]: event.target.value,
+                  }))
+                }
+                disabled={working || availablePeople.length === 0}
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base font-semibold text-slate-950 outline-none focus:border-emerald-600 disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                <option value="">Choose supported person</option>
+                {availablePeople.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {displayPersonName(person)} · {person.status}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <p className="mt-3 text-xs leading-5 text-slate-500">
+              Linking changes app access only. It does not activate program participation or change lifecycle status.
+            </p>
+
+            <button
+              type="button"
+              disabled={working || !selectedPersonId}
+              onClick={() => void linkAccount(account)}
+              className="mt-4 rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {working ? "Linking app access..." : "Link app access"}
+            </button>
+          </div>
+        )}
+      </article>
+    );
   }
 
   if (state === "checking" || loading) {
@@ -177,7 +282,9 @@ export default function AdminAppAccessPage() {
         <section className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm font-bold uppercase text-slate-500">THRIVE Admin</p>
           <h1 className="mt-2 text-3xl font-black">Admin access not available</h1>
-          <p className="mt-3 text-slate-600">{accessError || "This workflow requires an active THRIVE admin membership."}</p>
+          <p className="mt-3 text-slate-600">
+            {accessError || "This workflow requires an active THRIVE admin membership."}
+          </p>
         </section>
       </main>
     );
@@ -188,16 +295,16 @@ export default function AdminAppAccessPage() {
       <section className="mx-auto max-w-5xl space-y-6">
         <header className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
           <p className="text-sm font-bold uppercase text-emerald-700">THRIVE Admin · App Access</p>
-          <h1 className="mt-2 text-4xl font-black">Connect login to person</h1>
+          <h1 className="mt-2 text-4xl font-black">App access</h1>
           <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-            Confirmed login accounts appear here until Admin links them to an existing supported-person record. Linking app access does not change supported-person status or program participation.
+            Review confirmed logins and explicitly connect only the accounts that belong to a supported person.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/admin" className="inline-flex rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
               Back to THRIVE Admin
             </Link>
             <Link href="/admin/supported-people" className="inline-flex rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">
-              Open Supported People
+              Open People
             </Link>
           </div>
         </header>
@@ -215,92 +322,44 @@ export default function AdminAppAccessPage() {
           </section>
         ) : null}
 
-        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
+        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
           <p className="text-sm font-black uppercase tracking-wide">Access boundary</p>
           <p className="mt-2 max-w-3xl text-sm leading-6">
-            A login account and a supported-person record remain separate until Admin explicitly links them. THRIVE does not match people automatically by email or name.
+            A confirmed login is evidence that an account exists, not evidence that it should be linked to a participant. THRIVE does not match people automatically by email or name.
           </p>
         </section>
 
         <section>
           <div className="mb-4">
-            <p className="text-sm font-bold uppercase text-emerald-700">App access</p>
-            <h2 className="mt-1 text-3xl font-black">Accounts waiting for THRIVE access</h2>
+            <p className="text-sm font-bold uppercase text-emerald-700">Needs review</p>
+            <h2 className="mt-1 text-3xl font-black">Unlinked accounts</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              {accounts.length} confirmed account{accounts.length === 1 ? "" : "s"} currently waiting for a supported-person link.
+              {reviewAccounts.length} confirmed account{reviewAccounts.length === 1 ? "" : "s"} remain for human review. Not every unlinked account is a participant candidate.
             </p>
           </div>
 
-          {accounts.length === 0 ? (
+          {reviewAccounts.length === 0 ? (
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="font-black text-slate-900">No accounts are waiting.</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">New confirmed signups will appear here automatically until they are linked.</p>
+              <p className="font-black text-slate-900">No non-test accounts need review.</p>
             </div>
           ) : (
             <div className="grid gap-4">
-              {accounts.map((account) => {
-                const selectedPersonId = selectedPersonByAccount[account.auth_user_id] ?? "";
-                const working = workingAccountId === account.auth_user_id;
-
-                return (
-                  <article key={account.auth_user_id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Confirmed login</p>
-                        <h3 className="mt-2 break-words text-xl font-black text-slate-950">{account.email || "Email unavailable"}</h3>
-                        <p className="mt-2 break-all text-xs font-semibold text-slate-400">{account.auth_user_id}</p>
-                      </div>
-                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-900">Not linked</span>
-                    </div>
-
-                    <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
-                      <div>
-                        <dt className="font-bold text-slate-500">Confirmed</dt>
-                        <dd className="mt-1 font-semibold text-slate-900">{formatDate(account.email_confirmed_at)}</dd>
-                      </div>
-                      <div>
-                        <dt className="font-bold text-slate-500">Account created</dt>
-                        <dd className="mt-1 font-semibold text-slate-900">{formatDate(account.created_at)}</dd>
-                      </div>
-                    </dl>
-
-                    <div className="mt-6 border-t border-slate-200 pt-5">
-                      <label className="grid gap-2 text-sm font-black text-slate-800">
-                        Link to supported person
-                        <select
-                          value={selectedPersonId}
-                          onChange={(event) => setSelectedPersonByAccount((current) => ({ ...current, [account.auth_user_id]: event.target.value }))}
-                          disabled={working || availablePeople.length === 0}
-                          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base font-semibold text-slate-950 outline-none focus:border-emerald-600 disabled:bg-slate-100 disabled:text-slate-400"
-                        >
-                          <option value="">Choose supported person</option>
-                          {availablePeople.map((person) => (
-                            <option key={person.id} value={person.id}>
-                              {displayPersonName(person)} · {person.status}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <p className="mt-3 text-xs leading-5 text-slate-500">
-                        Only supported people with no login already linked are shown. Program participation is not changed by this action.
-                      </p>
-
-                      <button
-                        type="button"
-                        disabled={working || !selectedPersonId}
-                        onClick={() => void linkAccount(account)}
-                        className="mt-4 rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {working ? "Linking app access..." : "Link app access"}
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
+              {reviewAccounts.map((account) => renderAccountCard(account))}
             </div>
           )}
         </section>
+
+        <details className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <summary className="cursor-pointer list-none font-black text-slate-900">
+            Technical / RLS test accounts ({technicalTestAccounts.length})
+          </summary>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            These accounts are preserved as test evidence and are collapsed so they do not compete with participant-access review.
+          </p>
+          <div className="mt-4 grid gap-3">
+            {technicalTestAccounts.map((account) => renderAccountCard(account, true))}
+          </div>
+        </details>
       </section>
     </main>
   );
