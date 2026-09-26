@@ -215,6 +215,9 @@ export default function WellnessCheckinPreview({
   const [nextStepChoice, setNextStepChoice] = useState(
     draft.chosenNextStep ?? "",
   );
+  const [fitResponse, setFitResponse] = useState<
+    "yes" | "sort_of" | "not_really" | null
+  >(null);
 
   useEffect(() => {
     if (!focusOnMount) return;
@@ -612,43 +615,84 @@ export default function WellnessCheckinPreview({
             <h2 className="mt-2 text-2xl font-black">
               {guidance.headline}
             </h2>
-            <div className="mt-4 space-y-3">
-              {guidance.currentFacts.map((fact) => (
-                <p
-                  key={fact}
-                  className="text-base font-bold leading-7"
-                >
-                  {fact}
-                </p>
-              ))}
-            </div>
+            <p className="mt-4 text-base font-bold leading-7">
+              {guidance.summary}
+            </p>
           </div>
 
-          {guidance.historySignals.length > 0 ? (
+          {guidance.historySummary ? (
             <div className="mt-5 rounded-3xl border border-sky-100 bg-sky-50/70 p-5">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">
                 From your history
               </p>
-              <div className="mt-3 space-y-2">
-                {guidance.historySignals.map((signal) => (
-                  <p
-                    key={signal}
-                    className="font-bold leading-7 text-slate-800"
-                  >
-                    {signal}
-                  </p>
-                ))}
-              </div>
+              <p className="mt-3 font-bold leading-7 text-slate-800">
+                {guidance.historySummary}
+              </p>
             </div>
           ) : null}
 
-          {guidance.possibleConnection ? (
+          {guidance.possibleConnection && fitResponse !== "not_really" ? (
             <div className="mt-5 rounded-3xl bg-slate-950 p-5 text-white">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-300">
                 A possible connection
               </p>
               <p className="mt-3 text-lg font-black leading-7">
                 {guidance.possibleConnection}
+              </p>
+              <div className="mt-5 border-t border-slate-800 pt-4">
+                <p className="text-sm font-bold text-slate-300">
+                  Does that fit for you?
+                </p>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {[
+                    ["yes", "Yes"],
+                    ["sort_of", "Sort of"],
+                    ["not_really", "Not really"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={fitResponse === value}
+                      onClick={() =>
+                        setFitResponse(
+                          value as "yes" | "sort_of" | "not_really",
+                        )
+                      }
+                      className={`rounded-xl border px-3 py-2 text-sm font-black transition ${
+                        fitResponse === value
+                          ? "border-emerald-300 bg-emerald-300 text-slate-950"
+                          : "border-slate-700 bg-slate-900 text-white"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs font-semibold leading-5 text-slate-400">
+                  This only adjusts this check-in screen. THRIVE is not saving that answer yet.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {fitResponse === "not_really" ? (
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="font-black text-slate-800">
+                Got it. THRIVE will leave that connection aside for this check-in.
+              </p>
+            </div>
+          ) : null}
+
+          {guidance.followUpQuestion ? (
+            <div className="mt-5 rounded-3xl border border-violet-100 bg-violet-50/70 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">
+                Something to think about
+              </p>
+              <p className="mt-3 text-lg font-black leading-7 text-slate-900">
+                {guidance.followUpQuestion}
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+                If you want, you can answer that in your note before you save.
               </p>
             </div>
           ) : null}
@@ -668,8 +712,7 @@ export default function WellnessCheckinPreview({
               Something to try
             </p>
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-              Here’s an idea based on what you told THRIVE. You still
-              own the choice.
+              Here’s one concrete idea based on this check-in. You can use it, choose another idea, or leave it for now.
             </p>
             <button
               type="button"
@@ -689,7 +732,7 @@ export default function WellnessCheckinPreview({
                 {guidance.primarySuggestion.label}
               </span>
               <span className="mt-2 block text-sm font-semibold leading-6 text-slate-500">
-                {guidance.primarySuggestion.reason}
+                Why this idea: {guidance.primarySuggestion.reason}
               </span>
             </button>
           </div>
@@ -722,7 +765,7 @@ export default function WellnessCheckinPreview({
                         {action.label}
                       </span>
                       <span className="mt-1 block text-sm font-semibold leading-6 text-slate-500">
-                        {action.reason}
+                        Why this idea: {action.reason}
                       </span>
                     </button>
                   );
