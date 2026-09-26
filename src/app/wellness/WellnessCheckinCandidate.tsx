@@ -178,6 +178,18 @@ export default function WellnessCheckinCandidate() {
   const selectedDayKey = historyDay ?? (recentCheckinDates.includes(today) ? today : recentCheckinDates[0] ?? null);
   const selectedDayRows = selectedDayKey ? recentCheckinsByDate[selectedDayKey] ?? [] : [];
   const focusMode = !todayCheckin || isCheckingInAgain;
+  const experienceMode =
+    isCheckingInAgain && todayCheckin
+      ? "same_day"
+      : recentCheckins.length > 0
+        ? "later"
+        : "first";
+  const referenceCheckin =
+    experienceMode === "same_day"
+      ? todayCheckin
+      : experienceMode === "later"
+        ? recentCheckins[0] ?? null
+        : null;
 
   const todayDetails = todayCheckin ? [
     ["Stress", todayCheckin.stress],
@@ -217,7 +229,7 @@ export default function WellnessCheckinCandidate() {
                   <span className={`h-5 w-5 rounded-full ${todayOverallVisual.dot} ${todayOverallVisual.ring}`} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-black uppercase tracking-wide text-slate-500">How today feels</p>
+                  <p className="text-sm font-black uppercase tracking-wide text-slate-500">Latest check-in</p>
                   <h2 className={`mt-1 text-4xl font-black tracking-tight sm:text-5xl ${todayOverallVisual.text}`}>{formatValue(todayCheckin.overall_day)}</h2>
                 </div>
               </div>
@@ -271,7 +283,7 @@ export default function WellnessCheckinCandidate() {
       ) : null}
 
       {focusMode ? (
-        <WellnessCheckinPreview recentCheckins={recentCheckins} draft={draft} onDraftChange={setDraft} onSaveCandidate={handleSaveCandidate} onUpdateCandidate={handleUpdateCandidate} hasSavedCheckin={false} actionMessage={actionMessage} writeEnabled={writeEnabled} focusOnMount={isCheckingInAgain} />
+        <WellnessCheckinPreview recentCheckins={recentCheckins} experienceMode={experienceMode} referenceCheckin={referenceCheckin} draft={draft} onDraftChange={setDraft} onSaveCandidate={handleSaveCandidate} onUpdateCandidate={handleUpdateCandidate} hasSavedCheckin={false} actionMessage={actionMessage} writeEnabled={writeEnabled} focusOnMount={isCheckingInAgain} />
       ) : null}
 
       {justSaved ? (
@@ -280,6 +292,12 @@ export default function WellnessCheckinCandidate() {
           <h2 className="mt-2 text-2xl font-black sm:text-3xl">{contextualReturn?.headline ?? "Your check-in is saved."}</h2>
           {contextualReturn?.detail ? (
             <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-300">{contextualReturn.detail}</p>
+          ) : null}
+          {contextualReturn?.choiceLabel ? (
+            <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900 px-5 py-4">
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-300">Something you chose</p>
+              <p className="mt-2 font-black text-white">{contextualReturn.choiceLabel}</p>
+            </div>
           ) : null}
           {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
             <Link href={contextualReturn.actionHref} className="mt-5 inline-flex rounded-full bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300">
