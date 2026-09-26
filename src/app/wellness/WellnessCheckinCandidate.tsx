@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildContextualWellnessReturn } from "./contextualWellnessReturn";
 import WellnessCheckinPreview from "./WellnessCheckinPreview";
 import { type WellnessDraft, useWellnessCheckinCandidate } from "./useWellnessCheckinCandidate";
@@ -114,7 +114,13 @@ const emptyDraft: WellnessDraft = {
   participantNote: "",
 };
 
-export default function WellnessCheckinCandidate() {
+type WellnessCheckinCandidateProps = {
+  onHeroChange?: (text: string) => void;
+};
+
+export default function WellnessCheckinCandidate({
+  onHeroChange,
+}: WellnessCheckinCandidateProps) {
   const [draft, setDraft] = useState<WellnessDraft>(emptyDraft);
   const [actionMessage, setActionMessage] = useState("");
   const [isCheckingInAgain, setIsCheckingInAgain] = useState(false);
@@ -190,6 +196,22 @@ export default function WellnessCheckinCandidate() {
       : experienceMode === "later"
         ? recentCheckins[0] ?? null
         : null;
+
+  useEffect(() => {
+    if (!onHeroChange) return;
+
+    if (!todayCheckin) {
+      onHeroChange("How are things right now?");
+      return;
+    }
+
+    if (isCheckingInAgain) {
+      onHeroChange("What’s going on with you now?");
+      return;
+    }
+
+    onHeroChange("How are things going now?");
+  }, [isCheckingInAgain, onHeroChange, todayCheckin]);
 
   const todayDetails = todayCheckin ? [
     ["Stress", todayCheckin.stress],
@@ -297,6 +319,18 @@ export default function WellnessCheckinCandidate() {
             <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900 px-5 py-4">
               <p className="text-xs font-black uppercase tracking-wide text-emerald-300">Something you chose</p>
               <p className="mt-2 font-black text-white">{contextualReturn.choiceLabel}</p>
+            </div>
+          ) : null}
+          {contextualReturn?.noteQuestion ? (
+            <div className="mt-5 rounded-2xl border border-violet-800/70 bg-violet-950/30 px-5 py-4">
+              <p className="text-xs font-black uppercase tracking-wide text-violet-300">You asked</p>
+              <p className="mt-2 font-black leading-7 text-white">“{contextualReturn.noteQuestion}”</p>
+              {contextualReturn.noteResponse ? (
+                <>
+                  <p className="mt-4 text-xs font-black uppercase tracking-wide text-emerald-300">A place to start</p>
+                  <p className="mt-2 font-semibold leading-7 text-slate-200">{contextualReturn.noteResponse}</p>
+                </>
+              ) : null}
             </div>
           ) : null}
           {contextualReturn?.actionHref && contextualReturn.actionLabel ? (

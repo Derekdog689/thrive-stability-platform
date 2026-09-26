@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import AuthGate from "../AuthGate";
 import WellnessCheckinCandidate from "./WellnessCheckinCandidate";
 
@@ -98,6 +99,8 @@ function WellnessBottomNav() {
 }
 
 export default function WellnessPage() {
+  const [heroText, setHeroText] = useState("How are things right now?");
+
   return (
     <AuthGate>
       <main className="thrive-today-bg min-h-screen pb-36 text-slate-950">
@@ -124,19 +127,19 @@ export default function WellnessPage() {
             <div className="relative z-10 mt-7 max-w-2xl">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Check in</p>
               <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">
-                How are things today?
+                {heroText}
               </h1>
             </div>
           </header>
 
           <section className="mt-3 rounded-[1.9rem] border border-white/70 bg-white/48 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl sm:p-5">
-            <WellnessCheckinCandidate />
+            <WellnessCheckinCandidate onHeroChange={setHeroText} />
           </section>
 
           <details className="mt-3 rounded-[1.5rem] border border-white/70 bg-white/36 px-4 py-3 text-sm text-slate-600 backdrop-blur-xl">
             <summary className="cursor-pointer list-none font-black text-emerald-900">About your check-in</summary>
             <p className="mt-3 leading-6">
-              Your saved check-ins are reflections you can look back on. They do not create a diagnosis, relapse finding, or decision about what you need.
+              Your check-ins help THRIVE remember what has been happening, notice what changes or repeats, and offer ideas you can use or ignore. THRIVE offers supportive guidance, not clinical diagnosis or treatment decisions.
             </p>
           </details>
         </section>
