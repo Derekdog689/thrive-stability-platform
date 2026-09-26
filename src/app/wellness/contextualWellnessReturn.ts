@@ -13,6 +13,7 @@ export type ContextualWellnessReturn = {
   dimension: string | null;
   headline: string;
   detail: string | null;
+  choiceLabel: string | null;
   actionLabel: string | null;
   actionHref: string | null;
 };
@@ -38,7 +39,7 @@ const dimensionPriority: ComparableDimension[] = [
   { key: "sleep", label: "sleep" },
   { key: "energy", label: "energy" },
   { key: "confidence", label: "confidence" },
-  { key: "overall_day", label: "overall day" },
+  { key: "overall_day", label: "overall state" },
 ];
 
 const nextStepLabels: Record<string, string> = {
@@ -48,7 +49,7 @@ const nextStepLabels: Record<string, string> = {
   food_water_rest: "Handle a basic need",
   contact_supportive_person: "Talk to someone supportive",
   ask_for_help: "Ask THRIVE for help",
-  other: "Do the next thing you chose",
+  other: "Something else",
   nothing_right_now: "Nothing right now",
 };
 
@@ -64,7 +65,7 @@ function getValue(
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function priorRowsForToday(
+function priorRows(
   todayCheckin: WellnessCheckinRow,
   recentCheckins: WellnessCheckinRow[],
 ) {
@@ -72,92 +73,61 @@ function priorRowsForToday(
     .filter(
       (row) =>
         row.id !== todayCheckin.id &&
-        row.checkin_date !== todayCheckin.checkin_date &&
         row.status === "active",
     )
-    .sort((a, b) => {
-      const dateCompare = b.checkin_date.localeCompare(a.checkin_date);
-      if (dateCompare !== 0) return dateCompare;
-      return b.created_at.localeCompare(a.created_at);
-    });
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
-function supportReturn(): ContextualWellnessReturn {
+function routeForChoice(value: string | null) {
+  if (value === "ask_for_help" || value === "contact_supportive_person") {
+    return {
+      actionLabel: "Open Support",
+      actionHref: "/support",
+    };
+  }
+
   return {
-    kind: "support",
-    dimension: "support_needed",
-    headline: "You said support would help today.",
-    detail: "THRIVE can take you to Support when you're ready.",
-    actionLabel: "Open Support",
-    actionHref: "/support",
+    actionLabel: null,
+    actionHref: null,
   };
 }
 
-function nextStepReturn(value: string): ContextualWellnessReturn {
-  const label = nextStepLabels[value] ?? plainValue(value);
-  const routesToSupport =
-    value === "ask_for_help" || value === "contact_supportive_person";
+function choiceLabel(todayCheckin: WellnessCheckinRow) {
+  if (todayCheckin.support_needed === "yes") {
+    return "You said support would help.";
+  }
 
-  return {
-    kind: "next_step",
-    dimension: null,
-    headline: `You chose ${label} next.`,
-    detail: null,
-    actionLabel: routesToSupport ? "Open Support" : null,
-    actionHref: routesToSupport ? "/support" : null,
-  };
+  if (todayCheckin.chosen_next_step) {
+    const label =
+      nextStepLabels[todayCheckin.chosen_next_step] ??
+      plainValue(todayCheckin.chosen_next_step);
+
+    return `You chose ${label}.`;
+  }
+
+  return null;
 }
 
-function repeatReturn(
-  dimension: ComparableDimension,
-  todayValue: string,
+function buildReturn(
+  kind: ContextualWellnessReturnKind,
+  dimension: string | null,
+  headline: string,
+  detail: string | null,
+  todayCheckin: WellnessCheckinRow,
 ): ContextualWellnessReturn {
-  return {
-    kind: "repeat",
-    dimension: dimension.key,
-    headline: `You've selected ${plainValue(todayValue)} for ${dimension.label} on several recent check-ins.`,
-    detail: "THRIVE is only reflecting what you recorded across your recent check-ins.",
-    actionLabel: null,
-    actionHref: null,
-  };
-}
+  const route = routeForChoice(
+    todayCheckin.support_needed === "yes"
+      ? "ask_for_help"
+      : todayCheckin.chosen_next_step,
+  );
 
-function changeReturn(
-  dimension: ComparableDimension,
-  todayValue: string,
-  priorValue: string,
-): ContextualWellnessReturn {
   return {
-    kind: "change",
-    dimension: dimension.key,
-    headline: `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} is different from your last check-in.`,
-    detail: `${plainValue(priorValue)} → ${plainValue(todayValue)}`,
-    actionLabel: null,
-    actionHref: null,
-  };
-}
-
-function mixedReturn(
-  dimension: ComparableDimension,
-): ContextualWellnessReturn {
-  return {
-    kind: "mixed",
-    dimension: dimension.key,
-    headline: `Your recent check-ins have varied on ${dimension.label}.`,
-    detail: "There isn't one consistent recent pattern in what you recorded.",
-    actionLabel: null,
-    actionHref: null,
-  };
-}
-
-function confirmationReturn(): ContextualWellnessReturn {
-  return {
-    kind: "confirmation",
-    dimension: null,
-    headline: "Your check-in is saved.",
-    detail: "It's here when you want to look back or decide what to work on next.",
-    actionLabel: null,
-    actionHref: null,
+    kind,
+    dimension,
+    headline,
+    detail,
+    choiceLabel: choiceLabel(todayCheckin),
+    ...route,
   };
 }
 
@@ -167,24 +137,69 @@ export function buildContextualWellnessReturn(
 ): ContextualWellnessReturn | null {
   if (!todayCheckin) return null;
 
-  if (todayCheckin.support_needed === "yes") {
-    return supportReturn();
+  const previous = priorRows(todayCheckin, recentCheckins);
+  const sameDayRows = previous.filter(
+    (row) => row.checkin_date === todayCheckin.checkin_date,
+  );
+
+  const latestSameDay = sameDayRows[0] ?? null;
+
+  if (latestSameDay) {
+    for (const dimension of dimensionPriority) {
+      const todayValue = getValue(todayCheckin, dimension);
+      const priorValue = getValue(latestSameDay, dimension);
+
+      if (!todayValue || !priorValue) continue;
+
+      if (todayValue !== priorValue) {
+        return buildReturn(
+          "change",
+          dimension.key,
+          `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} changed since earlier today.`,
+          `${plainValue(priorValue)} → ${plainValue(todayValue)}`,
+          todayCheckin,
+        );
+      }
+
+      return buildReturn(
+        "repeat",
+        dimension.key,
+        `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} is still ${plainValue(todayValue)} since earlier today.`,
+        "THRIVE is comparing this moment with your earlier check-in.",
+        todayCheckin,
+      );
+    }
   }
 
-  if (
-    todayCheckin.chosen_next_step &&
-    todayCheckin.chosen_next_step !== "nothing_right_now"
-  ) {
-    return nextStepReturn(todayCheckin.chosen_next_step);
-  }
+  const priorDayRows = previous.filter(
+    (row) => row.checkin_date !== todayCheckin.checkin_date,
+  );
+  const latestPriorDay = priorDayRows[0] ?? null;
 
-  const priorRows = priorRowsForToday(todayCheckin, recentCheckins);
+  if (latestPriorDay) {
+    for (const dimension of dimensionPriority) {
+      const todayValue = getValue(todayCheckin, dimension);
+      const priorValue = getValue(latestPriorDay, dimension);
+
+      if (!todayValue || !priorValue) continue;
+
+      if (todayValue !== priorValue) {
+        return buildReturn(
+          "change",
+          dimension.key,
+          `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} is different from your last check-in.`,
+          `${plainValue(priorValue)} → ${plainValue(todayValue)}`,
+          todayCheckin,
+        );
+      }
+    }
+  }
 
   for (const dimension of dimensionPriority) {
     const todayValue = getValue(todayCheckin, dimension);
     if (!todayValue) continue;
 
-    const priorValues = priorRows
+    const priorValues = previous
       .map((row) => getValue(row, dimension))
       .filter((value): value is string => Boolean(value));
 
@@ -193,38 +208,52 @@ export function buildContextualWellnessReturn(
     ).length;
 
     if (repeatedPriorCount >= 2) {
-      return repeatReturn(dimension, todayValue);
+      return buildReturn(
+        "repeat",
+        dimension.key,
+        `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} has also been ${plainValue(todayValue)} on several recent check-ins.`,
+        "THRIVE is reflecting what you recorded across your recent Wellness history.",
+        todayCheckin,
+      );
     }
-  }
 
-  for (const dimension of dimensionPriority) {
-    const todayValue = getValue(todayCheckin, dimension);
-    if (!todayValue) continue;
-
-    const mostRecentPriorValue = priorRows
-      .map((row) => getValue(row, dimension))
-      .find((value): value is string => Boolean(value));
-
-    if (mostRecentPriorValue && mostRecentPriorValue !== todayValue) {
-      return changeReturn(dimension, todayValue, mostRecentPriorValue);
-    }
-  }
-
-  for (const dimension of dimensionPriority) {
-    const todayValue = getValue(todayCheckin, dimension);
-    if (!todayValue) continue;
-
-    const recentValues = [
-      todayValue,
-      ...priorRows
-        .map((row) => getValue(row, dimension))
-        .filter((value): value is string => Boolean(value)),
-    ];
-
+    const recentValues = [todayValue, ...priorValues];
     if (new Set(recentValues).size >= 2 && recentValues.length >= 3) {
-      return mixedReturn(dimension);
+      return buildReturn(
+        "mixed",
+        dimension.key,
+        `Your recent check-ins have varied on ${dimension.label}.`,
+        "There is not one consistent recent pattern in what you recorded.",
+        todayCheckin,
+      );
     }
   }
 
-  return confirmationReturn();
+  if (todayCheckin.support_needed === "yes") {
+    return buildReturn(
+      "support",
+      "support_needed",
+      "You said support would help right now.",
+      "THRIVE can take you to Support when you're ready.",
+      todayCheckin,
+    );
+  }
+
+  if (todayCheckin.chosen_next_step) {
+    return buildReturn(
+      "next_step",
+      null,
+      "Your check-in is saved.",
+      "THRIVE will carry this moment forward with your Wellness history.",
+      todayCheckin,
+    );
+  }
+
+  return buildReturn(
+    "confirmation",
+    null,
+    "Your check-in is saved.",
+    "THRIVE will carry this moment forward with your Wellness history.",
+    todayCheckin,
+  );
 }
