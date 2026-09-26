@@ -10,12 +10,13 @@ export type WellnessGuidanceAction = {
 
 export type WellnessGuidance = {
   headline: string;
-  currentFacts: string[];
-  historySignals: string[];
+  summary: string;
+  historySummary: string | null;
   possibleConnection: string | null;
   whyShown: string;
   primarySuggestion: WellnessGuidanceAction;
   otherSuggestions: WellnessGuidanceAction[];
+  followUpQuestion: string | null;
 };
 
 type Dimension = {
@@ -61,109 +62,110 @@ function buildActions(draft: WellnessDraft) {
   if (draft.recoverySupport === "could_use_support") {
     add({
       value: "contact_supportive_person",
-      label: "Reconnect with recovery support",
-      reason: "Reach out to someone or something that helps you stay connected.",
+      label: "Reach out to one supportive person",
+      reason: "You marked recovery support as something you could use right now.",
     });
   }
 
   if (draft.supportNeeded === "yes" || draft.supportNeeded === "not_sure") {
     add({
       value: "ask_for_help",
-      label: "Get help sorting out what needs attention",
-      reason: "Use THRIVE Support when you want another person in the loop.",
+      label: "Ask THRIVE Support to help you sort this out",
+      reason:
+        draft.supportNeeded === "yes"
+          ? "You said support would help right now."
+          : "You are not sure whether support would help, so bringing another person in is one option.",
     });
   }
 
   if (
-    draft.confidence === "low" ||
-    draft.confidence === "not_sure" ||
-    draft.routine === "off_track" ||
-    draft.routine === "mixed"
+    (draft.confidence === "low" || draft.confidence === "not_sure") &&
+    (draft.routine === "off_track" || draft.routine === "mixed")
   ) {
     add({
       value: "choose_one_task",
-      label: "Choose one manageable thing",
-      reason: "Shrink the next move instead of trying to solve everything at once.",
+      label: "Pick one task you can finish before deciding what comes next",
+      reason: "You marked confidence as unsettled and routine as off track or mixed.",
     });
   }
 
   if (draft.stress === "high") {
     add({
       value: "take_a_break",
-      label: "Take a short reset",
-      reason: "Step away briefly before deciding what deserves your attention next.",
+      label: "Take ten quiet minutes before adding another task",
+      reason: "You marked stress as high right now.",
     });
   }
 
   if (draft.sleep === "poor" || draft.energy === "low") {
     add({
       value: "food_water_rest",
-      label: "Take care of a basic need first",
-      reason: "Food, water, rest, or a little movement may be a useful next move.",
+      label: "Take care of one basic need first",
+      reason:
+        draft.sleep === "poor" && draft.energy === "low"
+          ? "You marked sleep as poor and energy as low."
+          : draft.sleep === "poor"
+            ? "You marked sleep as poor."
+            : "You marked energy as low.",
     });
   }
 
   if (draft.overallDay === "hard" || draft.overallDay === "not_sure") {
     add({
       value: "choose_one_task",
-      label: "Choose the next manageable thing",
-      reason: "Focus on one move you can actually complete.",
-    });
-    add({
-      value: "ask_for_help",
-      label: "Ask THRIVE Support to help you sort this out",
-      reason: "You do not have to decide the whole path before asking for support.",
+      label: "Choose one thing you can complete in the next part of the day",
+      reason: `You marked things as ${plainValue(draft.overallDay)} right now, so a smaller next move may be easier to test.`,
     });
   }
 
   if (draft.overallDay === "good" || draft.overallDay === "okay") {
     add({
       value: "review_today_plan",
-      label: "Look over what you want to keep moving",
-      reason: "Use what is working and decide what deserves attention next.",
+      label: "Pick one thing you want to keep steady for the next few hours",
+      reason: `Your overall check-in is ${plainValue(draft.overallDay)} right now.`,
     });
   }
 
   const defaults: WellnessGuidanceAction[] = [
     {
       value: "choose_one_task",
-      label: "Pick one useful thing",
-      reason: "Choose one concrete task and make that the next move.",
+      label: "Pick one useful thing you can finish",
+      reason: "A concrete next step can be easier to evaluate than trying to solve everything at once.",
     },
     {
       value: "contact_supportive_person",
-      label: "Talk to someone supportive",
-      reason: "Reach out if another person would help.",
+      label: "Talk to one supportive person",
+      reason: "Another person may help you get perspective without deciding the answer for you.",
     },
     {
       value: "ask_for_help",
       label: "Ask THRIVE Support",
-      reason: "Bring another person into what you are trying to sort out.",
+      reason: "Use Support when you want another person in the loop.",
     },
     {
       value: "food_water_rest",
-      label: "Handle a basic need",
-      reason: "Take care of food, water, rest, or movement before adding another task.",
+      label: "Handle one basic need",
+      reason: "Food, water, rest, or movement can be a simple place to start.",
     },
     {
       value: "take_a_break",
-      label: "Pause for a few minutes",
-      reason: "Give yourself a short reset before choosing the next move.",
+      label: "Pause for ten minutes",
+      reason: "A short reset can create space before you choose what comes next.",
     },
     {
       value: "review_today_plan",
-      label: "Look over today's plan",
-      reason: "See what is already in motion before adding something new.",
+      label: "Choose one thing to keep steady",
+      reason: "Pick one part of the day you want to protect or continue.",
     },
     {
       value: "other",
-      label: "Something else",
-      reason: "Keep the check-in and choose a different next step.",
+      label: "Try something else",
+      reason: "Choose a different next step that fits your situation better.",
     },
     {
       value: "none",
       label: "Save this and come back later",
-      reason: "You can record the check-in without taking another action right now.",
+      reason: "You can record the moment without taking another action right now.",
     },
   ];
 
@@ -178,15 +180,15 @@ function buildActions(draft: WellnessDraft) {
 function buildPossibleConnection(draft: WellnessDraft) {
   if (draft.sleep === "poor" && draft.energy === "low") {
     return {
-      text: "Poor sleep and low energy are appearing together and may be worth looking at together.",
-      why: "THRIVE is showing this because you marked sleep as poor and energy as low in this check-in.",
+      text: "Poor sleep and low energy are showing up together and may be worth looking at together.",
+      why: "You marked sleep as poor and energy as low in this check-in.",
     };
   }
 
   if (draft.stress === "high" && draft.energy === "low") {
     return {
-      text: "High stress and low energy are appearing together and may be worth looking at together.",
-      why: "THRIVE is showing this because you marked stress as high and energy as low in this check-in.",
+      text: "High stress and low energy are showing up together and may be worth looking at together.",
+      why: "You marked stress as high and energy as low in this check-in.",
     };
   }
 
@@ -195,8 +197,8 @@ function buildPossibleConnection(draft: WellnessDraft) {
     (draft.confidence === "low" || draft.confidence === "not_sure")
   ) {
     return {
-      text: "Routine and confidence are both showing up as unsettled and may be worth looking at together.",
-      why: "THRIVE is showing this because both routine and confidence stood out in this check-in.",
+      text: "Routine and confidence are both unsettled right now and may be worth looking at together.",
+      why: `You marked routine as ${plainValue(draft.routine)} and confidence as ${plainValue(draft.confidence)}.`,
     };
   }
 
@@ -206,11 +208,104 @@ function buildPossibleConnection(draft: WellnessDraft) {
   ) {
     return {
       text: "Recovery support and your need for support are both showing up right now and may be worth considering together.",
-      why: "THRIVE is showing this because both recovery support and support needs came up in this check-in.",
+      why: `You marked recovery support as could use support and support as ${plainValue(draft.supportNeeded)}.`,
     };
   }
 
   return null;
+}
+
+function buildCurrentSummary(draft: WellnessDraft) {
+  const details = dimensions
+    .map((dimension) => {
+      const value = draftValue(draft, dimension.draftKey);
+      return value ? { label: dimension.label.toLowerCase(), value: plainValue(value) } : null;
+    })
+    .filter((item): item is { label: string; value: string } => Boolean(item));
+
+  if (!draft.overallDay && details.length === 0) {
+    return "You completed the main check-in.";
+  }
+
+  if (!draft.overallDay) {
+    const first = details[0];
+    return first ? `${first.label.replace(/^./, (letter) => letter.toUpperCase())} is ${first.value} right now.` : "You completed the main check-in.";
+  }
+
+  if (details.length === 0) {
+    return `You’re at ${plainValue(draft.overallDay)} right now.`;
+  }
+
+  const first = details[0];
+  return `You’re at ${plainValue(draft.overallDay)} right now, and ${first.label} is ${first.value} too.`;
+}
+
+function buildHistorySummary(
+  draft: WellnessDraft,
+  latest: WellnessCheckinRow | null,
+  experienceMode: WellnessExperienceMode,
+) {
+  if (!latest || experienceMode === "first") {
+    return { text: null, followUpQuestion: null };
+  }
+
+  const changes: string[] = [];
+  const steady: string[] = [];
+
+  if (draft.overallDay && latest.overall_day) {
+    if (draft.overallDay === latest.overall_day) {
+      steady.push(`overall is still ${plainValue(draft.overallDay)}`);
+    } else {
+      changes.push(
+        `overall moved from ${plainValue(latest.overall_day)} to ${plainValue(draft.overallDay)}`,
+      );
+    }
+  }
+
+  for (const dimension of dimensions) {
+    const current = draftValue(draft, dimension.draftKey);
+    const prior = latest ? rowValue(latest, dimension.rowKey) : null;
+    if (!current || !prior) continue;
+
+    if (current === prior) {
+      steady.push(`${dimension.label.toLowerCase()} is still ${plainValue(current)}`);
+    } else {
+      changes.push(
+        `${dimension.label.toLowerCase()} moved from ${plainValue(prior)} to ${plainValue(current)}`,
+      );
+    }
+  }
+
+  const when = experienceMode === "same_day" ? "earlier" : "your last check-in";
+
+  if (changes.length === 0 && steady.length > 0) {
+    return {
+      text: `Not much has changed since ${when}. ${steady.slice(0, 2).join(", and ")}.`,
+      followUpQuestion: null,
+    };
+  }
+
+  if (changes.length > 0 && steady.length === 0) {
+    return {
+      text: `A little has shifted since ${when}. ${changes.slice(0, 2).join(", and ")}.`,
+      followUpQuestion:
+        experienceMode === "same_day"
+          ? "What do you think changed between then and now?"
+          : "What do you think may have contributed to that shift?",
+    };
+  }
+
+  if (changes.length > 0 && steady.length > 0) {
+    return {
+      text: `It’s a mixed picture since ${when}. ${changes[0]}, while ${steady[0]}.`,
+      followUpQuestion:
+        experienceMode === "same_day"
+          ? "What do you think changed between then and now?"
+          : null,
+    };
+  }
+
+  return { text: null, followUpQuestion: null };
 }
 
 export function buildWellnessGuidance(
@@ -223,97 +318,49 @@ export function buildWellnessGuidance(
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   const latest = priorRows[0] ?? null;
-  const currentFacts: string[] = [];
-  const historySignals: string[] = [];
-
-  if (draft.overallDay) {
-    currentFacts.push(`Right now, you marked things as ${plainValue(draft.overallDay)}.`);
-  }
-
-  for (const dimension of dimensions) {
-    if (currentFacts.length >= 3) break;
-    const current = draftValue(draft, dimension.draftKey);
-    if (!current) continue;
-    currentFacts.push(`${dimension.label}: ${plainValue(current)}.`);
-  }
-
-  if (latest && experienceMode !== "first") {
-    if (draft.overallDay && latest.overall_day) {
-      if (latest.overall_day === draft.overallDay) {
-        historySignals.push(
-          experienceMode === "same_day"
-            ? `Things overall are still ${plainValue(draft.overallDay)} since earlier today.`
-            : `Things overall are still ${plainValue(draft.overallDay)} compared with your last check-in.`,
-        );
-      } else {
-        historySignals.push(
-          experienceMode === "same_day"
-            ? `Things overall shifted from ${plainValue(latest.overall_day)} to ${plainValue(draft.overallDay)} since earlier today.`
-            : `Things overall shifted from ${plainValue(latest.overall_day)} to ${plainValue(draft.overallDay)} since your last check-in.`,
-        );
-      }
-    }
-
-    for (const dimension of dimensions) {
-      if (historySignals.length >= 2) break;
-
-      const current = draftValue(draft, dimension.draftKey);
-      if (!current) continue;
-
-      const prior = rowValue(latest, dimension.rowKey);
-      if (!prior) continue;
-
-      if (prior === current) {
-        historySignals.push(
-          experienceMode === "same_day"
-            ? `${dimension.label} is still ${plainValue(current)} since earlier today.`
-            : `${dimension.label} is still ${plainValue(current)} compared with your last check-in.`,
-        );
-      } else {
-        historySignals.push(
-          experienceMode === "same_day"
-            ? `${dimension.label} changed from ${plainValue(prior)} to ${plainValue(current)} since earlier today.`
-            : `${dimension.label} changed from ${plainValue(prior)} to ${plainValue(current)} since your last check-in.`,
-        );
-      }
-    }
-  }
-
-  if (historySignals.length < 2 && priorRows.length >= 2) {
-    for (const dimension of dimensions) {
-      if (historySignals.length >= 2) break;
-
-      const current = draftValue(draft, dimension.draftKey);
-      if (!current) continue;
-
-      const priorMatches = priorRows.filter(
-        (row) => rowValue(row, dimension.rowKey) === current,
-      ).length;
-
-      if (priorMatches >= 2) {
-        const statement = `${dimension.label} has also been ${plainValue(current)} on several recent check-ins.`;
-        if (!historySignals.includes(statement)) historySignals.push(statement);
-      }
-    }
-  }
-
-  if (currentFacts.length === 0) {
-    currentFacts.push("You completed the main check-in.");
-  }
-
+  const currentSummary = buildCurrentSummary(draft);
+  const history = buildHistorySummary(draft, latest, experienceMode);
   const connection = buildPossibleConnection(draft);
   const actionGroups = buildActions(draft);
 
+  let whyShown = connection?.why ?? "";
+
+  if (!whyShown && history.text) {
+    const evidence: string[] = [];
+    if (draft.overallDay && latest?.overall_day) {
+      evidence.push(
+        `Earlier you marked things ${plainValue(latest.overall_day)}; right now you marked ${plainValue(draft.overallDay)}`,
+      );
+    }
+
+    for (const dimension of dimensions) {
+      if (evidence.length >= 2) break;
+      const current = draftValue(draft, dimension.draftKey);
+      const prior = latest ? rowValue(latest, dimension.rowKey) : null;
+      if (!current || !prior) continue;
+      evidence.push(
+        `${dimension.label} was ${plainValue(prior)} and is ${plainValue(current)} now`,
+      );
+    }
+
+    whyShown = evidence.length > 0
+      ? `${evidence.join(". ")}.`
+      : "This is based on your current check-in and the most recent Wellness check-in available.";
+  }
+
+  if (!whyShown) {
+    whyShown = draft.overallDay
+      ? `You marked things as ${plainValue(draft.overallDay)} right now.`
+      : "This is based on what you recorded in this check-in.";
+  }
+
   return {
-    headline: experienceMode === "first" ? "Here’s what you recorded" : "Here’s what stands out",
-    currentFacts,
-    historySignals,
+    headline: experienceMode === "first" ? "Here’s where you are right now" : "Here’s what THRIVE is noticing",
+    summary: currentSummary,
+    historySummary: history.text,
     possibleConnection: connection?.text ?? null,
-    whyShown:
-      connection?.why ??
-      (historySignals.length > 0
-        ? "THRIVE is showing this from your current check-in and your recent Wellness history."
-        : "THRIVE is showing this from what you recorded in this check-in."),
+    whyShown,
+    followUpQuestion: history.followUpQuestion,
     ...actionGroups,
   };
 }
