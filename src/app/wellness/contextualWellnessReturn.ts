@@ -10,40 +10,17 @@ export type ContextualWellnessReturnKind =
 
 export type ContextualWellnessReturn = {
   kind: ContextualWellnessReturnKind;
-  dimension: string | null;
   headline: string;
   detail: string | null;
   choiceLabel: string | null;
+  noteQuestion: string | null;
+  noteResponse: string | null;
   actionLabel: string | null;
   actionHref: string | null;
 };
 
-type ComparableDimension = {
-  key:
-    | "support_needed"
-    | "recovery_support"
-    | "routine"
-    | "stress"
-    | "sleep"
-    | "energy"
-    | "confidence"
-    | "overall_day";
-  label: string;
-};
-
-const dimensionPriority: ComparableDimension[] = [
-  { key: "support_needed", label: "support" },
-  { key: "recovery_support", label: "recovery support" },
-  { key: "routine", label: "routine" },
-  { key: "stress", label: "stress" },
-  { key: "sleep", label: "sleep" },
-  { key: "energy", label: "energy" },
-  { key: "confidence", label: "confidence" },
-  { key: "overall_day", label: "overall state" },
-];
-
 const nextStepLabels: Record<string, string> = {
-  review_today_plan: "Review today's plan",
+  review_today_plan: "Keep one thing steady",
   choose_one_task: "Do one useful thing",
   take_a_break: "Take a break",
   food_water_rest: "Handle a basic need",
@@ -57,15 +34,7 @@ function plainValue(value: string) {
   return value.replaceAll("_", " ");
 }
 
-function getValue(
-  row: WellnessCheckinRow,
-  dimension: ComparableDimension,
-): string | null {
-  const value = row[dimension.key];
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function priorRows(
+function previousRows(
   todayCheckin: WellnessCheckinRow,
   recentCheckins: WellnessCheckinRow[],
 ) {
@@ -76,20 +45,6 @@ function priorRows(
         row.status === "active",
     )
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
-}
-
-function routeForChoice(value: string | null) {
-  if (value === "ask_for_help" || value === "contact_supportive_person") {
-    return {
-      actionLabel: "Open Support",
-      actionHref: "/support",
-    };
-  }
-
-  return {
-    actionLabel: null,
-    actionHref: null,
-  };
 }
 
 function choiceLabel(todayCheckin: WellnessCheckinRow) {
@@ -108,27 +63,159 @@ function choiceLabel(todayCheckin: WellnessCheckinRow) {
   return null;
 }
 
-function buildReturn(
-  kind: ContextualWellnessReturnKind,
-  dimension: string | null,
-  headline: string,
-  detail: string | null,
-  todayCheckin: WellnessCheckinRow,
-): ContextualWellnessReturn {
-  const route = routeForChoice(
-    todayCheckin.support_needed === "yes"
-      ? "ask_for_help"
-      : todayCheckin.chosen_next_step,
-  );
+function routeForChoice(todayCheckin: WellnessCheckinRow) {
+  if (
+    todayCheckin.support_needed === "yes" ||
+    todayCheckin.chosen_next_step === "ask_for_help" ||
+    todayCheckin.chosen_next_step === "contact_supportive_person"
+  ) {
+    return {
+      actionLabel: "Open Support",
+      actionHref: "/support",
+    };
+  }
 
   return {
-    kind,
-    dimension,
-    headline,
-    detail,
-    choiceLabel: choiceLabel(todayCheckin),
-    ...route,
+    actionLabel: null,
+    actionHref: null,
   };
+}
+
+function looksLikeQuestion(note: string | null) {
+  if (!note) return false;
+  const trimmed = note.trim();
+  if (!trimmed) return false;
+  if (trimmed.includes("?")) return true;
+  return /^(how|what|why|where|when|who|can|could|should|do|does|is|are|would)/i.test(
+    trimmed,
+  );
+}
+
+function responseForQuestion(todayCheckin: WellnessCheckinRow) {
+  switch (todayCheckin.chosen_next_step) {
+    case "choose_one_task":
+      return "Start smaller than the whole problem. Pick one thing you could finish or understand next, then decide whether another step is actually needed.";
+    case "food_water_rest":
+      return "Start with one basic need you can act on now: food, water, rest, or a little movement. Then check whether anything feels different.";
+    case "take_a_break":
+      return "Give yourself a short pause first. After that, name the one part of the situation that still needs your attention.";
+    case "contact_supportive_person":
+      return "You do not have to solve the question alone. One option is to take the exact question you wrote to someone supportive.";
+    case "ask_for_help":
+      return "This may be easier to sort out with another person. You can take this exact question into THRIVE Support.";
+    case "review_today_plan":
+      return "Pick one part of the day you want to keep steady, then notice what helps you protect it.";
+    default:
+      return "Start by naming the part you want to understand first. You do not need to solve the whole situation at once.";
+  }
+}
+
+function summarizeSameDay(
+  current: WellnessCheckinRow,
+  earlier: WellnessCheckinRow,
+) {
+  const changes: string[] = [];
+  const steady: string[] = [];
+
+  if (current.overall_day && earlier.overall_day) {
+    if (current.overall_day === earlier.overall_day) {
+      steady.push(`overall is still ${plainValue(current.overall_day)}`);
+    } else {
+      changes.push(
+        `overall moved from ${plainValue(earlier.overall_day)} to ${plainValue(current.overall_day)}`,
+      );
+    }
+  }
+
+  const dimensions: Array<
+    [keyof WellnessCheckinRow, string]
+  > = [
+    ["stress", "stress"],
+    ["sleep", "sleep"],
+    ["energy", "energy"],
+    ["confidence", "confidence"],
+    ["routine", "routine"],
+    ["recovery_support", "recovery support"],
+    ["support_needed", "support"],
+  ];
+
+  for (const [key, label] of dimensions) {
+    const currentValue = current[key];
+    const priorValue = earlier[key];
+    if (
+      typeof currentValue !== "string" ||
+      typeof priorValue !== "string" ||
+      !currentValue ||
+      !priorValue
+    ) {
+      continue;
+    }
+
+    if (currentValue === priorValue) {
+      steady.push(`${label} is still ${plainValue(currentValue)}`);
+    } else {
+      changes.push(
+        `${label} moved from ${plainValue(priorValue)} to ${plainValue(currentValue)}`,
+      );
+    }
+  }
+
+  if (changes.length === 0 && steady.length > 0) {
+    return {
+      kind: "repeat" as const,
+      headline: "Not much has changed since earlier.",
+      detail: `${steady.slice(0, 2).join(", and ")}.`,
+    };
+  }
+
+  if (changes.length > 0 && steady.length === 0) {
+    return {
+      kind: "change" as const,
+      headline: "A little has shifted since earlier.",
+      detail: `${changes.slice(0, 2).join(", and ")}.`,
+    };
+  }
+
+  if (changes.length > 0 && steady.length > 0) {
+    return {
+      kind: "mixed" as const,
+      headline: "It’s a mixed picture since earlier.",
+      detail: `${changes[0]}, while ${steady[0]}.`,
+    };
+  }
+
+  return null;
+}
+
+function summarizePriorDay(
+  current: WellnessCheckinRow,
+  prior: WellnessCheckinRow,
+) {
+  if (
+    current.overall_day &&
+    prior.overall_day &&
+    current.overall_day !== prior.overall_day
+  ) {
+    return {
+      kind: "change" as const,
+      headline: "Your latest check-in is different from the one before it.",
+      detail: `Overall moved from ${plainValue(prior.overall_day)} to ${plainValue(current.overall_day)}.`,
+    };
+  }
+
+  if (
+    current.overall_day &&
+    prior.overall_day &&
+    current.overall_day === prior.overall_day
+  ) {
+    return {
+      kind: "repeat" as const,
+      headline: "Your latest check-in is similar to the one before it.",
+      detail: `Overall is still ${plainValue(current.overall_day)}.`,
+    };
+  }
+
+  return null;
 }
 
 export function buildContextualWellnessReturn(
@@ -137,123 +224,67 @@ export function buildContextualWellnessReturn(
 ): ContextualWellnessReturn | null {
   if (!todayCheckin) return null;
 
-  const previous = priorRows(todayCheckin, recentCheckins);
-  const sameDayRows = previous.filter(
+  const previous = previousRows(todayCheckin, recentCheckins);
+  const sameDay = previous.find(
     (row) => row.checkin_date === todayCheckin.checkin_date,
   );
-
-  const latestSameDay = sameDayRows[0] ?? null;
-
-  if (latestSameDay) {
-    for (const dimension of dimensionPriority) {
-      const todayValue = getValue(todayCheckin, dimension);
-      const priorValue = getValue(latestSameDay, dimension);
-
-      if (!todayValue || !priorValue) continue;
-
-      if (todayValue !== priorValue) {
-        return buildReturn(
-          "change",
-          dimension.key,
-          `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} changed since earlier today.`,
-          `${plainValue(priorValue)} → ${plainValue(todayValue)}`,
-          todayCheckin,
-        );
-      }
-
-      return buildReturn(
-        "repeat",
-        dimension.key,
-        `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} is still ${plainValue(todayValue)} since earlier today.`,
-        "THRIVE is comparing this moment with your earlier check-in.",
-        todayCheckin,
-      );
-    }
-  }
-
-  const priorDayRows = previous.filter(
+  const priorDay = previous.find(
     (row) => row.checkin_date !== todayCheckin.checkin_date,
   );
-  const latestPriorDay = priorDayRows[0] ?? null;
 
-  if (latestPriorDay) {
-    for (const dimension of dimensionPriority) {
-      const todayValue = getValue(todayCheckin, dimension);
-      const priorValue = getValue(latestPriorDay, dimension);
+  const summary =
+    (sameDay ? summarizeSameDay(todayCheckin, sameDay) : null) ??
+    (priorDay ? summarizePriorDay(todayCheckin, priorDay) : null);
 
-      if (!todayValue || !priorValue) continue;
+  const noteQuestion = looksLikeQuestion(todayCheckin.participant_note)
+    ? todayCheckin.participant_note?.trim() ?? null
+    : null;
 
-      if (todayValue !== priorValue) {
-        return buildReturn(
-          "change",
-          dimension.key,
-          `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} is different from your last check-in.`,
-          `${plainValue(priorValue)} → ${plainValue(todayValue)}`,
-          todayCheckin,
-        );
-      }
-    }
-  }
+  const route = routeForChoice(todayCheckin);
 
-  for (const dimension of dimensionPriority) {
-    const todayValue = getValue(todayCheckin, dimension);
-    if (!todayValue) continue;
-
-    const priorValues = previous
-      .map((row) => getValue(row, dimension))
-      .filter((value): value is string => Boolean(value));
-
-    const repeatedPriorCount = priorValues.filter(
-      (value) => value === todayValue,
-    ).length;
-
-    if (repeatedPriorCount >= 2) {
-      return buildReturn(
-        "repeat",
-        dimension.key,
-        `${dimension.label.replace(/^./, (letter) => letter.toUpperCase())} has also been ${plainValue(todayValue)} on several recent check-ins.`,
-        "THRIVE is reflecting what you recorded across your recent Wellness history.",
-        todayCheckin,
-      );
-    }
-
-    const recentValues = [todayValue, ...priorValues];
-    if (new Set(recentValues).size >= 2 && recentValues.length >= 3) {
-      return buildReturn(
-        "mixed",
-        dimension.key,
-        `Your recent check-ins have varied on ${dimension.label}.`,
-        "There is not one consistent recent pattern in what you recorded.",
-        todayCheckin,
-      );
-    }
+  if (summary) {
+    return {
+      kind: summary.kind,
+      headline: summary.headline,
+      detail: summary.detail,
+      choiceLabel: choiceLabel(todayCheckin),
+      noteQuestion,
+      noteResponse: noteQuestion ? responseForQuestion(todayCheckin) : null,
+      ...route,
+    };
   }
 
   if (todayCheckin.support_needed === "yes") {
-    return buildReturn(
-      "support",
-      "support_needed",
-      "You said support would help right now.",
-      "THRIVE can take you to Support when you're ready.",
-      todayCheckin,
-    );
+    return {
+      kind: "support",
+      headline: "You said support would help right now.",
+      detail: "Your check-in is saved, and Support is available when you want another person in the loop.",
+      choiceLabel: choiceLabel(todayCheckin),
+      noteQuestion,
+      noteResponse: noteQuestion ? responseForQuestion(todayCheckin) : null,
+      ...route,
+    };
   }
 
   if (todayCheckin.chosen_next_step) {
-    return buildReturn(
-      "next_step",
-      null,
-      "Your check-in is saved.",
-      "THRIVE will carry this moment forward with your Wellness history.",
-      todayCheckin,
-    );
+    return {
+      kind: "next_step",
+      headline: "Your check-in is saved.",
+      detail: "THRIVE will carry this moment forward with your Wellness history.",
+      choiceLabel: choiceLabel(todayCheckin),
+      noteQuestion,
+      noteResponse: noteQuestion ? responseForQuestion(todayCheckin) : null,
+      ...route,
+    };
   }
 
-  return buildReturn(
-    "confirmation",
-    null,
-    "Your check-in is saved.",
-    "THRIVE will carry this moment forward with your Wellness history.",
-    todayCheckin,
-  );
+  return {
+    kind: "confirmation",
+    headline: "Your check-in is saved.",
+    detail: "THRIVE will carry this moment forward with your Wellness history.",
+    choiceLabel: null,
+    noteQuestion,
+    noteResponse: noteQuestion ? responseForQuestion(todayCheckin) : null,
+    ...route,
+  };
 }
