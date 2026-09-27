@@ -154,6 +154,7 @@ export default function WellnessCheckinCandidate({
   const [draft, setDraft] = useState<WellnessDraft>(emptyDraft);
   const [actionMessage, setActionMessage] = useState("");
   const [isCheckingInAgain, setIsCheckingInAgain] = useState(false);
+  const [isFinishingSavedCheckin, setIsFinishingSavedCheckin] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [historyDay, setHistoryDay] = useState<string | null>(null);
 
@@ -190,13 +191,15 @@ export default function WellnessCheckinCandidate({
   }
 
   async function handleUpdateCandidate() {
-    const result = await executeSameDayUpdate(savedDraft);
+    const result = await executeSameDayUpdate(draft);
     if (!result.ok) {
       setActionMessage(result.message);
       setJustSaved(false);
       return result;
     }
+    setDraft(emptyDraft);
     setActionMessage("");
+    setIsFinishingSavedCheckin(false);
     setJustSaved(true);
     return result;
   }
@@ -213,19 +216,34 @@ export default function WellnessCheckinCandidate({
   const reflectionCount = recentCheckins.length;
   const selectedDayKey = historyDay ?? (recentCheckinDates.includes(today) ? today : recentCheckinDates[0] ?? null);
   const selectedDayRows = selectedDayKey ? recentCheckinsByDate[selectedDayKey] ?? [] : [];
-  const focusMode = !todayCheckin || isCheckingInAgain;
+  const resumeHistory = useMemo(
+    () =>
+      todayCheckin
+        ? recentCheckins.filter((checkin) => checkin.id !== todayCheckin.id)
+        : recentCheckins,
+    [recentCheckins, todayCheckin],
+  );
+  const focusMode = !todayCheckin || isCheckingInAgain || isFinishingSavedCheckin;
   const experienceMode =
-    isCheckingInAgain && todayCheckin
-      ? "same_day"
-      : recentCheckins.length > 0
-        ? "later"
-        : "first";
+    isFinishingSavedCheckin
+      ? resumeHistory.some((checkin) => checkin.checkin_date === today)
+        ? "same_day"
+        : resumeHistory.length > 0
+          ? "later"
+          : "first"
+      : isCheckingInAgain && todayCheckin
+        ? "same_day"
+        : recentCheckins.length > 0
+          ? "later"
+          : "first";
   const referenceCheckin =
-    experienceMode === "same_day"
-      ? todayCheckin
-      : experienceMode === "later"
-        ? recentCheckins[0] ?? null
-        : null;
+    isFinishingSavedCheckin
+      ? resumeHistory[0] ?? null
+      : experienceMode === "same_day"
+        ? todayCheckin
+        : experienceMode === "later"
+          ? recentCheckins[0] ?? null
+          : null;
 
   useEffect(() => {
     if (!onHeroChange) return;
@@ -235,13 +253,18 @@ export default function WellnessCheckinCandidate({
       return;
     }
 
+    if (isFinishingSavedCheckin) {
+      onHeroChange("Pick up where you left off.");
+      return;
+    }
+
     if (isCheckingInAgain) {
       onHeroChange("What’s going on with you now?");
       return;
     }
 
     onHeroChange("How are things going now?");
-  }, [isCheckingInAgain, onHeroChange, todayCheckin]);
+  }, [isCheckingInAgain, isFinishingSavedCheckin, onHeroChange, todayCheckin]);
 
   const todayDetails = todayCheckin ? [
     ["Stress", todayCheckin.stress],
@@ -334,14 +357,58 @@ export default function WellnessCheckinCandidate({
                 </details>
               ) : null}
 
-              <button type="button" onClick={() => { setDraft(emptyDraft); setActionMessage(""); setJustSaved(false); setIsCheckingInAgain(true); }} className="mt-5 rounded-full border border-emerald-200 bg-white/72 px-4 py-2.5 text-sm font-black text-emerald-900 shadow-sm transition hover:bg-white">Check in again</button>
+              {todayCheckin.chosen_next_step ? (
+                <button type="button" onClick={() => { setDraft(emptyDraft); setActionMessage(""); setJustSaved(false); setIsFinishingSavedCheckin(false); setIsCheckingInAgain(true); }} className="mt-5 rounded-full border border-emerald-200 bg-white/72 px-4 py-2.5 text-sm font-black text-emerald-900 shadow-sm transition hover:bg-white">Check in again</button>
+              ) : (
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(savedDraft);
+                      setActionMessage("");
+                      setJustSaved(false);
+                      setIsCheckingInAgain(false);
+                      setIsFinishingSavedCheckin(true);
+                    }}
+                    className="rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-800"
+                  >
+                    Finish this check-in
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(emptyDraft);
+                      setActionMessage("");
+                      setJustSaved(false);
+                      setIsFinishingSavedCheckin(false);
+                      setIsCheckingInAgain(true);
+                    }}
+                    className="rounded-full border border-emerald-200 bg-white/72 px-4 py-2.5 text-sm font-black text-emerald-900 shadow-sm transition hover:bg-white"
+                  >
+                    Start a new check-in
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </section>
       ) : null}
 
       {focusMode ? (
-        <WellnessCheckinPreview recentCheckins={recentCheckins} experienceMode={experienceMode} referenceCheckin={referenceCheckin} draft={draft} onDraftChange={setDraft} onSaveCandidate={handleSaveCandidate} onUpdateCandidate={handleUpdateCandidate} hasSavedCheckin={false} actionMessage={actionMessage} writeEnabled={writeEnabled} focusOnMount={isCheckingInAgain} />
+        <WellnessCheckinPreview
+          recentCheckins={isFinishingSavedCheckin ? resumeHistory : recentCheckins}
+          experienceMode={experienceMode}
+          referenceCheckin={referenceCheckin}
+          draft={draft}
+          onDraftChange={setDraft}
+          onSaveCandidate={handleSaveCandidate}
+          onUpdateCandidate={handleUpdateCandidate}
+          hasSavedCheckin={isFinishingSavedCheckin}
+          actionMessage={actionMessage}
+          writeEnabled={writeEnabled}
+          focusOnMount={isCheckingInAgain || isFinishingSavedCheckin}
+          resumeMode={isFinishingSavedCheckin}
+        />
       ) : null}
 
       {justSaved ? (
