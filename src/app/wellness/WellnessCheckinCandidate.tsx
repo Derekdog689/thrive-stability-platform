@@ -25,9 +25,39 @@ function nextStepLabel(value: string | null | undefined) {
   return value ? labels[value] ?? formatValue(value) : null;
 }
 
-function nextStepRoute(value: string | null | undefined) {
-  if (value === "contact_supportive_person" || value === "ask_for_help") return "/support";
-  return null;
+function nextStepRoute(
+  value: string | null | undefined,
+  checkin?: {
+    overall_day: string | null;
+    stress: string | null;
+    sleep: string | null;
+    energy: string | null;
+    confidence: string | null;
+    routine: string | null;
+    recovery_support: string | null;
+    support_needed: string | null;
+  } | null,
+) {
+  if (value !== "contact_supportive_person" && value !== "ask_for_help") return null;
+  if (!checkin) return "/support";
+
+  const params = new URLSearchParams({ from: "wellness" });
+  const values: Array<[string, string | null]> = [
+    ["overall", checkin.overall_day],
+    ["stress", checkin.stress],
+    ["sleep", checkin.sleep],
+    ["energy", checkin.energy],
+    ["confidence", checkin.confidence],
+    ["routine", checkin.routine],
+    ["recoverySupport", checkin.recovery_support],
+    ["supportNeeded", checkin.support_needed],
+  ];
+
+  for (const [key, current] of values) {
+    if (current) params.set(key, current);
+  }
+
+  return `/support?${params.toString()}`;
 }
 
 function nextStepIcon(value: string | null | undefined) {
@@ -226,7 +256,7 @@ export default function WellnessCheckinCandidate({
   const primaryTodayDetail = todayDetails[0] ?? null;
   const secondaryTodayDetails = todayDetails.slice(1);
   const todayOverallVisual = overallVisual(todayCheckin?.overall_day);
-  const todayNextRoute = nextStepRoute(todayCheckin?.chosen_next_step);
+  const todayNextRoute = nextStepRoute(todayCheckin?.chosen_next_step, todayCheckin);
   const contextualReturn = useMemo(
     () => buildContextualWellnessReturn(todayCheckin, recentCheckins),
     [todayCheckin, recentCheckins],
@@ -344,7 +374,7 @@ export default function WellnessCheckinCandidate({
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Link href="/goals" className="rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300">Continue a goal</Link>
               <Link href="/budget" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Review money</Link>
-              {contextualReturn?.actionHref !== "/support" ? (
+              {!contextualReturn?.actionHref?.startsWith("/support") ? (
                 <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
               ) : null}
               <Link href="/" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Done for now</Link>
