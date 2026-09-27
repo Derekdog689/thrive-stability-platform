@@ -456,12 +456,69 @@ setRecentCheckins((current) => [
   async function executeSameDayUpdate(
     draft: WellnessDraft,
   ): Promise<WellnessWriteResult> {
-    void draft;
+    if (!participant || !participation || !authenticatedUserId || !todayCheckin) {
+      return {
+        ok: false,
+        code: "missing_identity",
+        message: "The saved check-in is not available to finish right now.",
+      };
+    }
+
+    if (
+      todayCheckin.status !== "active" ||
+      todayCheckin.checkin_date !== today ||
+      todayCheckin.chosen_next_step
+    ) {
+      return {
+        ok: false,
+        code: "not_allowed",
+        message: "Only an unfinished check-in from today can be finished here.",
+      };
+    }
+
+    const chosenNextStep =
+      draft.chosenNextStep === "nothing_right_now"
+        ? null
+        : draft.chosenNextStep;
+
+    const result = await supabase
+      .from("participant_wellness_checkins")
+      .update({
+        chosen_next_step: chosenNextStep,
+        participant_note: draft.participantNote.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", todayCheckin.id)
+      .eq("supported_person_id", participant.id)
+      .eq("program_id", participation.program_id)
+      .eq("workspace_id", participant.workspace_id)
+      .eq("checkin_date", today)
+      .eq("status", "active")
+      .select(
+        "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
+      )
+      .single();
+
+    if (result.error) {
+      return mapWriteError(result.error);
+    }
+
+    const row = result.data as WellnessCheckinRow;
+
+    setTodayCheckins((current) => [
+      row,
+      ...current.filter((checkin) => checkin.id !== row.id),
+    ]);
+
+    setRecentCheckins((current) => [
+      row,
+      ...current.filter((checkin) => checkin.id !== row.id),
+    ]);
 
     return {
-      ok: false,
-      code: "write_disabled",
-      message: "Editing today's saved check-in is not available yet.",
+      ok: true,
+      mode: "update",
+      row,
     };
   }
 
