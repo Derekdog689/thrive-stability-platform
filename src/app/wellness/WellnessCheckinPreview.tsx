@@ -33,6 +33,7 @@ type WellnessCheckinPreviewProps = {
   actionMessage: string;
   writeEnabled: boolean;
   focusOnMount?: boolean;
+  resumeMode?: boolean;
 };
 
 type ChoiceGroupProps = {
@@ -205,9 +206,10 @@ export default function WellnessCheckinPreview({
   actionMessage,
   writeEnabled,
   focusOnMount = false,
+  resumeMode = false,
 }: WellnessCheckinPreviewProps) {
   const sectionRef = useRef<HTMLElement>(null);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(resumeMode ? 3 : 1);
   const [selectedReflectionKeys, setSelectedReflectionKeys] = useState<
     ReflectionKey[]
   >([]);
@@ -393,13 +395,13 @@ export default function WellnessCheckinPreview({
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-              Guided check-in
+              {resumeMode ? "Finish check-in" : "Guided check-in"}
             </p>
             <p className="mt-1 text-sm font-bold text-slate-500">
               Step {step} of 4
             </p>
           </div>
-          {step > 1 ? (
+          {step > (resumeMode ? 3 : 1) ? (
             <button
               type="button"
               onClick={() => {
@@ -859,7 +861,7 @@ export default function WellnessCheckinPreview({
           >
             {writeEnabled
               ? hasSavedCheckin
-                ? "Update check-in"
+                ? "Finish check-in"
                 : "Save check-in"
               : "Save check-in unavailable"}
           </button>
