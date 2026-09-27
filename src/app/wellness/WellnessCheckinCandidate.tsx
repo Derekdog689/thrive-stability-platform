@@ -319,7 +319,13 @@ export default function WellnessCheckinCandidate({
                     </div>
                   </div>
                 )
-              ) : null}
+              ) : (
+                <div className="mt-6 rounded-[1.6rem] border border-slate-200/80 bg-slate-50/82 px-5 py-5 text-slate-800 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">For now</p>
+                  <p className="mt-1 text-lg font-black leading-6">No next step saved.</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">Come back whenever it’s useful.</p>
+                </div>
+              )}
 
               {todayCheckin.participant_note ? (
                 <details className="mt-4 rounded-2xl border border-white/80 bg-white/62 backdrop-blur-xl">
