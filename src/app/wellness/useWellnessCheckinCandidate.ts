@@ -311,7 +311,10 @@ setLoading(false);
       routine: draft.routine,
       recovery_support: draft.recoverySupport,
       support_needed: draft.supportNeeded,
-      chosen_next_step: draft.chosenNextStep,
+      chosen_next_step:
+        draft.chosenNextStep === "nothing_right_now"
+          ? null
+          : draft.chosenNextStep,
       participant_note: draft.participantNote.trim() || null,
       status: "active",
       created_by: authenticatedUserId,
