@@ -63,6 +63,27 @@ function choiceLabel(todayCheckin: WellnessCheckinRow) {
   return null;
 }
 
+function wellnessSupportHref(todayCheckin: WellnessCheckinRow) {
+  const params = new URLSearchParams({ from: "wellness" });
+
+  const values: Array<[string, string | null]> = [
+    ["overall", todayCheckin.overall_day],
+    ["stress", todayCheckin.stress],
+    ["sleep", todayCheckin.sleep],
+    ["energy", todayCheckin.energy],
+    ["confidence", todayCheckin.confidence],
+    ["routine", todayCheckin.routine],
+    ["recoverySupport", todayCheckin.recovery_support],
+    ["supportNeeded", todayCheckin.support_needed],
+  ];
+
+  for (const [key, value] of values) {
+    if (value) params.set(key, value);
+  }
+
+  return `/support?${params.toString()}`;
+}
+
 function routeForChoice(todayCheckin: WellnessCheckinRow) {
   if (
     todayCheckin.support_needed === "yes" ||
@@ -71,7 +92,7 @@ function routeForChoice(todayCheckin: WellnessCheckinRow) {
   ) {
     return {
       actionLabel: "Open Support",
-      actionHref: "/support",
+      actionHref: wellnessSupportHref(todayCheckin),
     };
   }
 

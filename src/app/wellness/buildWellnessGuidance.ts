@@ -25,6 +25,13 @@ type Dimension = {
   label: string;
 };
 
+type Signal = {
+  label: string;
+  value: string;
+  phrase: string;
+  priority: number;
+};
+
 const dimensions: Dimension[] = [
   { draftKey: "stress", rowKey: "stress", label: "Stress" },
   { draftKey: "sleep", rowKey: "sleep", label: "Sleep" },
@@ -49,7 +56,78 @@ function draftValue(draft: WellnessDraft, key: keyof WellnessDraft) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function currentSignals(draft: WellnessDraft): Signal[] {
+  const signals: Signal[] = [];
+
+  function add(label: string, value: string | null, phrase: string, priority: number) {
+    if (!value) return;
+    signals.push({ label, value, phrase, priority });
+  }
+
+  if (draft.stress === "high") add("Stress", draft.stress, "stress is high", 4);
+  else if (draft.stress === "not_sure") add("Stress", draft.stress, "stress is uncertain", 2);
+
+  if (draft.sleep === "poor") add("Sleep", draft.sleep, "sleep is poor", 3);
+  else if (draft.sleep === "not_sure") add("Sleep", draft.sleep, "sleep is uncertain", 2);
+
+  if (draft.energy === "low") add("Energy", draft.energy, "energy is low", 3);
+  else if (draft.energy === "not_sure") add("Energy", draft.energy, "energy is uncertain", 2);
+
+  if (draft.confidence === "low") add("Confidence", draft.confidence, "confidence is low", 4);
+  else if (draft.confidence === "not_sure") add("Confidence", draft.confidence, "confidence is uncertain", 2);
+
+  if (draft.routine === "off_track") add("Routine", draft.routine, "routine feels off track", 4);
+  else if (draft.routine === "mixed") add("Routine", draft.routine, "routine feels mixed", 2);
+  else if (draft.routine === "not_sure") add("Routine", draft.routine, "routine is uncertain", 2);
+
+  if (draft.recoverySupport === "could_use_support") {
+    add("Recovery support", draft.recoverySupport, "recovery support could use more attention", 5);
+  } else if (draft.recoverySupport === "not_sure") {
+    add("Recovery support", draft.recoverySupport, "recovery support is uncertain", 2);
+  }
+
+  if (draft.supportNeeded === "yes") add("Support", draft.supportNeeded, "you said support would help", 6);
+  else if (draft.supportNeeded === "not_sure") add("Support", draft.supportNeeded, "you are not sure whether support would help", 3);
+
+  return signals.sort((a, b) => b.priority - a.priority);
+}
+
+function joinPhrases(phrases: string[]) {
+  if (phrases.length === 0) return "";
+  if (phrases.length === 1) return phrases[0];
+  if (phrases.length === 2) return `${phrases[0]} and ${phrases[1]}`;
+  return `${phrases.slice(0, -1).join(", ")}, and ${phrases.at(-1)}`;
+}
+
+function buildCurrentSummary(draft: WellnessDraft) {
+  const signals = currentSignals(draft);
+  const overall = draft.overallDay ? plainValue(draft.overallDay) : null;
+
+  if (signals.length > 0) {
+    const unresolved = joinPhrases(signals.slice(0, 3).map((signal) => signal.phrase));
+    return overall
+      ? `You’re ${overall} overall, but ${unresolved}.`
+      : `A few things stand out right now: ${unresolved}.`;
+  }
+
+  const selected = dimensions
+    .map((dimension) => {
+      const value = draftValue(draft, dimension.draftKey);
+      return value ? { label: dimension.label.toLowerCase(), value: plainValue(value) } : null;
+    })
+    .filter((item): item is { label: string; value: string } => Boolean(item));
+
+  if (overall && selected.length > 0) {
+    return `You’re ${overall} overall, and ${selected[0].label} is ${selected[0].value} too.`;
+  }
+
+  if (overall) return `You’re ${overall} overall right now.`;
+  if (selected.length > 0) return `${selected[0].label.replace(/^./, (letter) => letter.toUpperCase())} is ${selected[0].value} right now.`;
+  return "You completed the main check-in.";
+}
+
 function buildActions(draft: WellnessDraft) {
+  const signals = currentSignals(draft);
   const actions: WellnessGuidanceAction[] = [];
   const seen = new Set<string>();
 
@@ -59,33 +137,48 @@ function buildActions(draft: WellnessDraft) {
     actions.push(action);
   }
 
-  if (draft.recoverySupport === "could_use_support") {
-    add({
-      value: "contact_supportive_person",
-      label: "Reach out to one supportive person",
-      reason: "You marked recovery support as something you could use right now.",
-    });
-  }
+  const confidenceLow = draft.confidence === "low";
+  const energyUncertain = draft.energy === "not_sure";
+  const routineOff = draft.routine === "off_track" || draft.routine === "mixed";
+  const recoverySupport = draft.recoverySupport === "could_use_support";
 
-  if (draft.supportNeeded === "yes" || draft.supportNeeded === "not_sure") {
+  if (draft.supportNeeded === "yes") {
     add({
       value: "ask_for_help",
       label: "Ask THRIVE Support to help you sort this out",
-      reason:
-        draft.supportNeeded === "yes"
-          ? "You said support would help right now."
-          : "You are not sure whether support would help, so bringing another person in is one option.",
+      reason: confidenceLow
+        ? "You said support would help, and confidence is low right now."
+        : "You said support would help right now.",
     });
   }
 
-  if (
-    (draft.confidence === "low" || draft.confidence === "not_sure") &&
-    (draft.routine === "off_track" || draft.routine === "mixed")
-  ) {
+  if (recoverySupport) {
+    add({
+      value: "contact_supportive_person",
+      label: "Reach out to one supportive person",
+      reason: confidenceLow
+        ? "You said recovery support could help, and confidence is low right now."
+        : energyUncertain
+          ? "You said recovery support could help, and energy is uncertain right now."
+          : "You marked recovery support as something you could use right now.",
+    });
+  }
+
+  if (routineOff) {
     add({
       value: "choose_one_task",
-      label: "Pick one task you can finish before deciding what comes next",
-      reason: "You marked confidence as unsettled and routine as off track or mixed.",
+      label: "Restart one part of your routine",
+      reason: confidenceLow
+        ? "Routine feels off track and confidence is low, so one small anchor may be easier to test than fixing the whole day."
+        : "Routine feels off track or mixed, so one small anchor may help you get the day moving.",
+    });
+  }
+
+  if (confidenceLow && !routineOff) {
+    add({
+      value: "choose_one_task",
+      label: "Pick one small thing you can finish",
+      reason: "Confidence is low right now, so a small completed step may give you something concrete to build from.",
     });
   }
 
@@ -110,70 +203,73 @@ function buildActions(draft: WellnessDraft) {
     });
   }
 
+  if (draft.energy === "not_sure" && actions.length === 0) {
+    add({
+      value: "food_water_rest",
+      label: "Check one basic need before deciding what comes next",
+      reason: "Energy is uncertain right now, so food, water, rest, or a little movement can give you a clearer read.",
+    });
+  }
+
   if (draft.overallDay === "hard" || draft.overallDay === "not_sure") {
     add({
       value: "choose_one_task",
-      label: "Choose one thing you can complete in the next part of the day",
-      reason: `You marked things as ${plainValue(draft.overallDay)} right now, so a smaller next move may be easier to test.`,
+      label: "Choose one thing you can complete next",
+      reason: `You marked things as ${plainValue(draft.overallDay)} overall, so a smaller next move may be easier to test.`,
     });
   }
 
-  if (draft.overallDay === "good" || draft.overallDay === "okay") {
+  if (actions.length === 0 && (draft.overallDay === "good" || draft.overallDay === "okay")) {
     add({
       value: "review_today_plan",
       label: "Pick one thing you want to keep steady for the next few hours",
-      reason: `Your overall check-in is ${plainValue(draft.overallDay)} right now.`,
+      reason: `Your overall check-in is ${plainValue(draft.overallDay)} and no stronger unresolved signal is showing up.`,
     });
   }
 
-  const defaults: WellnessGuidanceAction[] = [
-    {
+  if (actions.length === 0) {
+    add({
       value: "choose_one_task",
       label: "Pick one useful thing you can finish",
       reason: "A concrete next step can be easier to evaluate than trying to solve everything at once.",
-    },
-    {
+    });
+  }
+
+  if (!seen.has("contact_supportive_person") && signals.some((signal) => signal.priority >= 4)) {
+    add({
       value: "contact_supportive_person",
       label: "Talk to one supportive person",
-      reason: "Another person may help you get perspective without deciding the answer for you.",
-    },
-    {
-      value: "ask_for_help",
-      label: "Ask THRIVE Support",
-      reason: "Use Support when you want another person in the loop.",
-    },
-    {
+      reason: "Another person may help you get perspective on the areas that still feel unsettled.",
+    });
+  }
+
+  if (!seen.has("food_water_rest") && (draft.energy === "not_sure" || draft.energy === "low" || draft.sleep === "poor")) {
+    add({
       value: "food_water_rest",
       label: "Handle one basic need",
-      reason: "Food, water, rest, or movement can be a simple place to start.",
-    },
-    {
-      value: "take_a_break",
-      label: "Pause for ten minutes",
-      reason: "A short reset can create space before you choose what comes next.",
-    },
-    {
-      value: "review_today_plan",
-      label: "Choose one thing to keep steady",
-      reason: "Pick one part of the day you want to protect or continue.",
-    },
-    {
-      value: "other",
-      label: "Try something else",
-      reason: "Choose a different next step that fits your situation better.",
-    },
-    {
-      value: "none",
-      label: "Save this and come back later",
-      reason: "You can record the moment without taking another action right now.",
-    },
-  ];
+      reason: "Food, water, rest, or movement can be a simple second option while you notice what changes.",
+    });
+  }
 
-  for (const action of defaults) add(action);
+  if (!seen.has("choose_one_task") && (routineOff || confidenceLow)) {
+    add({
+      value: "choose_one_task",
+      label: "Pick one useful thing you can finish",
+      reason: "One small completed step can give you something concrete to work from.",
+    });
+  }
+
+  const primarySuggestion = actions[0];
+  const relevantAlternatives = actions.slice(1, 3);
+  const nothingRightNow: WellnessGuidanceAction = {
+    value: "nothing_right_now",
+    label: "Save this and come back later",
+    reason: "You can record the moment without taking another action right now.",
+  };
 
   return {
-    primarySuggestion: actions[0],
-    otherSuggestions: actions.slice(1),
+    primarySuggestion,
+    otherSuggestions: [...relevantAlternatives, nothingRightNow],
   };
 }
 
@@ -204,40 +300,21 @@ function buildPossibleConnection(draft: WellnessDraft) {
 
   if (
     draft.recoverySupport === "could_use_support" &&
-    (draft.supportNeeded === "yes" || draft.supportNeeded === "not_sure")
+    (draft.confidence === "low" || draft.energy === "not_sure" || draft.supportNeeded === "yes" || draft.supportNeeded === "not_sure")
   ) {
+    const companions: string[] = [];
+    if (draft.confidence === "low") companions.push("confidence is low");
+    if (draft.energy === "not_sure") companions.push("energy is uncertain");
+    if (draft.supportNeeded === "yes") companions.push("you said support would help");
+    if (draft.supportNeeded === "not_sure") companions.push("you are not sure whether support would help");
+
     return {
-      text: "Recovery support and your need for support are both showing up right now and may be worth considering together.",
-      why: `You marked recovery support as could use support and support as ${plainValue(draft.supportNeeded)}.`,
+      text: "Recovery support is one of the clearest unsettled areas right now, and it may be worth looking at alongside the other signals you marked.",
+      why: `You marked recovery support as something you could use, and ${joinPhrases(companions)}.`,
     };
   }
 
   return null;
-}
-
-function buildCurrentSummary(draft: WellnessDraft) {
-  const details = dimensions
-    .map((dimension) => {
-      const value = draftValue(draft, dimension.draftKey);
-      return value ? { label: dimension.label.toLowerCase(), value: plainValue(value) } : null;
-    })
-    .filter((item): item is { label: string; value: string } => Boolean(item));
-
-  if (!draft.overallDay && details.length === 0) {
-    return "You completed the main check-in.";
-  }
-
-  if (!draft.overallDay) {
-    const first = details[0];
-    return first ? `${first.label.replace(/^./, (letter) => letter.toUpperCase())} is ${first.value} right now.` : "You completed the main check-in.";
-  }
-
-  if (details.length === 0) {
-    return `You’re at ${plainValue(draft.overallDay)} right now.`;
-  }
-
-  const first = details[0];
-  return `You’re at ${plainValue(draft.overallDay)} right now, and ${first.label} is ${first.value} too.`;
 }
 
 function buildHistorySummary(
@@ -264,7 +341,7 @@ function buildHistorySummary(
 
   for (const dimension of dimensions) {
     const current = draftValue(draft, dimension.draftKey);
-    const prior = latest ? rowValue(latest, dimension.rowKey) : null;
+    const prior = rowValue(latest, dimension.rowKey);
     if (!current || !prior) continue;
 
     if (current === prior) {
@@ -276,32 +353,47 @@ function buildHistorySummary(
     }
   }
 
-  const when = experienceMode === "same_day" ? "earlier" : "your last check-in";
+  if (experienceMode === "same_day") {
+    if (changes.length === 0 && steady.length > 0) {
+      return {
+        text: `Not much has changed since earlier. ${steady.slice(0, 2).join(", and ")}.`,
+        followUpQuestion: null,
+      };
+    }
+
+    if (changes.length > 0 && steady.length === 0) {
+      return {
+        text: `A little has shifted since earlier. ${changes.slice(0, 2).join(", and ")}.`,
+        followUpQuestion: "What do you think changed between then and now?",
+      };
+    }
+
+    if (changes.length > 0 && steady.length > 0) {
+      return {
+        text: `It’s a mixed picture since earlier. ${changes[0]}, while ${steady[0]}.`,
+        followUpQuestion: "What do you think changed between then and now?",
+      };
+    }
+  }
 
   if (changes.length === 0 && steady.length > 0) {
     return {
-      text: `Not much has changed since ${when}. ${steady.slice(0, 2).join(", and ")}.`,
+      text: `You’re starting from a similar place to your last check-in. ${steady.slice(0, 2).join(", and ")}.`,
       followUpQuestion: null,
     };
   }
 
   if (changes.length > 0 && steady.length === 0) {
     return {
-      text: `A little has shifted since ${when}. ${changes.slice(0, 2).join(", and ")}.`,
-      followUpQuestion:
-        experienceMode === "same_day"
-          ? "What do you think changed between then and now?"
-          : "What do you think may have contributed to that shift?",
+      text: `This check-in feels different from where you left off last time. ${changes.slice(0, 2).join(", and ")}.`,
+      followUpQuestion: "What feels different today?",
     };
   }
 
   if (changes.length > 0 && steady.length > 0) {
     return {
-      text: `It’s a mixed picture since ${when}. ${changes[0]}, while ${steady[0]}.`,
-      followUpQuestion:
-        experienceMode === "same_day"
-          ? "What do you think changed between then and now?"
-          : null,
+      text: `Some things changed since your last check-in while others stayed steady. ${changes[0]}, while ${steady[0]}.`,
+      followUpQuestion: "What feels different today?",
     };
   }
 
@@ -318,39 +410,46 @@ export function buildWellnessGuidance(
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   const latest = priorRows[0] ?? null;
+  const signals = currentSignals(draft);
   const currentSummary = buildCurrentSummary(draft);
   const history = buildHistorySummary(draft, latest, experienceMode);
   const connection = buildPossibleConnection(draft);
   const actionGroups = buildActions(draft);
 
+  const currentEvidence = signals.slice(0, 3).map((signal) => signal.phrase);
+
   let whyShown = connection?.why ?? "";
+
+  if (!whyShown && currentEvidence.length > 0) {
+    whyShown = `THRIVE is showing this because ${joinPhrases(currentEvidence)}.`;
+  }
 
   if (!whyShown && history.text) {
     const evidence: string[] = [];
     if (draft.overallDay && latest?.overall_day) {
       evidence.push(
-        `Earlier you marked things ${plainValue(latest.overall_day)}; right now you marked ${plainValue(draft.overallDay)}`,
+        `last time you marked things ${plainValue(latest.overall_day)} and right now you marked ${plainValue(draft.overallDay)}`,
       );
     }
 
     for (const dimension of dimensions) {
       if (evidence.length >= 2) break;
       const current = draftValue(draft, dimension.draftKey);
-      const prior = latest ? rowValue(latest, dimension.rowKey) : null;
+      const prior = rowValue(latest, dimension.rowKey);
       if (!current || !prior) continue;
       evidence.push(
-        `${dimension.label} was ${plainValue(prior)} and is ${plainValue(current)} now`,
+        `${dimension.label.toLowerCase()} was ${plainValue(prior)} and is ${plainValue(current)} now`,
       );
     }
 
     whyShown = evidence.length > 0
-      ? `${evidence.join(". ")}.`
+      ? `THRIVE is showing this because ${joinPhrases(evidence)}.`
       : "This is based on your current check-in and the most recent Wellness check-in available.";
   }
 
   if (!whyShown) {
     whyShown = draft.overallDay
-      ? `You marked things as ${plainValue(draft.overallDay)} right now.`
+      ? `You marked things as ${plainValue(draft.overallDay)} overall right now.`
       : "This is based on what you recorded in this check-in.";
   }
 

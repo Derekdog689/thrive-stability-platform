@@ -29,6 +29,14 @@ type GoalSupportContext = {
   why: string | null;
 };
 
+type WellnessSupportContext = {
+  overall: string | null;
+  facts: string[];
+};
+
+function readableSignal(label: string, value: string) {
+  return `${label}: ${value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase())}`;
+}
 
 const participantAreas: SupportArea[] = [
   { value: "budget_money", label: "Money", symbol: "$", prompts: ["My Budget does not fit anymore", "I need help with a Budget area", "I want help deciding what to do next"] },
@@ -163,26 +171,64 @@ export default function SupportPage() {
   const [showAllOpen, setShowAllOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [goalContext, setGoalContext] = useState<GoalSupportContext | null>(null);
+  const [wellnessContext, setWellnessContext] = useState<WellnessSupportContext | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("from") !== "goal") return;
+    const source = params.get("from");
 
-    const title = params.get("goalTitle")?.trim() ?? "";
-    const nextStep = params.get("goalNext")?.trim() ?? "";
-    const why = params.get("goalWhy")?.trim() || null;
-    if (!title || !nextStep) return;
+    if (source === "goal") {
+      const title = params.get("goalTitle")?.trim() ?? "";
+      const nextStep = params.get("goalNext")?.trim() ?? "";
+      const why = params.get("goalWhy")?.trim() || null;
+      if (!title || !nextStep) return;
 
-    const context: GoalSupportContext = { title, nextStep, why };
+      const context: GoalSupportContext = { title, nextStep, why };
+      const lines = [
+        `Goal: ${title}`,
+        `Current next step: ${nextStep}`,
+        why ? `Why it matters: ${why}` : null,
+      ].filter(Boolean).join("\n\n");
+
+      setGoalContext(context);
+      setWellnessContext(null);
+      setDraft({
+        participantCategory: "goal_support",
+        participantMessage: lines,
+        requestedSupport: "",
+        contactPreference: "in_app",
+      });
+      setStep(2);
+      setShowCreate(true);
+      return;
+    }
+
+    if (source !== "wellness") return;
+
+    const overall = params.get("overall")?.trim() || null;
+    const factPairs: Array<[string, string | null]> = [
+      ["Stress", params.get("stress")],
+      ["Sleep", params.get("sleep")],
+      ["Energy", params.get("energy")],
+      ["Confidence", params.get("confidence")],
+      ["Routine", params.get("routine")],
+      ["Recovery support", params.get("recoverySupport")],
+      ["Support", params.get("supportNeeded")],
+    ];
+    const facts = factPairs
+      .filter((item): item is [string, string] => Boolean(item[1]))
+      .map(([label, value]) => readableSignal(label, value));
+
+    const context: WellnessSupportContext = { overall, facts };
     const lines = [
-      `Goal: ${title}`,
-      `Current next step: ${nextStep}`,
-      why ? `Why it matters: ${why}` : null,
-    ].filter(Boolean).join("\n\n");
+      overall ? `Overall: ${overall.replaceAll("_", " ")}` : null,
+      ...facts,
+    ].filter(Boolean).join("\n");
 
-    setGoalContext(context);
+    setWellnessContext(context);
+    setGoalContext(null);
     setDraft({
-      participantCategory: "goal_support",
+      participantCategory: "wellness_support",
       participantMessage: lines,
       requestedSupport: "",
       contactPreference: "in_app",
@@ -197,14 +243,15 @@ export default function SupportPage() {
   const otherOpenRequests = useMemo(() => priorityRequest ? openRequests.filter((request) => request.id !== priorityRequest.id) : openRequests, [openRequests, priorityRequest]);
   const selectedArea = participantAreas.find((area) => area.value === draft.participantCategory) ?? participantAreas.at(-1)!;
 
-  function beginCreate() { setGoalContext(null); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
+  function beginCreate() { setGoalContext(null); setWellnessContext(null); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
   function closeCreate() {
     setShowCreate(false);
     setGoalContext(null);
+    setWellnessContext(null);
     setDraft(emptyDraft);
     setStep(1);
     setNotice("");
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "goal") {
+    if (typeof window !== "undefined" && ["goal", "wellness"].includes(new URLSearchParams(window.location.search).get("from") ?? "")) {
       window.history.replaceState({}, "", "/support");
     }
   }
@@ -220,7 +267,8 @@ export default function SupportPage() {
     setStep(1);
     setShowCreate(false);
     setGoalContext(null);
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "goal") {
+    setWellnessContext(null);
+    if (typeof window !== "undefined" && ["goal", "wellness"].includes(new URLSearchParams(window.location.search).get("from") ?? "")) {
       window.history.replaceState({}, "", "/support");
     }
   }
@@ -237,11 +285,18 @@ export default function SupportPage() {
     {!loading && !errorMessage && !canCreate ? <section className="rounded-[1.8rem] bg-white/75 p-6"><h2 className="text-xl font-black">Support is not connected yet</h2></section> : null}
 
     {!loading && !errorMessage && canCreate ? <>
-      {!goalContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityRequest.status === "waiting_for_participant" ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">Needs you</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} /></section> : !goalContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
+      {!goalContext && !wellnessContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityRequest.status === "waiting_for_participant" ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">Needs you</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} /></section> : !goalContext && !wellnessContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
 
-      {!showCreate && !goalContext ? <button type="button" onClick={beginCreate} className="w-full rounded-[1.5rem] bg-emerald-700 px-5 py-4 text-left text-lg font-black text-white shadow-[0_12px_28px_rgba(4,120,87,0.18)]">+ Ask for support</button> : null}
+      {!showCreate && !goalContext && !wellnessContext ? <button type="button" onClick={beginCreate} className="w-full rounded-[1.5rem] bg-emerald-700 px-5 py-4 text-left text-lg font-black text-white shadow-[0_12px_28px_rgba(4,120,87,0.18)]">+ Ask for support</button> : null}
 
       {showCreate ? <form id="support-request-create" onSubmit={submit} className="rounded-[1.8rem] border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur-xl sm:p-7">
+        {wellnessContext ? <section className="mb-5 rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Continuing from Wellness</p>
+          <h2 className="mt-2 text-xl font-black text-slate-950">You do not need to start over.</h2>
+          {wellnessContext.overall ? <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">Overall: {wellnessContext.overall.replaceAll("_", " ")}</p> : null}
+          {wellnessContext.facts.length > 0 ? <div className="mt-3 flex flex-wrap gap-2">{wellnessContext.facts.map((fact) => <span key={fact} className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-black text-emerald-900">{fact}</span>)}</div> : null}
+          <p className="mt-3 text-sm leading-6 text-slate-600">THRIVE carried over what you just reported in Wellness. Review or edit it before you send anything to Support.</p>
+        </section> : null}
         {goalContext ? <section className="mb-5 rounded-[1.4rem] border border-violet-200 bg-violet-50 p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Continuing from Goals</p>
           <h2 className="mt-2 text-xl font-black text-slate-950">{goalContext.title}</h2>
