@@ -210,7 +210,7 @@ export default function SupportPage() {
       setWellnessContext(null);
       setDraft({
         participantCategory: "goal_support",
-        participantMessage: question ?? fallbackMessage,
+        participantMessage: lines,
         requestedSupport: "",
         contactPreference: "in_app",
       });
@@ -249,7 +249,7 @@ export default function SupportPage() {
     setGoalContext(null);
     setDraft({
       participantCategory: "wellness_support",
-      participantMessage: lines,
+      participantMessage: question ?? fallbackMessage,
       requestedSupport: "",
       contactPreference: "in_app",
     });
