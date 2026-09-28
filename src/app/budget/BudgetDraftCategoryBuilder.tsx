@@ -77,9 +77,7 @@ export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, 
   const [acknowledgeOverPlan, setAcknowledgeOverPlan] = useState(false);
   const [showMoreCategories, setShowMoreCategories] = useState(false);
   const [moneyAvailable, setMoneyAvailable] = useState(String(toNumber(draftPeriod.expected_income)));
-  const [incomeConfirmed, setIncomeConfirmed] = useState(
-    currentLines.some((line) => line.is_active) || toNumber(draftPeriod.expected_income) > 0,
-  );
+  const [incomeConfirmed, setIncomeConfirmed] = useState(true);
   const [incomeNotice, setIncomeNotice] = useState("");
   const [reviewingPlan, setReviewingPlan] = useState(false);
 
@@ -201,7 +199,7 @@ export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, 
     return (
       <section className="rounded-[2rem] border border-white/80 bg-white/78 p-5 pb-28 shadow-sm backdrop-blur-2xl sm:p-7 sm:pb-28">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700">Review plan</p>
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700">Step 3 · Review plan</p>
           <h2 className="mt-2 text-4xl font-black leading-tight text-slate-950">Does this look right?</h2>
           <p className="mt-3 max-w-xl text-base font-semibold leading-7 text-slate-600">Nothing is final until you choose Use this plan.</p>
         </div>
@@ -268,7 +266,7 @@ export default function BudgetDraftCategoryBuilder({ draftPeriod, currentLines, 
     <section className="rounded-[2rem] border border-white/80 bg-white/78 p-5 pb-28 shadow-sm backdrop-blur-2xl sm:p-7 sm:pb-28">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700">Continue your plan</p>
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-700">{incomeConfirmed ? "Step 2 · Build the plan" : "Step 1 · Money available"}</p>
           <h2 className="mt-2 text-4xl font-black leading-tight text-slate-950">
             {incomeConfirmed ? "Where do you want this money to go?" : "How much money are you planning with?"}
           </h2>
