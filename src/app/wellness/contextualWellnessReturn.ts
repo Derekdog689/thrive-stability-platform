@@ -68,6 +68,7 @@ function wellnessSupportHref(todayCheckin: WellnessCheckinRow) {
 
   const values: Array<[string, string | null]> = [
     ["overall", todayCheckin.overall_day],
+    ["nextStep", todayCheckin.chosen_next_step],
     ["stress", todayCheckin.stress],
     ["sleep", todayCheckin.sleep],
     ["energy", todayCheckin.energy],
@@ -79,6 +80,10 @@ function wellnessSupportHref(todayCheckin: WellnessCheckinRow) {
 
   for (const [key, value] of values) {
     if (value) params.set(key, value);
+  }
+
+  if (looksLikeQuestion(todayCheckin.participant_note)) {
+    params.set("question", todayCheckin.participant_note!.trim());
   }
 
   return `/support?${params.toString()}`;
