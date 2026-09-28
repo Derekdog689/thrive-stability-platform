@@ -32,10 +32,26 @@ type GoalSupportContext = {
 type WellnessSupportContext = {
   overall: string | null;
   facts: string[];
+  nextStep: string | null;
+  question: string | null;
 };
 
 function readableSignal(label: string, value: string) {
   return `${label}: ${value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase())}`;
+}
+
+function wellnessNextStepLabel(value: string | null) {
+  if (!value) return null;
+  const labels: Record<string, string> = {
+    contact_supportive_person: "Talk to someone supportive",
+    ask_for_help: "Ask THRIVE for help",
+    choose_one_task: "Do one useful thing",
+    review_today_plan: "Keep one thing steady",
+    take_a_break: "Take a break",
+    food_water_rest: "Handle a basic need",
+    other: "Something else",
+  };
+  return labels[value] ?? value.replaceAll("_", " ");
 }
 
 const participantAreas: SupportArea[] = [
@@ -139,7 +155,7 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
         <span className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-black ${needsYou ? "bg-amber-100 text-amber-900" : request.status === "completed" ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>{labelStatus(request.status)}</span>
       </div>
 
-      {!compact ? <div className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm font-bold ${needsYou ? "bg-amber-50 text-amber-950" : "bg-emerald-50/80 text-emerald-950"}`}>{needsYou ? "Support needs something from you." : request.status === "submitted" ? "Support received this. Nothing is needed from you right now." : request.status === "acknowledged" ? "Support has seen this." : request.status === "in_progress" ? "Support is reviewing this." : request.status === "completed" ? "This request is resolved." : "This request is in your history."}</div> : null}
+      {!compact ? <div className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm font-bold ${needsYou ? "bg-amber-50 text-amber-950" : "bg-emerald-50/80 text-emerald-950"}`}>{needsYou ? "Support needs something from you." : request.status === "submitted" ? "Support has your request. You do not need to repeat it." : request.status === "acknowledged" ? "Support has seen this." : request.status === "in_progress" ? "Support is reviewing this." : request.status === "completed" ? "This request is resolved." : "This request is in your history."}</div> : null}
 
       {needsYou ? <section className="mt-4 rounded-[1.4rem] border border-amber-200 bg-amber-50 p-4">
         {latestSupportMessage ? <><p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Support said</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{latestSupportMessage}</p></> : <p className="font-black text-amber-950">A response is needed.</p>}
@@ -206,6 +222,8 @@ export default function SupportPage() {
     if (source !== "wellness") return;
 
     const overall = params.get("overall")?.trim() || null;
+    const nextStep = params.get("nextStep")?.trim() || null;
+    const question = params.get("question")?.trim() || null;
     const factPairs: Array<[string, string | null]> = [
       ["Stress", params.get("stress")],
       ["Sleep", params.get("sleep")],
@@ -219,17 +237,19 @@ export default function SupportPage() {
       .filter((item): item is [string, string] => Boolean(item[1]))
       .map(([label, value]) => readableSignal(label, value));
 
-    const context: WellnessSupportContext = { overall, facts };
-    const lines = [
-      overall ? `Overall: ${overall.replaceAll("_", " ")}` : null,
-      ...facts,
-    ].filter(Boolean).join("\n");
+    const context: WellnessSupportContext = { overall, facts, nextStep, question };
+    const fallbackMessage =
+      nextStep === "contact_supportive_person"
+        ? "I chose to talk to someone supportive."
+        : nextStep === "ask_for_help"
+          ? "I chose to ask THRIVE for help."
+          : "I want help with something from my Wellness check-in.";
 
     setWellnessContext(context);
     setGoalContext(null);
     setDraft({
       participantCategory: "wellness_support",
-      participantMessage: lines,
+      participantMessage: question ?? fallbackMessage,
       requestedSupport: "",
       contactPreference: "in_app",
     });
@@ -292,10 +312,17 @@ export default function SupportPage() {
       {showCreate ? <form id="support-request-create" onSubmit={submit} className="rounded-[1.8rem] border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur-xl sm:p-7">
         {wellnessContext ? <section className="mb-5 rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Continuing from Wellness</p>
-          <h2 className="mt-2 text-xl font-black text-slate-950">You do not need to start over.</h2>
-          {wellnessContext.overall ? <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">Overall: {wellnessContext.overall.replaceAll("_", " ")}</p> : null}
-          {wellnessContext.facts.length > 0 ? <div className="mt-3 flex flex-wrap gap-2">{wellnessContext.facts.map((fact) => <span key={fact} className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-black text-emerald-900">{fact}</span>)}</div> : null}
-          <p className="mt-3 text-sm leading-6 text-slate-600">THRIVE carried over what you just reported in Wellness. Review or edit it before you send anything to Support.</p>
+          <h2 className="mt-2 text-xl font-black text-slate-950">You do not need to explain it again.</h2>
+          {wellnessContext.question ? <div className="mt-4 rounded-[1.1rem] bg-white/90 p-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">You asked</p><p className="mt-2 text-lg font-black leading-7 text-slate-950">{wellnessContext.question}</p></div> : null}
+          {wellnessContext.nextStep ? <p className="mt-3 text-sm font-bold leading-6 text-slate-700">You chose: {wellnessNextStepLabel(wellnessContext.nextStep)}</p> : null}
+          <details className="mt-3 rounded-[1.1rem] border border-emerald-200/80 bg-white/65">
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-emerald-900">Context from Wellness</summary>
+            <div className="border-t border-emerald-100 px-4 py-3 text-sm leading-6 text-slate-600">
+              {wellnessContext.overall ? <p><strong>Overall:</strong> {wellnessContext.overall.replaceAll("_", " ")}</p> : null}
+              {wellnessContext.facts.length > 0 ? <ul className="mt-2 space-y-1">{wellnessContext.facts.map((fact) => <li key={fact}>{fact}</li>)}</ul> : null}
+            </div>
+          </details>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Review or edit your question below, then send it when you are ready.</p>
         </section> : null}
         {goalContext ? <section className="mb-5 rounded-[1.4rem] border border-violet-200 bg-violet-50 p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Continuing from Goals</p>
@@ -305,7 +332,7 @@ export default function SupportPage() {
         </section> : null}
         <div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Ask for support</p><div className="mt-2 flex gap-1.5"><span className="h-1.5 w-10 rounded-full bg-emerald-600" /><span className={`h-1.5 w-10 rounded-full ${step === 2 ? "bg-emerald-600" : "bg-slate-200"}`} /></div></div><button type="button" onClick={closeCreate} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black">Close</button></div>
         {step === 1 ? <section className="mt-6"><h2 className="text-3xl font-black">What is this about?</h2><div className="mt-4 grid grid-cols-2 gap-3">{participantAreas.map((area) => <button key={area.value} type="button" onClick={() => chooseArea(area)} className="flex min-h-24 flex-col items-center justify-center rounded-[1.4rem] border border-slate-200 bg-white px-3 py-4 text-center transition active:scale-[0.98]"><span className="text-2xl font-black text-emerald-800">{area.symbol}</span><span className="mt-2 font-black">{area.label}</span></button>)}</div></section> : null}
-        {step === 2 ? <section className="mt-6"><button type="button" onClick={() => setStep(1)} className="text-sm font-black text-slate-600">← Back</button><p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{selectedArea.label}</p><h2 className="mt-1 text-3xl font-black">Tell Support what is happening.</h2><div className="mt-4 flex flex-wrap gap-2">{selectedArea.prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft((current) => ({ ...current, requestedSupport: prompt }))} className={`rounded-full border px-3 py-2 text-xs font-black ${draft.requestedSupport === prompt ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-200 bg-white text-slate-600"}`}>{prompt}</button>)}</div><textarea value={draft.participantMessage} onChange={(event) => setDraft((current) => ({ ...current, participantMessage: event.target.value }))} maxLength={4000} rows={5} autoFocus className="mt-4 w-full rounded-[1.3rem] border border-slate-200 bg-white px-4 py-3" placeholder="What is happening?" />
+        {step === 2 ? <section className="mt-6"><button type="button" onClick={() => setStep(1)} className="text-sm font-black text-slate-600">← Back</button><p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{selectedArea.label}</p><h2 className="mt-1 text-3xl font-black">{wellnessContext ? "What do you want help with?" : "Tell Support what is happening."}</h2><div className="mt-4 flex flex-wrap gap-2">{selectedArea.prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft((current) => ({ ...current, requestedSupport: prompt }))} className={`rounded-full border px-3 py-2 text-xs font-black ${draft.requestedSupport === prompt ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-200 bg-white text-slate-600"}`}>{prompt}</button>)}</div><textarea value={draft.participantMessage} onChange={(event) => setDraft((current) => ({ ...current, participantMessage: event.target.value }))} maxLength={4000} rows={5} autoFocus className="mt-4 w-full rounded-[1.3rem] border border-slate-200 bg-white px-4 py-3" placeholder="What is happening?" />
           <details className="mt-3 rounded-[1.2rem] border border-slate-200 bg-white/60"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-slate-700">Follow-up preference · {labelContact(draft.contactPreference)}</summary><div className="grid grid-cols-2 gap-2 border-t border-slate-200 p-3">{contactOptions.map((option) => <button key={option.value} type="button" onClick={() => setDraft((current) => ({ ...current, contactPreference: option.value }))} className={`rounded-xl border px-3 py-2.5 text-sm font-black ${draft.contactPreference === option.value ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>{option.label}</button>)}</div></details>
           <button type="submit" disabled={working || !draft.participantMessage.trim()} className="mt-4 w-full rounded-full bg-emerald-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send to Support"}</button>{notice ? <p className="mt-3 text-sm font-bold text-slate-600">{notice}</p> : null}</section> : null}
       </form> : null}
