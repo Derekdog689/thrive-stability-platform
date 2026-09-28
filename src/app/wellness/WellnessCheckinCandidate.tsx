@@ -36,6 +36,8 @@ function nextStepRoute(
     routine: string | null;
     recovery_support: string | null;
     support_needed: string | null;
+    chosen_next_step: string | null;
+    participant_note: string | null;
   } | null,
 ) {
   if (value !== "contact_supportive_person" && value !== "ask_for_help") return null;
@@ -44,6 +46,7 @@ function nextStepRoute(
   const params = new URLSearchParams({ from: "wellness" });
   const values: Array<[string, string | null]> = [
     ["overall", checkin.overall_day],
+    ["nextStep", checkin.chosen_next_step],
     ["stress", checkin.stress],
     ["sleep", checkin.sleep],
     ["energy", checkin.energy],
@@ -55,6 +58,11 @@ function nextStepRoute(
 
   for (const [key, current] of values) {
     if (current) params.set(key, current);
+  }
+
+  const note = checkin.participant_note?.trim() ?? "";
+  if (note && (note.includes("?") || /^(how|what|why|where|when|who|can|could|should|do|does|is|are|would)\b/i.test(note))) {
+    params.set("question", note);
   }
 
   return `/support?${params.toString()}`;
