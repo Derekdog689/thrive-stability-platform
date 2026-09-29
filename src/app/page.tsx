@@ -144,6 +144,12 @@ export default function TodayPage() {
 
   const currentGoal = activeGoals.find((goal) => goal.progress_status === "in_progress") ?? activeGoals.find((goal) => goal.progress_status === "not_started") ?? null;
   const unresolvedSupportRequest = requests.find((request) => !["completed", "withdrawn", "archived"].includes(request.status)) ?? null;
+  const assistedMoneyReviewRequest = requests.find(
+    (request) =>
+      request.status === "waiting_for_participant" &&
+      request.participant_category === "budget_money" &&
+      Boolean(request.linked_budget_period_id),
+  ) ?? null;
   const supportNeedsParticipant = unresolvedSupportRequest?.status === "waiting_for_participant";
   const openGoalCount = activeGoals.filter((goal) => !["completed", "archived"].includes(goal.progress_status)).length;
 
@@ -154,6 +160,14 @@ export default function TodayPage() {
 
   const primaryAction = useMemo(() => {
     if (isNewParticipant) return { label: "Start here", title: "Check in", detail: "Tell THRIVE how things are going right now.", href: "/wellness", action: "Check in", icon: "wellness" as IconName };
+    if (assistedMoneyReviewRequest?.linked_budget_period_id) return {
+      label: "Ready for you",
+      title: "Your starter Money plan is ready",
+      detail: "Support prepared a starting point. Review it, change anything you want, and use it only if it works for you.",
+      href: `/budget?review=${encodeURIComponent(assistedMoneyReviewRequest.linked_budget_period_id)}`,
+      action: "Review plan",
+      icon: "money" as IconName,
+    };
     if (supportNeedsParticipant) return { label: "Needs you", title: "Support needs your reply", detail: "There is a message waiting for you.", href: "/support", action: "Reply", icon: "support" as IconName };
     if (budgetExpired && activeBudgetPeriod) return { label: "Needs you", title: "Your Money plan ended", detail: "Review the finished plan when you are ready to set up the next one.", href: "/budget", action: "Review Money", icon: "money" as IconName };
     if (!todayCheckin) return { label: "Start here", title: "Check in", detail: "Tell THRIVE how things are going right now.", href: "/wellness", action: "Check in", icon: "wellness" as IconName };
@@ -161,7 +175,7 @@ export default function TodayPage() {
     if (!goalsDoneForNow && currentGoal?.next_step) return { label: "One thing you can continue", title: currentGoal.title, detail: currentGoal.next_step, href: "/goals", action: "Continue goal", icon: "goal" as IconName };
     if (needsNextMoneyPlan) return { label: "When you're ready", title: "Start your next Money plan", detail: "Your last plan is complete. Set up the next one when it is useful.", href: "/budget", action: "Open Money", icon: "money" as IconName };
     return { label: "Right now", title: "You’re caught up", detail: "Nothing in THRIVE needs your attention. Come back when something changes or when you want to work on something.", href: "/", action: "", icon: "today" as IconName };
-  }, [isNewParticipant, supportNeedsParticipant, budgetExpired, activeBudgetPeriod, todayCheckin, currentGoal, needsNextMoneyPlan, goalsDoneForNow]);
+  }, [isNewParticipant, assistedMoneyReviewRequest, supportNeedsParticipant, budgetExpired, activeBudgetPeriod, todayCheckin, currentGoal, needsNextMoneyPlan, goalsDoneForNow]);
 
   if (loading) {
     return <AuthGate><main className="min-h-screen bg-[#edf5ef] px-4 py-10 text-slate-950"><div className="mx-auto max-w-2xl rounded-[2rem] border border-white/70 bg-white/70 p-8 shadow-sm backdrop-blur-xl"><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">THRIVE Now</p><h1 className="mt-3 text-3xl font-black">Getting things ready...</h1></div></main></AuthGate>;
@@ -208,7 +222,7 @@ export default function TodayPage() {
               <Link href="/wellness" className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-white/85 bg-white/72 p-4 transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><Icon name="wellness" className="h-6 w-6 text-emerald-800" /><div><p className="font-black text-slate-950">Wellness</p><p className="mt-1 text-xs font-semibold text-slate-500">How things are going</p></div></div><span className="shrink-0 text-xs font-black text-emerald-800">{todayCheckin ? signal.label : "Check in"}</span></Link>
               <Link href="/goals" className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-white/85 bg-white/72 p-4 transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><Icon name="goal" className="h-6 w-6 text-amber-800" /><div><p className="font-black text-slate-950">Goals</p><p className="mt-1 text-xs font-semibold text-slate-500">What you want to move forward</p></div></div><span className="shrink-0 text-xs font-black text-amber-800">{openGoalCount > 0 ? `${openGoalCount} open` : "Open"}</span></Link>
               <Link href="/budget" className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-white/85 bg-white/72 p-4 transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><Icon name="money" className="h-6 w-6 text-cyan-800" /><div><p className="font-black text-slate-950">Money</p><p className="mt-1 text-xs font-semibold text-slate-500">Your plan and activity</p></div></div><span className="shrink-0 text-xs font-black text-cyan-900">{budgetExpired ? "Plan ended" : activeBudgetPeriod ? `${formatMoneyShort(budgetRemaining)} left` : needsNextMoneyPlan ? "Next plan" : "No plan"}</span></Link>
-              <Link href="/support" className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-white/85 bg-white/72 p-4 transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><Icon name="support" className="h-6 w-6 text-violet-800" /><div><p className="font-black text-slate-950">Support</p><p className="mt-1 text-xs font-semibold text-slate-500">Questions and replies</p></div></div><span className="shrink-0 text-xs font-black text-violet-800">{supportState(unresolvedSupportRequest?.status)}</span></Link>
+              <Link href="/support" className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-white/85 bg-white/72 p-4 transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><Icon name="support" className="h-6 w-6 text-violet-800" /><div><p className="font-black text-slate-950">Support</p><p className="mt-1 text-xs font-semibold text-slate-500">Questions and replies</p></div></div><span className="shrink-0 text-xs font-black text-violet-800">{assistedMoneyReviewRequest ? "Plan ready" : supportState(unresolvedSupportRequest?.status)}</span></Link>
             </div>
           </section>
         </section>
