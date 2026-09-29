@@ -47,7 +47,7 @@ create or replace function public.prepare_assisted_budget_v1(
 )
 returns uuid
 language plpgsql
-security definer
+security invoker
 set search_path to ''
 as $function$
 declare
@@ -282,6 +282,36 @@ begin
   return v_budget_period_id;
 end;
 $function$;
+
+drop policy if exists support_request_links_insert_workspace_admins
+  on public.support_request_links;
+
+create policy support_request_links_insert_workspace_admins
+on public.support_request_links
+for insert
+to authenticated
+with check (
+  created_by = auth.uid()
+  and archived_at is null
+  and budget_period_id is not null
+  and public.is_workspace_admin(workspace_id)
+  and public.is_program_in_workspace(program_id, workspace_id)
+  and public.is_supported_person_in_workspace(supported_person_id, workspace_id)
+  and public.is_program_participant_active(
+    supported_person_id,
+    program_id,
+    workspace_id
+  )
+  and exists (
+    select 1
+    from public.support_requests sr
+    where sr.id = support_request_id
+      and sr.workspace_id = workspace_id
+      and sr.program_id = program_id
+      and sr.supported_person_id = supported_person_id
+      and sr.participant_category = 'budget_money'
+  )
+);
 
 revoke all on function public.prepare_assisted_budget_v1(
   uuid, date, date, numeric, text, jsonb
