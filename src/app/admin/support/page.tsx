@@ -992,6 +992,15 @@ export default function AdminSupportPage() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap items-center gap-3">
+                        {membership?.member_role === "admin" && request.participant_category === "budget_money" ? (
+                          <Link
+                            href={"/admin/assisted-budget?request=" + encodeURIComponent(request.id)}
+                            className="rounded-2xl bg-sky-700 px-4 py-2 text-sm font-bold text-white"
+                          >
+                            Prepare starter budget
+                          </Link>
+                        ) : null}
+
                         {request.status === "submitted" ? (
                           <button
                             type="button"
