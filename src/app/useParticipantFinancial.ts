@@ -81,6 +81,22 @@ export type FinancialActivityAllocation = {
   archived_at: string | null;
 };
 
+export type FinancialActivityPeriodLink = {
+  id: string;
+  workspace_id: string;
+  program_id: string;
+  supported_person_id: string;
+  activity_record_type: "imported" | "manual";
+  staged_transaction_id: string | null;
+  manual_financial_activity_id: string | null;
+  budget_period_id: string;
+  status: "active" | "archived";
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  archive_reason: string | null;
+};
+
 export type BudgetPeriod = {
   id: string;
   period_start: string;
@@ -285,6 +301,11 @@ const [
   setFinancialActivityAllocations,
 ] = useState<FinancialActivityAllocation[]>([]);
 
+const [
+  financialActivityPeriodLinks,
+  setFinancialActivityPeriodLinks,
+] = useState<FinancialActivityPeriodLink[]>([]);
+
 const [budgetPeriods, setBudgetPeriods] =
   useState<BudgetPeriod[]>([]);
 
@@ -346,6 +367,7 @@ const [budgetPeriods, setBudgetPeriods] =
   transactionResult,
   financialActivityResult,
   financialActivityAllocationResult,
+  financialActivityPeriodLinkResult,
   periodResult,
   programParticipantResult,
 ] = await Promise.all([
@@ -367,6 +389,13 @@ const [budgetPeriods, setBudgetPeriods] =
       supabase.rpc(
         "get_my_financial_activity_allocations_v1",
       ),
+
+      supabase
+        .from("participant_financial_activity_period_links")
+        .select(
+          "id, workspace_id, program_id, supported_person_id, activity_record_type, staged_transaction_id, manual_financial_activity_id, budget_period_id, status, created_at, updated_at, archived_at, archive_reason",
+        )
+        .order("created_at", { ascending: true }),
 
       supabase
         .from("participant_budget_periods")
@@ -391,6 +420,7 @@ const [budgetPeriods, setBudgetPeriods] =
       transactionResult.error ??
       financialActivityResult.error ??
       financialActivityAllocationResult.error ??
+      financialActivityPeriodLinkResult.error ??
       periodResult.error ??
       programParticipantResult.error;
 
@@ -452,6 +482,11 @@ const [budgetPeriods, setBudgetPeriods] =
   (financialActivityAllocationResult.data ??
     []) as FinancialActivityAllocation[],
 );
+
+    setFinancialActivityPeriodLinks(
+      (financialActivityPeriodLinkResult.data ??
+        []) as FinancialActivityPeriodLink[],
+    );
 
     setBudgetPeriods(orderedPeriods);
 
@@ -539,6 +574,7 @@ setBudgetLines(
     transactions,
 financialActivity,
 financialActivityAllocations,
+financialActivityPeriodLinks,
 budgetPeriods,
 budgetLines,
     totalOutflow,
