@@ -188,10 +188,26 @@ export default function SupportPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [goalContext, setGoalContext] = useState<GoalSupportContext | null>(null);
   const [wellnessContext, setWellnessContext] = useState<WellnessSupportContext | null>(null);
+  const [moneyContext, setMoneyContext] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const source = params.get("from");
+
+    if (source === "money") {
+      setMoneyContext(true);
+      setGoalContext(null);
+      setWellnessContext(null);
+      setDraft({
+        participantCategory: "budget_money",
+        participantMessage: "I’d like help building a starter Money plan.",
+        requestedSupport: "Help me build a starter plan I can review before I use it.",
+        contactPreference: "in_app",
+      });
+      setStep(2);
+      setShowCreate(true);
+      return;
+    }
 
     if (source === "goal") {
       const title = params.get("goalTitle")?.trim() ?? "";
@@ -263,15 +279,16 @@ export default function SupportPage() {
   const otherOpenRequests = useMemo(() => priorityRequest ? openRequests.filter((request) => request.id !== priorityRequest.id) : openRequests, [openRequests, priorityRequest]);
   const selectedArea = participantAreas.find((area) => area.value === draft.participantCategory) ?? participantAreas.at(-1)!;
 
-  function beginCreate() { setGoalContext(null); setWellnessContext(null); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
+  function beginCreate() { setGoalContext(null); setWellnessContext(null); setMoneyContext(false); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
   function closeCreate() {
     setShowCreate(false);
     setGoalContext(null);
     setWellnessContext(null);
+    setMoneyContext(false);
     setDraft(emptyDraft);
     setStep(1);
     setNotice("");
-    if (typeof window !== "undefined" && ["goal", "wellness"].includes(new URLSearchParams(window.location.search).get("from") ?? "")) {
+    if (typeof window !== "undefined" && ["goal", "wellness", "money"].includes(new URLSearchParams(window.location.search).get("from") ?? "")) {
       window.history.replaceState({}, "", "/support");
     }
   }
@@ -288,7 +305,7 @@ export default function SupportPage() {
     setShowCreate(false);
     setGoalContext(null);
     setWellnessContext(null);
-    if (typeof window !== "undefined" && ["goal", "wellness"].includes(new URLSearchParams(window.location.search).get("from") ?? "")) {
+    if (typeof window !== "undefined" && ["goal", "wellness", "money"].includes(new URLSearchParams(window.location.search).get("from") ?? "")) {
       window.history.replaceState({}, "", "/support");
     }
   }
@@ -305,11 +322,17 @@ export default function SupportPage() {
     {!loading && !errorMessage && !canCreate ? <section className="rounded-[1.8rem] bg-white/75 p-6"><h2 className="text-xl font-black">Support is not connected yet</h2></section> : null}
 
     {!loading && !errorMessage && canCreate ? <>
-      {!goalContext && !wellnessContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityRequest.status === "waiting_for_participant" ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">Needs you</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} /></section> : !goalContext && !wellnessContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
+      {!goalContext && !wellnessContext && !moneyContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityRequest.status === "waiting_for_participant" ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">Needs you</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} /></section> : !goalContext && !wellnessContext && !moneyContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
 
-      {!showCreate && !goalContext && !wellnessContext ? <button type="button" onClick={beginCreate} className="w-full rounded-[1.5rem] bg-emerald-700 px-5 py-4 text-left text-lg font-black text-white shadow-[0_12px_28px_rgba(4,120,87,0.18)]">+ Ask for support</button> : null}
+      {!showCreate && !goalContext && !wellnessContext && !moneyContext ? <button type="button" onClick={beginCreate} className="w-full rounded-[1.5rem] bg-emerald-700 px-5 py-4 text-left text-lg font-black text-white shadow-[0_12px_28px_rgba(4,120,87,0.18)]">+ Ask for support</button> : null}
 
       {showCreate ? <form id="support-request-create" onSubmit={submit} className="rounded-[1.8rem] border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur-xl sm:p-7">
+        {moneyContext ? <section className="mb-5 rounded-[1.4rem] border border-sky-200 bg-sky-50 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">Continuing from Money</p>
+          <h2 className="mt-2 text-xl font-black text-slate-950">You do not need to figure out the whole plan first.</h2>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">Support can help prepare a starter plan for you to review. Nothing becomes active until you choose to use it.</p>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Review or edit the request below, then send it when you are ready.</p>
+        </section> : null}
         {wellnessContext ? <section className="mb-5 rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Continuing from Wellness</p>
           <h2 className="mt-2 text-xl font-black text-slate-950">You do not need to explain it again.</h2>
@@ -332,7 +355,7 @@ export default function SupportPage() {
         </section> : null}
         <div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Ask for support</p><div className="mt-2 flex gap-1.5"><span className="h-1.5 w-10 rounded-full bg-emerald-600" /><span className={`h-1.5 w-10 rounded-full ${step === 2 ? "bg-emerald-600" : "bg-slate-200"}`} /></div></div><button type="button" onClick={closeCreate} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black">Close</button></div>
         {step === 1 ? <section className="mt-6"><h2 className="text-3xl font-black">What is this about?</h2><div className="mt-4 grid grid-cols-2 gap-3">{participantAreas.map((area) => <button key={area.value} type="button" onClick={() => chooseArea(area)} className="flex min-h-24 flex-col items-center justify-center rounded-[1.4rem] border border-slate-200 bg-white px-3 py-4 text-center transition active:scale-[0.98]"><span className="text-2xl font-black text-emerald-800">{area.symbol}</span><span className="mt-2 font-black">{area.label}</span></button>)}</div></section> : null}
-        {step === 2 ? <section className="mt-6"><button type="button" onClick={() => setStep(1)} className="text-sm font-black text-slate-600">← Back</button><p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{selectedArea.label}</p><h2 className="mt-1 text-3xl font-black">{wellnessContext ? "What do you want help with?" : "Tell Support what is happening."}</h2><div className="mt-4 flex flex-wrap gap-2">{selectedArea.prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft((current) => ({ ...current, requestedSupport: prompt }))} className={`rounded-full border px-3 py-2 text-xs font-black ${draft.requestedSupport === prompt ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-200 bg-white text-slate-600"}`}>{prompt}</button>)}</div><textarea value={draft.participantMessage} onChange={(event) => setDraft((current) => ({ ...current, participantMessage: event.target.value }))} maxLength={4000} rows={5} autoFocus className="mt-4 w-full rounded-[1.3rem] border border-slate-200 bg-white px-4 py-3" placeholder="What is happening?" />
+        {step === 2 ? <section className="mt-6"><button type="button" onClick={() => setStep(1)} className="text-sm font-black text-slate-600">← Back</button><p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{selectedArea.label}</p><h2 className="mt-1 text-3xl font-black">{wellnessContext || moneyContext ? "What do you want help with?" : "Tell Support what is happening."}</h2><div className="mt-4 flex flex-wrap gap-2">{selectedArea.prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft((current) => ({ ...current, requestedSupport: prompt }))} className={`rounded-full border px-3 py-2 text-xs font-black ${draft.requestedSupport === prompt ? "border-emerald-700 bg-emerald-700 text-white" : "border-slate-200 bg-white text-slate-600"}`}>{prompt}</button>)}</div><textarea value={draft.participantMessage} onChange={(event) => setDraft((current) => ({ ...current, participantMessage: event.target.value }))} maxLength={4000} rows={5} autoFocus className="mt-4 w-full rounded-[1.3rem] border border-slate-200 bg-white px-4 py-3" placeholder="What is happening?" />
           <details className="mt-3 rounded-[1.2rem] border border-slate-200 bg-white/60"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-slate-700">Follow-up preference · {labelContact(draft.contactPreference)}</summary><div className="grid grid-cols-2 gap-2 border-t border-slate-200 p-3">{contactOptions.map((option) => <button key={option.value} type="button" onClick={() => setDraft((current) => ({ ...current, contactPreference: option.value }))} className={`rounded-xl border px-3 py-2.5 text-sm font-black ${draft.contactPreference === option.value ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>{option.label}</button>)}</div></details>
           <button type="submit" disabled={working || !draft.participantMessage.trim()} className="mt-4 w-full rounded-full bg-emerald-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send to Support"}</button>{notice ? <p className="mt-3 text-sm font-bold text-slate-600">{notice}</p> : null}</section> : null}
       </form> : null}
