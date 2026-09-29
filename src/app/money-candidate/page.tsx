@@ -208,6 +208,7 @@ export default function MoneyCandidatePage() {
   const [showPlanSetup, setShowPlanSetup] = useState(false);
   const [showOrientationHelp, setShowOrientationHelp] = useState(false);
   const [focusDraftPlan, setFocusDraftPlan] = useState(false);
+  const [assistedDraft, setAssistedDraft] = useState(false);
 
   const activePeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
   const draftPeriod = budgetPeriods.find((period) => period.status === "draft") ?? null;
@@ -240,6 +241,31 @@ export default function MoneyCandidatePage() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [focusDraftPlan, draftPeriod, showPlanSetup]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAssistedDraftState() {
+      if (!draftPeriod) {
+        setAssistedDraft(false);
+        return;
+      }
+
+      const result = await supabase
+        .from("support_request_links")
+        .select("id")
+        .eq("budget_period_id", draftPeriod.id)
+        .is("archived_at", null)
+        .limit(1);
+
+      if (!cancelled) {
+        setAssistedDraft(!result.error && (result.data?.length ?? 0) > 0);
+      }
+    }
+
+    void loadAssistedDraftState();
+    return () => { cancelled = true; };
+  }, [draftPeriod]);
 
   function scrollToMoneySection(id: string) {
     window.requestAnimationFrame(() => {
@@ -468,10 +494,11 @@ export default function MoneyCandidatePage() {
         </div>
       ) : (
         <section className="rounded-[2rem] border border-sky-100 bg-sky-50/80 p-5 shadow-sm sm:p-7">
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-sky-700">Your draft is waiting</p>
-          <h2 className="mt-2 text-3xl font-black text-sky-950">Continue when you’re ready.</h2>
-          <p className="mt-2 text-base font-semibold leading-7 text-sky-800">The plan stays here. Open it when you want to work on what needs to be covered.</p>
-          <button type="button" onClick={() => { setShowPlanSetup(true); scrollToMoneySection("money-plan"); }} className="mt-4 w-full rounded-full bg-sky-700 px-5 py-4 text-lg font-black text-white">Continue plan</button>
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-sky-700">{assistedDraft ? "Starter plan ready" : "Your draft is waiting"}</p>
+          <h2 className="mt-2 text-3xl font-black text-sky-950">{assistedDraft ? "Support prepared a starting point for you." : "Continue when you’re ready."}</h2>
+          <p className="mt-2 text-base font-semibold leading-7 text-sky-800">{assistedDraft ? "Nothing is final. Review every amount, change anything you want, and use the plan only if it works for you." : "The plan stays here. Open it when you want to work on what needs to be covered."}</p>
+          <button type="button" onClick={() => { setShowPlanSetup(true); scrollToMoneySection("money-plan"); }} className="mt-4 w-full rounded-full bg-sky-700 px-5 py-4 text-lg font-black text-white">{assistedDraft ? "Review starter plan" : "Continue plan"}</button>
+          {assistedDraft ? <p className="mt-3 text-sm font-semibold leading-6 text-sky-800">You still make the final choice before this plan becomes active.</p> : null}
         </section>
       )
     ) : null}
