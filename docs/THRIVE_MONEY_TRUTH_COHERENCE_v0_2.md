@@ -1,4 +1,4 @@
-# THRIVE Money Truth / Coherence v0.2 Candidate
+# THRIVE Money Truth / Coherence v0.2
 
 ## Verified defects
 
@@ -10,7 +10,7 @@
 6. Admin assisted-budget setup prefilled Total Money Available with $1,500, making total-plan money too easy to confuse with a Housing/Rent allocation.
 7. Inflows currently have no explicit Budget-period ownership relationship; date overlap is the only connection.
 
-## Candidate behavior
+## Installed / candidate behavior
 
 ### Budget activity truth
 
@@ -42,15 +42,24 @@ For a `budget_money` Support request that is `waiting_for_participant` and has a
 Outflows already have an explicit period relationship through
 `participant_financial_activity_allocations`.
 
-Inflows do not.
+Inflows did not have an explicit Budget-period ownership relationship.
 
-The review-only SQL candidate adds
-`participant_financial_activity_period_links` for period-only ownership,
-primarily for inflows. It intentionally does not change or reinterpret any
-historical activity.
+On 2026-09-29 the live database was reconciled and hardened around
+`participant_financial_activity_period_links`. The table already existed
+with zero rows, so it was preserved rather than recreated. The insert policy
+was replaced with participant-scoped validation, `archive_reason` was added,
+and the following participant RPCs were installed:
 
-Until that schema candidate is separately approved and installed, the UI
-candidate must not claim that date-overlapping inflows belong to a Budget.
+- `link_my_inflow_to_budget_v1`
+- `create_my_manual_inflow_for_budget_v1`
+
+Manual Money-in added from an active Budget is now created and linked in one
+transaction. Linked manual inflows are guarded so their direction cannot be
+changed to outflow and their date cannot be moved outside the owning Budget.
+Archiving the manual activity archives the period link instead of deleting it.
+
+The ownership validator was hardened to SECURITY INVOKER after advisor review.
+No historical activity was backfilled or reinterpreted.
 
 ## Frozen boundaries
 
@@ -60,3 +69,15 @@ candidate must not claim that date-overlapping inflows belong to a Budget.
 - no hard deletes;
 - no Trust Engine crossover;
 - participant remains the final actor for assisted-plan activation.
+
+
+## Verification checkpoint
+
+- authenticated manual Money-in can be created and linked to its active Budget;
+- direct attempts to use the inflow link for an outflow are denied;
+- RLS blocks direct invalid link inserts;
+- linked inflow direction/date guards pass;
+- archiving a linked manual inflow archives its period link;
+- anon cannot execute the new write RPCs;
+- Supabase security advisor shows no new finding for the installed ownership helper;
+- current live Budget `bddadb93-df3c-4167-be36-ad7d67fabbd5` has zero explicit period links and zero current-Budget outflow allocations from this feature, so prior date-overlapping activity is not treated as owned activity by the v0.2 UI.
