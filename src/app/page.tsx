@@ -261,7 +261,7 @@ export default function TodayPage() {
                   <h2 className="mt-2 text-2xl font-black leading-tight text-slate-950">{visibleSynthesis.headline}</h2>
                   <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{visibleSynthesis.detail}</p>
                 </div>
-                <span className="shrink-0 rounded-full border border-cyan-100 bg-white/70 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-cyan-900">Why this</span>
+
               </div>
 
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
