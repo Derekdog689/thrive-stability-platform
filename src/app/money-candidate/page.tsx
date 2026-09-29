@@ -234,13 +234,26 @@ export default function MoneyCandidatePage() {
   const recentExplainedCount = recentActivityPreview.filter((activity) => activity.activity_record_type === "imported" && explanationByTransactionId.get(activity.activity_id)?.status !== "archived" && explanationByTransactionId.has(activity.activity_id)).length;
 
   useEffect(() => {
-    if (!focusDraftPlan || !draftPeriod || !showPlanSetup) return;
-    const frame = window.requestAnimationFrame(() => {
-      document.getElementById("money-plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!focusDraftPlan || !draftPeriod || !showPlanSetup || loading) return;
+
+    const moveToStepTwo = () => {
+      const target = document.getElementById("money-plan");
+      if (!target) return;
+      const top = window.scrollY + target.getBoundingClientRect().top - 76;
+      window.scrollTo({ top: Math.max(top, 0), behavior: "auto" });
+    };
+
+    const firstPass = window.setTimeout(moveToStepTwo, 80);
+    const settlePass = window.setTimeout(() => {
+      moveToStepTwo();
       setFocusDraftPlan(false);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [focusDraftPlan, draftPeriod, showPlanSetup]);
+    }, 420);
+
+    return () => {
+      window.clearTimeout(firstPass);
+      window.clearTimeout(settlePass);
+    };
+  }, [focusDraftPlan, draftPeriod, showPlanSetup, loading]);
 
   useEffect(() => {
     let cancelled = false;
