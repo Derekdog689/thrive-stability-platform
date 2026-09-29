@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AuthGate from "./AuthGate";
+import { buildCrossLaneSynthesis } from "./crossLaneSynthesis";
 import { useParticipantGoals } from "./goals/useParticipantGoals";
 import { useParticipantSupport } from "./support/useParticipantSupport";
 import { useWellnessCheckinCandidate } from "./wellness/useWellnessCheckinCandidate";
@@ -101,7 +102,7 @@ function TodayBottomNav() {
 }
 
 export default function TodayPage() {
-  const { participantName, financialActivity, budgetPeriods, budgetLines, loading: financialLoading, errorMessage: financialErrorMessage } = useParticipantFinancial();
+  const { participant, participantName, financialActivity, budgetPeriods, budgetLines, loading: financialLoading, errorMessage: financialErrorMessage } = useParticipantFinancial();
   const { todayCheckin, recentCheckins, today: wellnessToday, loading: wellnessLoading, errorMessage: wellnessErrorMessage } = useWellnessCheckinCandidate();
   const { goals, activeGoals, loading: goalsLoading, errorMessage: goalsErrorMessage } = useParticipantGoals();
   const { requests, assistedBudgetLinks, loading: supportLoading, errorMessage: supportErrorMessage } = useParticipantSupport();
@@ -109,6 +110,7 @@ export default function TodayPage() {
   const [timeGreeting, setTimeGreeting] = useState("Hello");
   const [signingOut, setSigningOut] = useState(false);
   const [goalsDoneForNow, setGoalsDoneForNow] = useState(false);
+  const [dismissedSynthesisId, setDismissedSynthesisId] = useState<string | null>(null);
 
   useEffect(() => {
     setTimeGreeting(getTimeGreeting(new Date().getHours()));
@@ -143,6 +145,17 @@ export default function TodayPage() {
   const budgetRemaining = activeBudgetLines.reduce((sum, line) => sum + toNumber(line.derived_remaining_amount), 0);
 
   const currentGoal = activeGoals.find((goal) => goal.progress_status === "in_progress") ?? activeGoals.find((goal) => goal.progress_status === "not_started") ?? null;
+  const synthesis = useMemo(
+    () =>
+      buildCrossLaneSynthesis({
+        todayCheckin,
+        currentGoal,
+        supportRequests: requests,
+        assistedBudgetLinks,
+        activeBudgetPeriod,
+      }),
+    [todayCheckin, currentGoal, requests, assistedBudgetLinks, activeBudgetPeriod],
+  );
   const assistedBudgetByRequestId = new Map(assistedBudgetLinks.map((item) => [item.support_request_id, item]));
   const unresolvedSupportRequest = requests.find((request) => !["completed", "withdrawn", "archived"].includes(request.status)) ?? null;
   const assistedBudgetReviewRequest = requests.find((request) => {
@@ -172,6 +185,26 @@ export default function TodayPage() {
   const errorMessage = financialErrorMessage || wellnessErrorMessage || goalsErrorMessage || supportErrorMessage;
   const isNewParticipant = !loading && recentCheckins.length === 0 && goals.length === 0 && budgetPeriods.length === 0;
   const signal = daySignal(todayCheckin?.overall_day);
+  const synthesisStorageKey = participant?.id
+    ? `thrive:today:synthesis-dismissed:${participant.id}`
+    : null;
+  const visibleSynthesis =
+    synthesis && synthesis.id !== dismissedSynthesisId ? synthesis : null;
+
+  useEffect(() => {
+    if (!synthesisStorageKey) {
+      setDismissedSynthesisId(null);
+      return;
+    }
+
+    setDismissedSynthesisId(window.localStorage.getItem(synthesisStorageKey));
+  }, [synthesisStorageKey]);
+
+  function dismissSynthesis() {
+    if (!visibleSynthesis || !synthesisStorageKey) return;
+    window.localStorage.setItem(synthesisStorageKey, visibleSynthesis.id);
+    setDismissedSynthesisId(visibleSynthesis.id);
+  }
 
   const primaryAction = useMemo(() => {
     if (isNewParticipant) return { label: "Start here", title: "Check in", detail: "Tell THRIVE how things are going right now.", href: "/wellness", action: "Check in", icon: "wellness" as IconName };
@@ -219,6 +252,40 @@ export default function TodayPage() {
             </div>
             {primaryAction.href !== "/" ? <Link href={primaryAction.href} className="mt-5 flex min-h-12 w-full items-center justify-center rounded-[1.2rem] bg-emerald-700 px-4 py-3 text-center text-base font-black text-white shadow-[0_10px_24px_rgba(4,120,87,0.22)] transition hover:bg-emerald-800 active:scale-[0.985]">{primaryAction.action}<Icon name="arrow" className="ml-2 h-5 w-5" /></Link> : null}
           </section>
+
+          {visibleSynthesis ? (
+            <section className="mt-3 rounded-[1.8rem] border border-cyan-100/90 bg-cyan-50/62 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl sm:p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-800">{visibleSynthesis.eyebrow}</p>
+                  <h2 className="mt-2 text-2xl font-black leading-tight text-slate-950">{visibleSynthesis.headline}</h2>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{visibleSynthesis.detail}</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-cyan-100 bg-white/70 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-cyan-900">Why this</span>
+              </div>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {visibleSynthesis.evidence.map((item) => (
+                  <div key={`${item.lane}:${item.fact}`} className="rounded-[1.2rem] border border-white/85 bg-white/72 p-3.5">
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{item.lane}</p>
+                    <p className="mt-1 text-sm font-bold leading-5 text-slate-700">{item.fact}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                {visibleSynthesis.actionHref && visibleSynthesis.actionLabel ? (
+                  <Link href={visibleSynthesis.actionHref} className="flex min-h-11 flex-1 items-center justify-center rounded-[1.1rem] bg-cyan-800 px-4 py-2.5 text-center text-sm font-black text-white transition active:scale-[0.985]">
+                    {visibleSynthesis.actionLabel}
+                    <Icon name="arrow" className="ml-2 h-4 w-4" />
+                  </Link>
+                ) : null}
+                <button type="button" onClick={dismissSynthesis} className="min-h-11 rounded-[1.1rem] border border-cyan-200 bg-white/75 px-4 py-2.5 text-sm font-black text-cyan-950 transition active:scale-[0.985]">
+                  Got it
+                </button>
+              </div>
+            </section>
+          ) : null}
 
           <section className="mt-3 rounded-[1.8rem] border border-white/75 bg-white/44 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl sm:p-6">
             <div>
