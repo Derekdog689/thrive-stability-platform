@@ -176,6 +176,7 @@ export default function MoneyCandidatePage() {
     budgetLines,
     financialActivity,
     financialActivityAllocations,
+    financialActivityPeriodLinks,
     loading,
     errorMessage,
     refresh,
@@ -227,40 +228,72 @@ export default function MoneyCandidatePage() {
   const draftLines = draftPeriod ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id && line.is_active) : [];
   const activePeriodActivityKeys = new Set(
     activePeriod
-      ? financialActivityAllocations
-          .filter(
-            (allocation) =>
-              allocation.budget_period_id === activePeriod.id &&
-              allocation.status === "active" &&
-              !allocation.archived_at,
-          )
-          .map((allocation) => `${allocation.activity_record_type}:${allocation.activity_id}`)
+      ? [
+          ...financialActivityAllocations
+            .filter(
+              (allocation) =>
+                allocation.budget_period_id === activePeriod.id &&
+                allocation.status === "active" &&
+                !allocation.archived_at,
+            )
+            .map((allocation) => `${allocation.activity_record_type}:${allocation.activity_id}`),
+          ...financialActivityPeriodLinks
+            .filter(
+              (periodLink) =>
+                periodLink.budget_period_id === activePeriod.id &&
+                periodLink.status === "active" &&
+                !periodLink.archived_at,
+            )
+            .flatMap((periodLink) => {
+              const activityId =
+                periodLink.activity_record_type === "manual"
+                  ? periodLink.manual_financial_activity_id
+                  : periodLink.staged_transaction_id;
+              return activityId ? [`${periodLink.activity_record_type}:${activityId}`] : [];
+            }),
+        ]
       : [],
   );
   const draftPeriodActivityKeys = new Set(
     draftPeriod
-      ? financialActivityAllocations
-          .filter(
-            (allocation) =>
-              allocation.budget_period_id === draftPeriod.id &&
-              allocation.status === "active" &&
-              !allocation.archived_at,
-          )
-          .map((allocation) => `${allocation.activity_record_type}:${allocation.activity_id}`)
+      ? [
+          ...financialActivityAllocations
+            .filter(
+              (allocation) =>
+                allocation.budget_period_id === draftPeriod.id &&
+                allocation.status === "active" &&
+                !allocation.archived_at,
+            )
+            .map((allocation) => `${allocation.activity_record_type}:${allocation.activity_id}`),
+          ...financialActivityPeriodLinks
+            .filter(
+              (periodLink) =>
+                periodLink.budget_period_id === draftPeriod.id &&
+                periodLink.status === "active" &&
+                !periodLink.archived_at,
+            )
+            .flatMap((periodLink) => {
+              const activityId =
+                periodLink.activity_record_type === "manual"
+                  ? periodLink.manual_financial_activity_id
+                  : periodLink.staged_transaction_id;
+              return activityId ? [`${periodLink.activity_record_type}:${activityId}`] : [];
+            }),
+        ]
       : [],
   );
-  const currentActivity = activePeriod
-    ? financialActivity
-        .filter((activity) =>
-          activePeriodActivityKeys.has(`${activity.activity_record_type}:${activity.activity_id}`),
-        )
-        .slice(0, 12)
+  const activePeriodActivity = activePeriod
+    ? financialActivity.filter((activity) =>
+        activePeriodActivityKeys.has(`${activity.activity_record_type}:${activity.activity_id}`),
+      )
     : [];
-  const draftActivity = draftPeriod
+  const draftPeriodActivity = draftPeriod
     ? financialActivity.filter((activity) =>
         draftPeriodActivityKeys.has(`${activity.activity_record_type}:${activity.activity_id}`),
       )
     : [];
+  const currentActivity = activePeriodActivity.slice(0, 12);
+  const draftActivity = draftPeriodActivity;
   const activityRows = currentActivity;
   const budgetDaysLeft = activePeriod ? daysUntil(activePeriod.period_end) : null;
   const budgetExpired = activePeriod ? activePeriod.period_end < localDateKey() : false;
@@ -271,10 +304,12 @@ export default function MoneyCandidatePage() {
   const remaining = activeLines.reduce((sum, line) => sum + toNumber(line.derived_remaining_amount), 0);
   const overPlan = Math.max(out - planned, 0);
   const usedPercent = planned > 0 ? Math.max(0, Math.min(100, Math.round((out / planned) * 100))) : 0;
-  const incomeInByDate = activePeriod ? financialActivity.filter((activity) => activity.activity_direction === "inflow" && activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end).reduce((sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)), 0) : 0;
+  const incomeIn = activePeriodActivity
+    .filter((activity) => activity.activity_direction === "inflow")
+    .reduce((sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)), 0);
   const orientationPeriod = activePeriod ?? draftPeriod;
   const orientationExpectedIncome = orientationPeriod ? toNumber(orientationPeriod.expected_income) : null;
-  const orientationActivityCount = activePeriod ? currentActivity.length : draftPeriod ? draftActivity.length : financialActivity.length;
+  const orientationActivityCount = activePeriod ? activePeriodActivity.length : draftPeriod ? draftPeriodActivity.length : financialActivity.length;
   const recentActivityPreview = draftPeriod ? draftActivity.slice(0, 4) : financialActivity.slice(0, 4);
   const recentExplainedCount = recentActivityPreview.filter((activity) => activity.activity_record_type === "imported" && explanationByTransactionId.get(activity.activity_id)?.status !== "archived" && explanationByTransactionId.has(activity.activity_id)).length;
 
@@ -440,13 +475,21 @@ export default function MoneyCandidatePage() {
       : activityDescription.trim();
 
     setActivityWorking(true);
-    const createResult = await supabase.rpc("create_my_manual_financial_activity_v1", {
-      p_program_id: activeProgramId,
-      p_activity_date: activityDate,
-      p_activity_direction: activityDirection,
-      p_amount: amount,
-      p_description: description,
-    });
+    const createResult = activityDirection === "inflow"
+      ? await supabase.rpc("create_my_manual_inflow_for_budget_v1", {
+          p_program_id: activeProgramId,
+          p_budget_period_id: activePeriod.id,
+          p_activity_date: activityDate,
+          p_amount: amount,
+          p_description: description,
+        })
+      : await supabase.rpc("create_my_manual_financial_activity_v1", {
+          p_program_id: activeProgramId,
+          p_activity_date: activityDate,
+          p_activity_direction: activityDirection,
+          p_amount: amount,
+          p_description: description,
+        });
 
     if (createResult.error) {
       setActivityNotice(createResult.error.message);
@@ -476,7 +519,7 @@ export default function MoneyCandidatePage() {
     setActivityDirection("outflow");
     setShowAddActivity(false);
     await refresh();
-    setActivityNotice(activityDirection === "outflow" ? "Money out added to your Budget." : "Money in added.");
+    setActivityNotice(activityDirection === "outflow" ? "Money out added to your Budget." : "Money in added to this Budget.");
     setActivityWorking(false);
   }
 
@@ -583,13 +626,13 @@ export default function MoneyCandidatePage() {
     {!loading && !errorMessage && activePeriod ? <>
       {budgetExpired ? <section className="rounded-[2rem] border border-amber-200 bg-amber-50/90 p-5 shadow-sm sm:p-7"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Plan ended</p><h2 className="mt-2 text-3xl font-black text-amber-950">Your Money plan ended {formatDate(activePeriod.period_end)}.</h2><p className="mt-2 text-sm font-semibold text-amber-900">Review the final numbers, complete this plan, then THRIVE will open the next-plan setup.</p><button type="button" disabled={completingExpired || budgetWorking} onClick={() => void completeExpiredBudget()} className="mt-5 w-full rounded-full bg-amber-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50">{completingExpired ? "Completing plan..." : "Complete plan"}</button></section> : budgetEndingSoon ? <section className="rounded-[2rem] border border-cyan-100 bg-cyan-50/80 p-5 shadow-sm"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-700">Coming up</p><h2 className="mt-2 text-2xl font-black text-cyan-950">Your Money plan {budgetDaysLeft === 0 ? "ends today" : `ends in ${budgetDaysLeft} day${budgetDaysLeft === 1 ? "" : "s"}`}.</h2><p className="mt-2 text-sm font-semibold text-cyan-800">Nothing to do yet. THRIVE will prompt you when it is time to close this plan and start the next one.</p></section> : null}
 
-      <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/72 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl"><div className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Right now</p><p className="mt-2 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">{formatMoney(Math.max(remaining, 0))}</p><p className="mt-1 text-lg font-bold text-slate-500">left in the plan</p></div><span className={`rounded-full px-3 py-1.5 text-xs font-black ${budgetExpired ? "bg-amber-100 text-amber-900" : "bg-emerald-50 text-emerald-800"}`}>{budgetExpired ? `Ended ${formatDate(activePeriod.period_end)}` : "Active plan"}</span></div><div className={`mt-6 flex items-center gap-3 rounded-full border px-4 py-3 ${state.panel}`}><span className={`h-3.5 w-3.5 rounded-full ${state.dot}`} /><p className={`font-black ${state.text}`}>{state.label}</p></div><div className="mt-6 h-3 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${overPlan > 0 ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${usedPercent}%` }} /></div><div className="mt-5 grid grid-cols-3 gap-2 text-center"><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Plan</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(planned)}</p></div><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Out</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(out)}</p></div><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Income in</p><p className="mt-1 whitespace-nowrap text-lg font-black">{activePeriod ? "Pending link" : formatMoney(incomeInByDate)}</p></div></div></div></section>
+      <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/72 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl"><div className="p-6 sm:p-8"><div className="flex items-start justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Right now</p><p className="mt-2 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">{formatMoney(Math.max(remaining, 0))}</p><p className="mt-1 text-lg font-bold text-slate-500">left in the plan</p></div><span className={`rounded-full px-3 py-1.5 text-xs font-black ${budgetExpired ? "bg-amber-100 text-amber-900" : "bg-emerald-50 text-emerald-800"}`}>{budgetExpired ? `Ended ${formatDate(activePeriod.period_end)}` : "Active plan"}</span></div><div className={`mt-6 flex items-center gap-3 rounded-full border px-4 py-3 ${state.panel}`}><span className={`h-3.5 w-3.5 rounded-full ${state.dot}`} /><p className={`font-black ${state.text}`}>{state.label}</p></div><div className="mt-6 h-3 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${overPlan > 0 ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${usedPercent}%` }} /></div><div className="mt-5 grid grid-cols-3 gap-2 text-center"><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Plan</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(planned)}</p></div><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Out</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(out)}</p></div><div className="min-w-0 rounded-2xl bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Income in</p><p className="mt-1 whitespace-nowrap text-lg font-black">{formatMoney(incomeIn)}</p></div></div></div></section>
 
       {!budgetExpired ? <div id="money-plan" className="scroll-mt-24"><ActiveBudgetEditor activePeriod={activePeriod} currentLines={activeLines} refresh={refresh} /></div> : null}
 
       <section className="rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Your categories</p><h2 className="mt-2 text-3xl font-black">Where the money is going</h2></div><span className="text-sm font-black text-slate-500">{activeLines.length}</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{activeLines.map((line) => { const linePlan = toNumber(line.planned_amount); const lineOut = toNumber(line.derived_actual_amount); const lineLeft = toNumber(line.derived_remaining_amount); const linePercent = linePlan > 0 ? Math.max(0, Math.min(100, Math.round((lineOut / linePlan) * 100))) : 0; const lineOver = lineOut > linePlan; return <article key={line.id} className="rounded-[1.5rem] border border-slate-100 bg-white/85 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{line.category_name}</p><p className={`mt-1 text-sm font-bold ${lineOver ? "text-amber-800" : "text-slate-500"}`}>{lineOver ? `${formatMoney(lineOut - linePlan)} over` : `${formatMoney(lineLeft)} left`}</p></div><p className="shrink-0 text-sm font-black text-slate-500">{formatMoney(linePlan)}</p></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${lineOver ? "bg-amber-500" : "bg-emerald-600"}`} style={{ width: `${linePercent}%` }} /></div><div className="mt-3 grid grid-cols-3 gap-1 text-center"><div><p className="text-[9px] font-black uppercase text-slate-400">Plan</p><p className="text-xs font-black">{formatMoney(linePlan)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Used</p><p className="text-xs font-black">{formatMoney(lineOut)}</p></div><div><p className="text-[9px] font-black uppercase text-slate-400">Left</p><p className="text-xs font-black">{formatMoney(lineLeft)}</p></div></div></article>; })}</div></section>
 
-      <section id="money-activity" className="scroll-mt-24 rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Money activity</p><h2 className="mt-2 text-3xl font-black">What happened</h2></div><span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-black text-slate-500">{currentActivity.length}</span></div><p className="mt-2 text-sm font-semibold text-slate-500">This plan only shows activity explicitly connected to this Budget. Activity from prior Budgets stays with those periods.</p><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => setShowActivity((current) => !current)} className="rounded-full bg-emerald-700 px-4 py-3.5 text-sm font-black text-white">{showActivity ? "Close activity" : "Review activity"}</button><button type="button" onClick={() => { setShowAddActivity((current) => !current); setShowActivity(true); setActivityNotice(""); }} className="rounded-full border border-emerald-200 bg-white px-4 py-3.5 text-sm font-black text-emerald-800">+ Add activity</button></div>
+      <section id="money-activity" className="scroll-mt-24 rounded-[2rem] border border-white/80 bg-white/70 p-5 shadow-sm backdrop-blur-xl sm:p-7"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Money activity</p><h2 className="mt-2 text-3xl font-black">What happened</h2></div><span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-black text-slate-500">{activePeriodActivity.length}</span></div><p className="mt-2 text-sm font-semibold text-slate-500">This plan only shows activity explicitly connected to this Budget. Activity from prior Budgets stays with those periods.</p><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => setShowActivity((current) => !current)} className="rounded-full bg-emerald-700 px-4 py-3.5 text-sm font-black text-white">{showActivity ? "Close activity" : "Review activity"}</button><button type="button" onClick={() => { setShowAddActivity((current) => !current); setShowActivity(true); setActivityNotice(""); }} className="rounded-full border border-emerald-200 bg-white px-4 py-3.5 text-sm font-black text-emerald-800">+ Add activity</button></div>
 
         {showAddActivity ? <form onSubmit={addManualActivity} className="mt-4 rounded-[1.5rem] bg-emerald-50 p-4"><p className="text-sm font-black">Add what happened</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => { setActivityDirection("outflow"); setActivityBudgetLineId(""); }} className={`rounded-full px-3 py-3 text-sm font-black ${activityDirection === "outflow" ? "bg-slate-900 text-white" : "bg-white text-slate-600"}`}>Money out</button><button type="button" onClick={() => { setActivityDirection("inflow"); setActivityBudgetLineId(""); }} className={`rounded-full px-3 py-3 text-sm font-black ${activityDirection === "inflow" ? "bg-emerald-700 text-white" : "bg-white text-slate-600"}`}>Money in</button></div><input type="date" min={activePeriod.period_start} max={activePeriod.period_end} value={activityDate} onChange={(event) => setActivityDate(event.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" /><div className="mt-3 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="text-xl font-black text-slate-400">$</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={activityAmount} onChange={(event) => setActivityAmount(event.target.value)} className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none" /></div>
 
