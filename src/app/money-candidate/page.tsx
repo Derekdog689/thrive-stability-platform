@@ -66,11 +66,13 @@ function ActivityCard({
   explanation,
   canWriteContext,
   canCategorize,
+  canLinkToPlan,
   onCreateContext,
   onUpdateContext,
   onAllocate,
   onUpdateManual,
   onArchiveManual,
+  onLinkToPlan,
 }: {
   activity: FinancialActivity;
   allocations: FinancialActivityAllocation[];
@@ -78,11 +80,13 @@ function ActivityCard({
   explanation: ParticipantTransactionExplanation | undefined;
   canWriteContext: boolean;
   canCategorize: boolean;
+  canLinkToPlan: boolean;
   onCreateContext: (transactionId: string, category: TransactionExplanationCategory, note: string) => Promise<{ ok: boolean; message: string }>;
   onUpdateContext: (explanation: ParticipantTransactionExplanation, category: TransactionExplanationCategory, note: string) => Promise<{ ok: boolean; message: string }>;
   onAllocate: (activity: FinancialActivity, budgetLineId: string, amount: number) => Promise<{ ok: boolean; message: string }>;
   onUpdateManual: (activity: FinancialActivity, date: string, direction: "inflow" | "outflow", amount: number, description: string) => Promise<{ ok: boolean; message: string }>;
   onArchiveManual: (activity: FinancialActivity) => Promise<{ ok: boolean; message: string }>;
+  onLinkToPlan: (activity: FinancialActivity) => Promise<{ ok: boolean; message: string }>;
 }) {
   const [showContext, setShowContext] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
@@ -147,6 +151,15 @@ function ActivityCard({
     setWorking(false);
   }
 
+  async function addToPlan() {
+    if (!canLinkToPlan) return;
+    setWorking(true);
+    setNotice("");
+    const result = await onLinkToPlan(activity);
+    setNotice(result.message);
+    setWorking(false);
+  }
+
   return <article className="rounded-[1.5rem] border border-slate-100 bg-white/90 p-4">
     <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-lg font-black">{activity.description}</p><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${isImported ? "bg-sky-50 text-sky-700" : "bg-emerald-50 text-emerald-700"}`}>{isImported ? "Imported" : "Added by you"}</span></div><p className="mt-1 text-xs font-semibold text-slate-500">{formatDate(activity.activity_date)} · {activity.source_name}</p></div><div className="shrink-0 text-right"><p className={`text-lg font-black ${activity.activity_direction === "inflow" ? "text-emerald-700" : "text-slate-950"}`}>{formatMoney(Math.abs(toNumber(activity.signed_amount)))}</p><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{activity.activity_direction === "inflow" ? "Money in" : "Money out"}</p></div></div>
 
@@ -154,9 +167,9 @@ function ActivityCard({
 
     {activeAllocations.length ? <div className="mt-3 flex flex-wrap gap-2">{activeAllocations.map((item) => <span key={item.allocation_id} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600">{item.budget_category_name} · {formatMoney(item.allocated_amount)}</span>)}</div> : null}
 
-    <div className={`mt-3 grid gap-2 ${isOutflow ? "grid-cols-2" : "grid-cols-1"}`}>
+    <div className={`mt-3 grid gap-2 ${isOutflow || canLinkToPlan ? "grid-cols-2" : "grid-cols-1"}`}>
       {isImported ? <button type="button" disabled={!canWriteContext || working || (explanation?.status != null && explanation.status !== "draft")} onClick={() => { setShowContext((current) => !current); setShowPlan(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{explanation ? "Edit context" : "Add context"}</button> : <button type="button" disabled={working} onClick={() => { setShowEdit((current) => !current); setShowPlan(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700">Edit entry</button>}
-      {isOutflow ? <button type="button" disabled={working || !canCategorize || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{unassigned > 0 ? "Choose category" : "Categorized"}</button> : null}
+      {isOutflow ? <button type="button" disabled={working || !canCategorize || unassigned <= 0 || budgetLines.length === 0} onClick={() => { setShowPlan((current) => !current); setShowContext(false); setShowEdit(false); setNotice(""); }} className="rounded-full border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700 disabled:opacity-40">{unassigned > 0 ? "Choose category" : "Categorized"}</button> : canLinkToPlan ? <button type="button" disabled={working} onClick={() => void addToPlan()} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-black text-emerald-800 disabled:opacity-40">{working ? "Adding..." : "Add to this plan"}</button> : null}
     </div>
 
     {showContext ? <div className="mt-3 rounded-2xl bg-slate-50 p-3"><p className="text-xs font-black text-slate-500">What was this?</p><div className="mt-2 flex flex-wrap gap-2">{contextChoices.map((choice) => <button key={choice.value} type="button" onClick={() => setCategory(choice.value)} className={`rounded-full px-3 py-2 text-xs font-black ${category === choice.value ? "bg-emerald-700 text-white" : "border border-slate-200 bg-white text-slate-600"}`}>{choice.label}</button>)}</div><label className="mt-3 block text-xs font-black text-slate-500">Anything to add? <span className="font-normal">Optional</span><textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal text-slate-800" /></label><button type="button" disabled={working} onClick={() => void saveContext()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Save context</button></div> : null}
