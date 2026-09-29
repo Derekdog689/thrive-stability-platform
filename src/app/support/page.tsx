@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import AuthGate from "../AuthGate";
 import {
+  AssistedBudgetSupportLink,
   ContactPreference,
   ParticipantReplyResult,
   ParticipantSupportCategory,
@@ -117,11 +118,12 @@ function SupportBottomNav() {
   return <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[1.75rem] border border-white/60 bg-white/90 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:bottom-5"><div className="grid grid-cols-5 gap-1">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-center transition ${item.href === "/support" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-900"}`}><span className="text-xl font-black leading-none">{item.icon}</span><span className="mt-1 truncate text-[10px] font-black uppercase tracking-wide sm:text-xs">{item.label}</span></Link>)}</div></nav>;
 }
 
-function SupportCard({ request, statusEvents, participantResponses, participantReplies, working, onWithdraw, onSubmitReply, compact = false }: {
+function SupportCard({ request, statusEvents, participantResponses, participantReplies, assistedBudgetLink, working, onWithdraw, onSubmitReply, compact = false }: {
   request: ParticipantSupportRequest;
   statusEvents: ParticipantSupportStatusEvent[];
   participantResponses: ParticipantSupportResponse[];
   participantReplies: ParticipantSupportReply[];
+  assistedBudgetLink?: AssistedBudgetSupportLink | null;
   working: boolean;
   onWithdraw: (request: ParticipantSupportRequest) => Promise<{ ok: boolean; message: string }>;
   onSubmitReply: (request: ParticipantSupportRequest, content: string) => Promise<ParticipantReplyResult>;
@@ -130,11 +132,24 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
   const [replyDraft, setReplyDraft] = useState("");
   const [replyNotice, setReplyNotice] = useState("");
   const [withdrawNotice, setWithdrawNotice] = useState("");
+  const [showReply, setShowReply] = useState(false);
   const entries = participantResponses.filter((item) => item.support_request_id === request.id);
   const replies = participantReplies.filter((item) => item.support_request_id === request.id);
   const events = statusEvents.filter((item) => item.support_request_id === request.id);
   const latestSupportMessage = entries.at(-1)?.content ?? null;
-  const needsYou = request.status === "waiting_for_participant";
+  const assistedPlanNeedsReview =
+    request.participant_category === "budget_money" &&
+    request.status === "waiting_for_participant" &&
+    assistedBudgetLink?.budget_status === "draft";
+  const assistedPlanAlreadyActive =
+    request.participant_category === "budget_money" &&
+    assistedBudgetLink?.budget_status === "active";
+  const needsYou = request.status === "waiting_for_participant" && !assistedPlanAlreadyActive;
+  const statusLabel = assistedPlanNeedsReview
+    ? "Plan ready"
+    : assistedPlanAlreadyActive
+      ? "Plan active"
+      : labelStatus(request.status);
 
   async function sendReply() {
     const result = await onSubmitReply(request, replyDraft);
@@ -152,12 +167,19 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
     <div className={compact ? "p-4" : "p-5 sm:p-6"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{labelCategory(request.participant_category)}</p><h3 className={`mt-2 font-black leading-tight text-slate-950 ${compact ? "text-lg" : "text-2xl"}`}>{request.participant_message}</h3></div>
-        <span className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-black ${needsYou ? "bg-amber-100 text-amber-900" : request.status === "completed" ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>{labelStatus(request.status)}</span>
+        <span className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-black ${assistedPlanNeedsReview ? "bg-sky-100 text-sky-900" : assistedPlanAlreadyActive ? "bg-emerald-100 text-emerald-900" : needsYou ? "bg-amber-100 text-amber-900" : request.status === "completed" ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>{statusLabel}</span>
       </div>
 
-      {!compact ? <div className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm font-bold ${needsYou ? "bg-amber-50 text-amber-950" : "bg-emerald-50/80 text-emerald-950"}`}>{needsYou ? "Support needs something from you." : request.status === "submitted" ? "Support has your request. You do not need to repeat it." : request.status === "acknowledged" ? "Support has seen this." : request.status === "in_progress" ? "Support is reviewing this." : request.status === "completed" ? "This request is resolved." : "This request is in your history."}</div> : null}
+      {!compact ? <div className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm font-bold ${assistedPlanNeedsReview ? "bg-sky-50 text-sky-950" : needsYou ? "bg-amber-50 text-amber-950" : "bg-emerald-50/80 text-emerald-950"}`}>{assistedPlanNeedsReview ? "Your starter Money plan is ready to review." : assistedPlanAlreadyActive ? "Your starter Money plan is active." : needsYou ? "Support needs something from you." : request.status === "submitted" ? "Support has your request. You do not need to repeat it." : request.status === "acknowledged" ? "Support has seen this." : request.status === "in_progress" ? "Support is reviewing this." : request.status === "completed" ? "This request is resolved." : "This request is in your history."}</div> : null}
 
-      {needsYou ? <section className="mt-4 rounded-[1.4rem] border border-amber-200 bg-amber-50 p-4">
+      {assistedPlanNeedsReview && assistedBudgetLink ? <section className="mt-4 rounded-[1.4rem] border border-sky-200 bg-sky-50 p-4">
+        {latestSupportMessage ? <><p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-800">Support prepared</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{latestSupportMessage}</p></> : null}
+        <p className="mt-3 text-sm font-semibold leading-6 text-sky-950">Review the plan in Money. Change anything you want before you use it.</p>
+        <Link href={"/budget?review=" + encodeURIComponent(assistedBudgetLink.budget_period_id)} className="mt-4 flex w-full items-center justify-center rounded-full bg-emerald-700 px-4 py-3 font-black text-white">Review starter plan</Link>
+        <button type="button" onClick={() => setShowReply((current) => !current)} className="mt-3 w-full rounded-full border border-sky-200 bg-white px-4 py-3 font-black text-sky-900">{showReply ? "Hide message" : "Message Support"}</button>
+        {showReply ? <div className="mt-3"><textarea value={replyDraft} onChange={(event) => setReplyDraft(event.target.value)} maxLength={4000} rows={3} className="w-full rounded-[1.2rem] border border-sky-200 bg-white px-4 py-3" placeholder="Write a message to Support" /><button type="button" disabled={working || !replyDraft.trim()} onClick={() => void sendReply()} className="mt-3 w-full rounded-full bg-sky-700 px-4 py-3 font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send message"}</button></div> : null}
+        {replyNotice ? <p className="mt-2 text-sm font-bold text-slate-600">{replyNotice}</p> : null}
+      </section> : needsYou ? <section className="mt-4 rounded-[1.4rem] border border-amber-200 bg-amber-50 p-4">
         {latestSupportMessage ? <><p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Support said</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{latestSupportMessage}</p></> : <p className="font-black text-amber-950">A response is needed.</p>}
         <textarea value={replyDraft} onChange={(event) => setReplyDraft(event.target.value)} maxLength={4000} rows={3} className="mt-3 w-full rounded-[1.2rem] border border-amber-200 bg-white px-4 py-3" placeholder="Write your response" />
         <button type="button" disabled={working || !replyDraft.trim()} onClick={() => void sendReply()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send response"}</button>
@@ -179,7 +201,7 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
 }
 
 export default function SupportPage() {
-  const { participantName, requests, statusEvents, participantResponses, participantReplies, loading, working, errorMessage, canCreate, createRequest, withdrawRequest, submitParticipantReply } = useParticipantSupport();
+  const { participantName, requests, statusEvents, participantResponses, participantReplies, assistedBudgetLinks, loading, working, errorMessage, canCreate, createRequest, withdrawRequest, submitParticipantReply } = useParticipantSupport();
   const [draft, setDraft] = useState<SupportRequestDraft>(emptyDraft);
   const [showCreate, setShowCreate] = useState(false);
   const [step, setStep] = useState(1);
@@ -277,6 +299,14 @@ export default function SupportPage() {
   const pastRequests = useMemo(() => requests.filter((request) => ["completed", "withdrawn", "archived"].includes(request.status)), [requests]);
   const priorityRequest = useMemo(() => openRequests.find((request) => request.status === "waiting_for_participant") ?? openRequests[0] ?? null, [openRequests]);
   const otherOpenRequests = useMemo(() => priorityRequest ? openRequests.filter((request) => request.id !== priorityRequest.id) : openRequests, [openRequests, priorityRequest]);
+  const assistedBudgetByRequestId = useMemo(
+    () => new Map(assistedBudgetLinks.map((item) => [item.support_request_id, item])),
+    [assistedBudgetLinks],
+  );
+  const priorityAssistedBudget = priorityRequest ? assistedBudgetByRequestId.get(priorityRequest.id) ?? null : null;
+  const priorityNeedsParticipant =
+    priorityRequest?.status === "waiting_for_participant" &&
+    priorityAssistedBudget?.budget_status !== "active";
   const selectedArea = participantAreas.find((area) => area.value === draft.participantCategory) ?? participantAreas.at(-1)!;
 
   function beginCreate() { setGoalContext(null); setWellnessContext(null); setMoneyContext(false); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
@@ -322,7 +352,7 @@ export default function SupportPage() {
     {!loading && !errorMessage && !canCreate ? <section className="rounded-[1.8rem] bg-white/75 p-6"><h2 className="text-xl font-black">Support is not connected yet</h2></section> : null}
 
     {!loading && !errorMessage && canCreate ? <>
-      {!goalContext && !wellnessContext && !moneyContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityRequest.status === "waiting_for_participant" ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">Needs you</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} /></section> : !goalContext && !wellnessContext && !moneyContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
+      {!goalContext && !wellnessContext && !moneyContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityNeedsParticipant ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">{priorityAssistedBudget?.budget_status === "draft" ? "Plan ready" : "Needs you"}</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={priorityAssistedBudget} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} /></section> : !goalContext && !wellnessContext && !moneyContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
 
       {!showCreate && !goalContext && !wellnessContext && !moneyContext ? <button type="button" onClick={beginCreate} className="w-full rounded-[1.5rem] bg-emerald-700 px-5 py-4 text-left text-lg font-black text-white shadow-[0_12px_28px_rgba(4,120,87,0.18)]">+ Ask for support</button> : null}
 
@@ -360,8 +390,8 @@ export default function SupportPage() {
           <button type="submit" disabled={working || !draft.participantMessage.trim()} className="mt-4 w-full rounded-full bg-emerald-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send to Support"}</button>{notice ? <p className="mt-3 text-sm font-bold text-slate-600">{notice}</p> : null}</section> : null}
       </form> : null}
 
-      {otherOpenRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/55 p-4"><button type="button" onClick={() => setShowAllOpen((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-700"><span>{otherOpenRequests.length} other open request{otherOpenRequests.length === 1 ? "" : "s"}</span><span>{showAllOpen ? "−" : "+"}</span></button>{showAllOpen ? <div className="mt-4 space-y-3">{otherOpenRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact />)}</div> : null}</section> : null}
-      {pastRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/45 p-4"><button type="button" onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-600"><span>Past requests · {pastRequests.length}</span><span>{showHistory ? "−" : "+"}</span></button>{showHistory ? <div className="mt-4 space-y-3">{pastRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact />)}</div> : null}</section> : null}
+      {otherOpenRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/55 p-4"><button type="button" onClick={() => setShowAllOpen((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-700"><span>{otherOpenRequests.length} other open request{otherOpenRequests.length === 1 ? "" : "s"}</span><span>{showAllOpen ? "−" : "+"}</span></button>{showAllOpen ? <div className="mt-4 space-y-3">{otherOpenRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact />)}</div> : null}</section> : null}
+      {pastRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/45 p-4"><button type="button" onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-600"><span>Past requests · {pastRequests.length}</span><span>{showHistory ? "−" : "+"}</span></button>{showHistory ? <div className="mt-4 space-y-3">{pastRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact />)}</div> : null}</section> : null}
     </> : null}
 
     <Link href="/resources" className="group flex items-center justify-between rounded-[1.5rem] border border-white/80 bg-white/58 p-4 shadow-[0_14px_38px_rgba(15,23,42,0.06)] backdrop-blur-xl transition active:scale-[0.99]">
