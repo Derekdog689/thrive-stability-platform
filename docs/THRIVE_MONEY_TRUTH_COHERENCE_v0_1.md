@@ -60,3 +60,25 @@ Verified with rollback-safe live tests:
 - current live assisted Budget had zero activity relationships;
 - previously displayed Gas / Sunburn / Flowery rows were related to prior Budget periods, not the current Budget;
 - Supabase security advisor reports no new finding for the new table/functions/guard.
+
+
+## 2026-09-29 hardening reconciliation
+
+A later live-schema reconciliation found that the first installed period-link INSERT
+policy used ambiguous unqualified references inside correlated subqueries. The live
+policy was replaced with an exact participant/Budget/activity validator.
+
+Additional hardening now installed:
+
+- `can_link_my_inflow_to_budget_v1` validates the exact participant, program,
+  Budget period, activity identity, inflow direction, and activity date;
+- the validator is `SECURITY INVOKER`;
+- `create_my_manual_inflow_for_budget_v1` creates manual Money-in and its Budget
+  membership atomically, so a membership failure does not leave an orphan activity;
+- linked manual inflows cannot be changed to Money-out or moved outside the owning
+  Budget period;
+- archiving a linked manual inflow archives its period link and preserves history;
+- anonymous execution is denied for the new write RPCs;
+- Supabase security advisor reports no new finding for the hardened validator.
+
+No historical Financial Activity was moved, reclassified, backfilled, or deleted.
