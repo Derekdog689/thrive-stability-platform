@@ -80,7 +80,7 @@ export default function AssistedBudgetAdminCandidatePage() {
   const [lines, setLines] = useState<StarterLine[]>(() => cloneLines("basic"));
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
-  const [moneyAvailable, setMoneyAvailable] = useState("1500");
+  const [moneyAvailable, setMoneyAvailable] = useState("");
   const [note, setNote] = useState("Starter plan prepared from your request. Review every amount before using it.");
   const [working, setWorking] = useState(false);
   const [notice, setNotice] = useState("");
@@ -161,8 +161,12 @@ export default function AssistedBudgetAdminCandidatePage() {
       setNotice("Choose a valid start and end date.");
       return;
     }
+    if (!moneyAvailable.trim()) {
+      setNotice("Enter the total money available for this plan.");
+      return;
+    }
     if (!Number.isFinite(availableNumber) || availableNumber < 0) {
-      setNotice("Money available must be zero or more.");
+      setNotice("Total money available must be zero or more.");
       return;
     }
     if (lines.length === 0) {
@@ -237,12 +241,13 @@ export default function AssistedBudgetAdminCandidatePage() {
                 <label className="text-sm font-black">Start<input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 font-normal" /></label>
                 <label className="text-sm font-black">End<input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 font-normal" /></label>
               </div>
-              <label className="mt-4 block font-black">Money available
-                <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="text-xl font-black text-slate-400">$</span><input type="number" min="0" step="0.01" value={moneyAvailable} onChange={(e) => setMoneyAvailable(e.target.value)} inputMode="decimal" className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none" /></div>
+              <label className="mt-4 block font-black">Total money available for this plan
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">Enter the full amount the participant expects to have available during this planning period. Do not enter a category amount here.</p>
+                <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4"><span className="text-xl font-black text-slate-400">$</span><input type="number" min="0" step="0.01" value={moneyAvailable} onChange={(e) => setMoneyAvailable(e.target.value)} inputMode="decimal" placeholder="Total available" className="w-full bg-transparent px-3 py-4 text-2xl font-black outline-none" /></div>
               </label>
 
               <div className="mt-5 space-y-3">
-                {lines.map((entry, index) => <div key={entry.category_name} className="grid grid-cols-[1fr_8rem] items-center gap-4 rounded-[1.4rem] border border-slate-100 bg-slate-50 p-4"><div><p className="font-black">{entry.category_name}</p><p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400">Starter suggestion</p></div><div className="flex items-center rounded-xl border border-slate-200 bg-white px-3"><span className="font-black text-slate-400">$</span><input type="number" min="0" step="0.01" value={entry.planned_amount} onChange={(e) => changeAmount(index, e.target.value)} className="w-full bg-transparent px-2 py-2.5 text-right font-black outline-none" /></div></div>)}
+                {lines.map((entry, index) => <div key={entry.category_name} className="grid grid-cols-[1fr_8rem] items-center gap-4 rounded-[1.4rem] border border-slate-100 bg-slate-50 p-4"><div><p className="font-black">{entry.category_name}</p><p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400">Amount to set aside</p></div><div className="flex items-center rounded-xl border border-slate-200 bg-white px-3"><span className="font-black text-slate-400">$</span><input type="number" min="0" step="0.01" value={entry.planned_amount} onChange={(e) => changeAmount(index, e.target.value)} className="w-full bg-transparent px-2 py-2.5 text-right font-black outline-none" /></div></div>)}
               </div>
 
               <div className="mt-5 grid grid-cols-3 gap-3 text-center">
