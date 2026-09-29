@@ -1,5 +1,5 @@
 -- THRIVE Money Truth Coherence v0.1
--- Approved implementation candidate.
+-- Installed and verified in THRIVE production Supabase on 2026-09-29.
 --
 -- Adds explicit plan membership for inflow Financial Activity.
 -- Outflow plan membership remains represented by participant_financial_activity_allocations.
