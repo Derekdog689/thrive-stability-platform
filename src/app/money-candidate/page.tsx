@@ -467,13 +467,21 @@ export default function MoneyCandidatePage() {
       : activityDescription.trim();
 
     setActivityWorking(true);
-    const createResult = await supabase.rpc("create_my_manual_financial_activity_v1", {
-      p_program_id: activeProgramId,
-      p_activity_date: activityDate,
-      p_activity_direction: activityDirection,
-      p_amount: amount,
-      p_description: description,
-    });
+    const createResult = activityDirection === "inflow"
+      ? await supabase.rpc("create_my_manual_inflow_for_budget_v1", {
+          p_program_id: activeProgramId,
+          p_budget_period_id: activePeriod.id,
+          p_activity_date: activityDate,
+          p_amount: amount,
+          p_description: description,
+        })
+      : await supabase.rpc("create_my_manual_financial_activity_v1", {
+          p_program_id: activeProgramId,
+          p_activity_date: activityDate,
+          p_activity_direction: activityDirection,
+          p_amount: amount,
+          p_description: description,
+        });
 
     if (createResult.error) {
       setActivityNotice(createResult.error.message);
@@ -491,18 +499,6 @@ export default function MoneyCandidatePage() {
       if (allocationResult.error) {
         await refresh();
         setActivityNotice(`Activity saved, but its category was not saved: ${allocationResult.error.message}`);
-        setActivityWorking(false);
-        return;
-      }
-    } else {
-      const linkResult = await supabase.rpc("link_my_financial_activity_to_budget_v1", {
-        p_activity_record_type: "manual",
-        p_activity_id: createResult.data as string,
-        p_budget_period_id: activePeriod.id,
-      });
-      if (linkResult.error) {
-        await refresh();
-        setActivityNotice(`Money in was saved, but it was not added to this plan: ${linkResult.error.message}`);
         setActivityWorking(false);
         return;
       }
