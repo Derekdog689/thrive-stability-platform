@@ -237,6 +237,39 @@ It does not merge THRIVE with the Trust Engine, and it does not transfer ownersh
 
 Money/bank evidence remains observational only.
 
+
+## Approved presentation refinements
+
+The review gate added five implementation constraints:
+
+1. **Explain the connection.** Every synthesis return must show the participant-facing facts that caused THRIVE to place two lanes together.
+2. **One synthesis return at a time.** Today must not become a stack of cross-lane observations.
+3. **Avoid stale repetition.** If the same connection has not materially changed, do not repeatedly present it as a fresh discovery.
+4. **Protect primary-action hierarchy.** Required participant attention such as a Support reply, unfinished check-in, or ended Money plan remains above synthesis.
+5. **Silence is valid.** If the evidence is thin, ambiguous, stale, or unrelated, render no synthesis return.
+
+### Candidate evidence priority
+
+When more than one eligible connection exists, prefer:
+
+1. explicit linked Support context,
+2. participant-selected next step,
+3. current-day Wellness + active Goal,
+4. current Money state + a clearly related Goal,
+5. otherwise no synthesis.
+
+This is display priority based on evidence quality, not a score or judgment about the participant.
+
+### Candidate test matrix
+
+Before wider implementation, verify at minimum:
+
+- a participant with rich history across several lanes,
+- a participant with only two usable lanes,
+- a participant with almost no history.
+
+Sparse history must not be treated as a defect and must not trigger fabricated connections.
+
 ## Candidate implementation shape after approval
 
 If this reconciliation candidate is approved, the smallest implementation pass should be:
