@@ -47,6 +47,10 @@ function daysUntil(dateKey: string) {
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
 
+function financialActivityKey(activityRecordType: string, activityId: string) {
+  return `${activityRecordType}:${activityId}`;
+}
+
 function MoneyBottomNav() {
   const items = [
     { href: "/", label: "Today", icon: "⌂" },
@@ -189,6 +193,7 @@ export default function MoneyCandidatePage() {
     budgetLines,
     financialActivity,
     financialActivityAllocations,
+    financialActivityPeriodLinks,
     loading,
     errorMessage,
     refresh,
@@ -222,14 +227,62 @@ export default function MoneyCandidatePage() {
   const [showOrientationHelp, setShowOrientationHelp] = useState(false);
   const [focusDraftPlan, setFocusDraftPlan] = useState(false);
   const [assistedDraft, setAssistedDraft] = useState(false);
+  const [reviewBudgetPeriodId, setReviewBudgetPeriodId] = useState("");
 
-  const activePeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
-  const draftPeriod = budgetPeriods.find((period) => period.status === "draft") ?? null;
+  const reviewPeriod = reviewBudgetPeriodId
+    ? budgetPeriods.find((period) => period.id === reviewBudgetPeriodId) ?? null
+    : null;
+  const activePeriod = reviewPeriod?.status === "active"
+    ? reviewPeriod
+    : budgetPeriods.find((period) => period.status === "active") ?? null;
+  const draftPeriod = reviewPeriod?.status === "draft"
+    ? reviewPeriod
+    : budgetPeriods.find((period) => period.status === "draft") ?? null;
   const activeLines = activePeriod ? budgetLines.filter((line) => line.budget_period_id === activePeriod.id && line.is_active) : [];
   const draftLines = draftPeriod ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id && line.is_active) : [];
-  const currentActivity = activePeriod ? financialActivity.filter((activity) => activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end).slice(0, 12) : [];
-  const draftActivity = draftPeriod ? financialActivity.filter((activity) => activity.activity_date >= draftPeriod.period_start && activity.activity_date <= draftPeriod.period_end) : [];
-  const activityRows = currentActivity;
+
+  const allRelatedActivityKeys = new Set([
+    ...financialActivityAllocations
+      .filter((item) => item.status === "active" && item.archived_at === null)
+      .map((item) => financialActivityKey(item.activity_record_type, item.activity_id)),
+    ...financialActivityPeriodLinks
+      .filter((item) => item.status === "active" && item.archived_at === null)
+      .map((item) => financialActivityKey(item.activity_record_type, item.activity_id)),
+  ]);
+
+  const activePlanActivityKeys = activePeriod ? new Set([
+    ...financialActivityAllocations
+      .filter((item) => item.status === "active" && item.archived_at === null && item.budget_period_id === activePeriod.id)
+      .map((item) => financialActivityKey(item.activity_record_type, item.activity_id)),
+    ...financialActivityPeriodLinks
+      .filter((item) => item.status === "active" && item.archived_at === null && item.budget_period_id === activePeriod.id)
+      .map((item) => financialActivityKey(item.activity_record_type, item.activity_id)),
+  ]) : new Set<string>();
+
+  const draftPlanActivityKeys = draftPeriod ? new Set([
+    ...financialActivityAllocations
+      .filter((item) => item.status === "active" && item.archived_at === null && item.budget_period_id === draftPeriod.id)
+      .map((item) => financialActivityKey(item.activity_record_type, item.activity_id)),
+    ...financialActivityPeriodLinks
+      .filter((item) => item.status === "active" && item.archived_at === null && item.budget_period_id === draftPeriod.id)
+      .map((item) => financialActivityKey(item.activity_record_type, item.activity_id)),
+  ]) : new Set<string>();
+
+  const currentActivity = activePeriod
+    ? financialActivity.filter((activity) => activePlanActivityKeys.has(financialActivityKey(activity.activity_record_type, activity.activity_id)))
+    : [];
+  const draftActivity = draftPeriod
+    ? financialActivity.filter((activity) => draftPlanActivityKeys.has(financialActivityKey(activity.activity_record_type, activity.activity_id)))
+    : [];
+  const availableActivity = activePeriod
+    ? financialActivity.filter((activity) => {
+        const key = financialActivityKey(activity.activity_record_type, activity.activity_id);
+        return activity.activity_date >= activePeriod.period_start
+          && activity.activity_date <= activePeriod.period_end
+          && !allRelatedActivityKeys.has(key);
+      })
+    : [];
+  const activityRows = currentActivity.slice(0, 12);
   const budgetDaysLeft = activePeriod ? daysUntil(activePeriod.period_end) : null;
   const budgetExpired = activePeriod ? activePeriod.period_end < localDateKey() : false;
   const budgetEndingSoon = activePeriod && !budgetExpired && budgetDaysLeft !== null && budgetDaysLeft >= 0 && budgetDaysLeft <= 3;
@@ -239,12 +292,22 @@ export default function MoneyCandidatePage() {
   const remaining = activeLines.reduce((sum, line) => sum + toNumber(line.derived_remaining_amount), 0);
   const overPlan = Math.max(out - planned, 0);
   const usedPercent = planned > 0 ? Math.max(0, Math.min(100, Math.round((out / planned) * 100))) : 0;
-  const incomeIn = activePeriod ? financialActivity.filter((activity) => activity.activity_direction === "inflow" && activity.activity_date >= activePeriod.period_start && activity.activity_date <= activePeriod.period_end).reduce((sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)), 0) : 0;
+  const incomeIn = currentActivity
+    .filter((activity) => activity.activity_direction === "inflow")
+    .reduce((sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)), 0);
   const orientationPeriod = activePeriod ?? draftPeriod;
   const orientationExpectedIncome = orientationPeriod ? toNumber(orientationPeriod.expected_income) : null;
   const orientationActivityCount = activePeriod ? currentActivity.length : draftPeriod ? draftActivity.length : financialActivity.length;
   const recentActivityPreview = draftPeriod ? draftActivity.slice(0, 4) : financialActivity.slice(0, 4);
   const recentExplainedCount = recentActivityPreview.filter((activity) => activity.activity_record_type === "imported" && explanationByTransactionId.get(activity.activity_id)?.status !== "archived" && explanationByTransactionId.has(activity.activity_id)).length;
+
+  useEffect(() => {
+    const reviewId = new URLSearchParams(window.location.search).get("review")?.trim() ?? "";
+    if (!reviewId) return;
+    setReviewBudgetPeriodId(reviewId);
+    setShowPlanSetup(true);
+    setFocusDraftPlan(true);
+  }, []);
 
   useEffect(() => {
     if (!focusDraftPlan || !draftPeriod || !showPlanSetup || loading) return;
