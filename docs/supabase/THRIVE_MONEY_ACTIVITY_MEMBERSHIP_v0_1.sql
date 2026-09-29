@@ -369,3 +369,60 @@ $function$;
 revoke all on function public.link_my_financial_activity_to_budget_v1(text,uuid,uuid) from public;
 revoke all on function public.link_my_financial_activity_to_budget_v1(text,uuid,uuid) from anon;
 grant execute on function public.link_my_financial_activity_to_budget_v1(text,uuid,uuid) to authenticated;
+
+
+-- Keep money-out activity owned by one Budget period at a time.
+-- Multiple category allocations inside the same Budget period remain allowed.
+create or replace function public.enforce_financial_activity_single_budget_v1()
+returns trigger
+language plpgsql
+security invoker
+set search_path to ''
+as $function$
+begin
+  if new.status <> 'active' then
+    return new;
+  end if;
+
+  if new.staged_transaction_id is not null
+     and exists (
+       select 1
+       from public.participant_financial_activity_allocations a
+       where a.id <> new.id
+         and a.supported_person_id = new.supported_person_id
+         and a.staged_transaction_id = new.staged_transaction_id
+         and a.status = 'active'
+         and a.archived_at is null
+         and a.budget_period_id <> new.budget_period_id
+     )
+  then
+    raise exception 'This Financial Activity already belongs to another Budget plan';
+  end if;
+
+  if new.manual_financial_activity_id is not null
+     and exists (
+       select 1
+       from public.participant_financial_activity_allocations a
+       where a.id <> new.id
+         and a.supported_person_id = new.supported_person_id
+         and a.manual_financial_activity_id = new.manual_financial_activity_id
+         and a.status = 'active'
+         and a.archived_at is null
+         and a.budget_period_id <> new.budget_period_id
+     )
+  then
+    raise exception 'This Financial Activity already belongs to another Budget plan';
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists participant_financial_activity_allocations_single_budget_guard
+  on public.participant_financial_activity_allocations;
+
+create trigger participant_financial_activity_allocations_single_budget_guard
+before insert or update of status, archived_at, budget_period_id, staged_transaction_id, manual_financial_activity_id
+on public.participant_financial_activity_allocations
+for each row
+execute function public.enforce_financial_activity_single_budget_v1();
