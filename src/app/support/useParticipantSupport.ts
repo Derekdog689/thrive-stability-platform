@@ -46,6 +46,7 @@ export type ParticipantSupportRequest = {
   created_at: string;
   updated_at: string;
   linked_budget_period_id: string | null;
+  linked_budget_status: string | null;
 };
 
 export type ParticipantSupportStatusEvent = {
@@ -121,22 +122,27 @@ const requestSelect =
 type ParticipantSupportBudgetLink = {
   support_request_id: string;
   budget_period_id: string | null;
+  budget_status: string | null;
 };
 
 function attachBudgetLinks(
-  rows: Omit<ParticipantSupportRequest, "linked_budget_period_id">[],
+  rows: Omit<ParticipantSupportRequest, "linked_budget_period_id" | "linked_budget_status">[],
   links: ParticipantSupportBudgetLink[],
 ): ParticipantSupportRequest[] {
   const budgetByRequest = new Map(
     links
       .filter((link) => Boolean(link.budget_period_id))
-      .map((link) => [link.support_request_id, link.budget_period_id]),
+      .map((link) => [link.support_request_id, link]),
   );
 
-  return rows.map((row) => ({
-    ...row,
-    linked_budget_period_id: budgetByRequest.get(row.id) ?? null,
-  }));
+  return rows.map((row) => {
+    const link = budgetByRequest.get(row.id) ?? null;
+    return {
+      ...row,
+      linked_budget_period_id: link?.budget_period_id ?? null,
+      linked_budget_status: link?.budget_status ?? null,
+    };
+  });
 }
 
 const statusEventSelect =
@@ -196,7 +202,7 @@ export function useParticipantSupport() {
         .order("created_at", { ascending: false });
 
       if (result.error) throw result.error;
-      return (result.data as Omit<ParticipantSupportRequest, "linked_budget_period_id">[] | null) ?? [];
+      return (result.data as Omit<ParticipantSupportRequest, "linked_budget_period_id" | "linked_budget_status">[] | null) ?? [];
     },
     [],
   );
@@ -213,7 +219,38 @@ export function useParticipantSupport() {
         .is("archived_at", null);
 
       if (result.error) throw result.error;
-      return (result.data as ParticipantSupportBudgetLink[] | null) ?? [];
+
+      const rows =
+        (result.data as Array<{ support_request_id: string; budget_period_id: string | null }> | null) ?? [];
+      const budgetIds = [
+        ...new Set(
+          rows
+            .map((row) => row.budget_period_id)
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ];
+
+      if (budgetIds.length === 0) return [];
+
+      const budgetResult = await supabase
+        .from("participant_budget_periods")
+        .select("id, status")
+        .in("id", budgetIds);
+
+      if (budgetResult.error) throw budgetResult.error;
+
+      const statusByBudget = new Map(
+        ((budgetResult.data as Array<{ id: string; status: string }> | null) ?? [])
+          .map((budget) => [budget.id, budget.status]),
+      );
+
+      return rows.map((row) => ({
+        support_request_id: row.support_request_id,
+        budget_period_id: row.budget_period_id,
+        budget_status: row.budget_period_id
+          ? statusByBudget.get(row.budget_period_id) ?? null
+          : null,
+      })) as ParticipantSupportBudgetLink[];
     },
     [],
   );
@@ -483,8 +520,9 @@ export function useParticipantSupport() {
     }
 
     const row = {
-      ...(result.data as Omit<ParticipantSupportRequest, "linked_budget_period_id">),
+      ...(result.data as Omit<ParticipantSupportRequest, "linked_budget_period_id" | "linked_budget_status">),
       linked_budget_period_id: null,
+      linked_budget_status: null,
     } as ParticipantSupportRequest;
     let createMessage = "Your Support request was sent.";
 
