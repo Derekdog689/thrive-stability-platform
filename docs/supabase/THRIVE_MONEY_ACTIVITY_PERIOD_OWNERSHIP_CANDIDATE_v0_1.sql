@@ -1,13 +1,13 @@
 -- THRIVE Money Activity Period Ownership Candidate v0.1
--- REVIEW ONLY. DO NOT EXECUTE.
+-- APPROVED FOR CONTROLLED INSTALLATION ON 2026-09-29.
 --
 -- Goal:
 -- Date overlap makes Financial Activity eligible for a Budget period.
 -- An explicit link makes it belong to that Budget period.
 --
 -- Existing outflow allocations already establish period ownership.
--- This table provides the missing period-only ownership relationship,
--- primarily for inflows that do not belong to an expense category.
+-- This table supplies period-only ownership for inflows, which do not
+-- belong to an expense category.
 
 create table public.participant_financial_activity_period_links (
   id uuid primary key default gen_random_uuid(),
@@ -69,6 +69,12 @@ create table public.participant_financial_activity_period_links (
       (status='active' and archived_at is null)
       or
       (status='archived' and archived_at is not null)
+    ),
+
+  constraint participant_financial_activity_period_links_archive_reason_check
+    check (
+      archive_reason is null
+      or length(trim(archive_reason)) > 0
     )
 );
 
@@ -94,16 +100,105 @@ on public.participant_financial_activity_period_links(
 alter table public.participant_financial_activity_period_links
 enable row level security;
 
+revoke all on table public.participant_financial_activity_period_links from public;
 revoke all on table public.participant_financial_activity_period_links from anon;
-grant select, insert on table public.participant_financial_activity_period_links to authenticated;
+grant select, insert on table public.participant_financial_activity_period_links
+  to authenticated;
+
+create or replace function public.can_link_my_inflow_to_budget_v1(
+  p_supported_person_id uuid,
+  p_workspace_id uuid,
+  p_program_id uuid,
+  p_activity_record_type text,
+  p_staged_transaction_id uuid,
+  p_manual_financial_activity_id uuid,
+  p_budget_period_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path to ''
+as $function$
+  select
+    auth.uid() is not null
+    and public.is_supported_person_self(p_supported_person_id)
+    and public.is_program_participant_active(
+      p_supported_person_id,
+      p_program_id,
+      p_workspace_id
+    )
+    and exists (
+      select 1
+      from public.participant_budget_periods pbp
+      where pbp.id = p_budget_period_id
+        and pbp.workspace_id = p_workspace_id
+        and pbp.program_id = p_program_id
+        and pbp.supported_person_id = p_supported_person_id
+        and pbp.status in ('draft','active')
+        and pbp.archived_at is null
+        and (
+          (
+            p_activity_record_type = 'manual'
+            and p_staged_transaction_id is null
+            and p_manual_financial_activity_id is not null
+            and exists (
+              select 1
+              from public.participant_manual_financial_activity pmfa
+              where pmfa.id = p_manual_financial_activity_id
+                and pmfa.workspace_id = p_workspace_id
+                and pmfa.program_id = p_program_id
+                and pmfa.supported_person_id = p_supported_person_id
+                and pmfa.status = 'active'
+                and pmfa.archived_at is null
+                and pmfa.activity_direction = 'inflow'
+                and pmfa.activity_date between pbp.period_start and pbp.period_end
+            )
+          )
+          or
+          (
+            p_activity_record_type = 'imported'
+            and p_manual_financial_activity_id is null
+            and p_staged_transaction_id is not null
+            and public.is_owned_staged_transaction_for_self(
+              p_supported_person_id,
+              p_staged_transaction_id,
+              p_workspace_id,
+              p_program_id
+            )
+            and exists (
+              select 1
+              from public.staged_financial_transactions sft
+              where sft.id = p_staged_transaction_id
+                and sft.workspace_id = p_workspace_id
+                and sft.program_id = p_program_id
+                and sft.parse_status = 'parsed'
+                and sft.transaction_lifecycle = 'posted'
+                and sft.amount > 0
+                and coalesce(sft.transaction_date, sft.posted_date)
+                    between pbp.period_start and pbp.period_end
+            )
+          )
+        )
+    );
+$function$;
+
+revoke all on function public.can_link_my_inflow_to_budget_v1(
+  uuid,uuid,uuid,text,uuid,uuid,uuid
+) from public;
+revoke all on function public.can_link_my_inflow_to_budget_v1(
+  uuid,uuid,uuid,text,uuid,uuid,uuid
+) from anon;
+grant execute on function public.can_link_my_inflow_to_budget_v1(
+  uuid,uuid,uuid,text,uuid,uuid,uuid
+) to authenticated;
 
 create policy participant_financial_activity_period_links_select_self
 on public.participant_financial_activity_period_links
 for select
 to authenticated
 using (
-  archived_at is null
-  and public.is_supported_person_self(supported_person_id)
+  public.is_supported_person_self(supported_person_id)
 );
 
 create policy participant_financial_activity_period_links_insert_self
@@ -112,23 +207,17 @@ for insert
 to authenticated
 with check (
   created_by = auth.uid()
-  and archived_at is null
   and status = 'active'
-  and public.is_supported_person_self(supported_person_id)
-  and public.is_program_participant_active(
+  and archived_at is null
+  and archive_reason is null
+  and public.can_link_my_inflow_to_budget_v1(
     supported_person_id,
+    workspace_id,
     program_id,
-    workspace_id
-  )
-  and exists (
-    select 1
-    from public.participant_budget_periods pbp
-    where pbp.id = budget_period_id
-      and pbp.workspace_id = workspace_id
-      and pbp.program_id = program_id
-      and pbp.supported_person_id = supported_person_id
-      and pbp.status in ('draft','active')
-      and pbp.archived_at is null
+    activity_record_type,
+    staged_transaction_id,
+    manual_financial_activity_id,
+    budget_period_id
   )
 );
 
@@ -147,9 +236,6 @@ declare
   v_supported_person_id uuid;
   v_workspace_id uuid;
   v_program_id uuid;
-  v_activity_date date;
-  v_activity_direction text;
-  v_period public.participant_budget_periods;
   v_link_id uuid;
 begin
   if v_actor_id is null then
@@ -170,66 +256,29 @@ begin
     raise exception 'No active supported-person record is connected to this user';
   end if;
 
-  if p_activity_record_type='imported' then
-    select sft.program_id,
-           coalesce(sft.transaction_date,sft.posted_date),
-           case when sft.amount > 0 then 'inflow'
-                when sft.amount < 0 then 'outflow'
-                else null end
-      into v_program_id, v_activity_date, v_activity_direction
-    from public.staged_financial_transactions sft
-    where sft.id=p_activity_id
-      and sft.workspace_id=v_workspace_id
-      and sft.parse_status='parsed'
-      and sft.transaction_lifecycle='posted';
-
-    if v_program_id is null
-       or not public.is_owned_staged_transaction_for_self(
-         v_supported_person_id,
-         p_activity_id,
-         v_workspace_id,
-         v_program_id
-       )
-    then
-      raise exception 'Participant Financial Activity access denied';
-    end if;
-  else
-    select pmfa.program_id, pmfa.activity_date, pmfa.activity_direction
-      into v_program_id, v_activity_date, v_activity_direction
-    from public.participant_manual_financial_activity pmfa
-    where pmfa.id=p_activity_id
-      and pmfa.workspace_id=v_workspace_id
-      and pmfa.supported_person_id=v_supported_person_id
-      and pmfa.status='active';
-
-    if v_program_id is null then
-      raise exception 'Participant Financial Activity access denied';
-    end if;
-  end if;
-
-  if v_activity_direction <> 'inflow' then
-    raise exception 'This period-only link is reserved for money-in activity';
-  end if;
-
-  select pbp.*
-    into v_period
+  select pbp.program_id
+    into v_program_id
   from public.participant_budget_periods pbp
-  where pbp.id=p_budget_period_id;
+  where pbp.id = p_budget_period_id
+    and pbp.workspace_id = v_workspace_id
+    and pbp.supported_person_id = v_supported_person_id
+    and pbp.status in ('draft','active')
+    and pbp.archived_at is null;
 
-  if v_period.id is null
-     or v_period.workspace_id<>v_workspace_id
-     or v_period.program_id<>v_program_id
-     or v_period.supported_person_id<>v_supported_person_id
-     or v_period.status not in ('draft','active')
-     or v_period.archived_at is not null
-  then
+  if v_program_id is null then
     raise exception 'Participant Budget access denied';
   end if;
 
-  if v_activity_date < v_period.period_start
-     or v_activity_date > v_period.period_end
-  then
-    raise exception 'Financial Activity date is outside this Budget period';
+  if not public.can_link_my_inflow_to_budget_v1(
+    v_supported_person_id,
+    v_workspace_id,
+    v_program_id,
+    p_activity_record_type,
+    case when p_activity_record_type='imported' then p_activity_id else null end,
+    case when p_activity_record_type='manual' then p_activity_id else null end,
+    p_budget_period_id
+  ) then
+    raise exception 'Money-in activity cannot be linked to this Budget';
   end if;
 
   insert into public.participant_financial_activity_period_links(
@@ -250,7 +299,7 @@ begin
     p_activity_record_type,
     case when p_activity_record_type='imported' then p_activity_id else null end,
     case when p_activity_record_type='manual' then p_activity_id else null end,
-    v_period.id,
+    p_budget_period_id,
     'active',
     v_actor_id
   )
@@ -260,6 +309,128 @@ begin
 end;
 $function$;
 
-revoke all on function public.link_my_inflow_to_budget_v1(text,uuid,uuid) from public;
-revoke all on function public.link_my_inflow_to_budget_v1(text,uuid,uuid) from anon;
-grant execute on function public.link_my_inflow_to_budget_v1(text,uuid,uuid) to authenticated;
+revoke all on function public.link_my_inflow_to_budget_v1(text,uuid,uuid)
+  from public;
+revoke all on function public.link_my_inflow_to_budget_v1(text,uuid,uuid)
+  from anon;
+grant execute on function public.link_my_inflow_to_budget_v1(text,uuid,uuid)
+  to authenticated;
+
+create or replace function public.create_my_manual_inflow_for_budget_v1(
+  p_program_id uuid,
+  p_budget_period_id uuid,
+  p_activity_date date,
+  p_amount numeric,
+  p_description text
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path to ''
+as $function$
+declare
+  v_activity_id uuid;
+begin
+  v_activity_id := public.create_my_manual_financial_activity_v1(
+    p_program_id,
+    p_activity_date,
+    'inflow',
+    p_amount,
+    p_description
+  );
+
+  perform public.link_my_inflow_to_budget_v1(
+    'manual',
+    v_activity_id,
+    p_budget_period_id
+  );
+
+  return v_activity_id;
+end;
+$function$;
+
+revoke all on function public.create_my_manual_inflow_for_budget_v1(
+  uuid,uuid,date,numeric,text
+) from public;
+revoke all on function public.create_my_manual_inflow_for_budget_v1(
+  uuid,uuid,date,numeric,text
+) from anon;
+grant execute on function public.create_my_manual_inflow_for_budget_v1(
+  uuid,uuid,date,numeric,text
+) to authenticated;
+
+create or replace function public.protect_linked_manual_inflow_v1()
+returns trigger
+language plpgsql
+security invoker
+set search_path to ''
+as $function$
+declare
+  v_period_start date;
+  v_period_end date;
+begin
+  select pbp.period_start, pbp.period_end
+    into v_period_start, v_period_end
+  from public.participant_financial_activity_period_links pfl
+  join public.participant_budget_periods pbp
+    on pbp.id = pfl.budget_period_id
+   and pbp.workspace_id = pfl.workspace_id
+   and pbp.program_id = pfl.program_id
+   and pbp.supported_person_id = pfl.supported_person_id
+  where pfl.manual_financial_activity_id = old.id
+    and pfl.status = 'active'
+    and pfl.archived_at is null
+  limit 1;
+
+  if v_period_start is null then
+    return new;
+  end if;
+
+  if new.activity_direction <> 'inflow' then
+    raise exception 'Linked Money-in activity must remain money in';
+  end if;
+
+  if new.activity_date < v_period_start
+     or new.activity_date > v_period_end
+  then
+    raise exception 'Linked Money-in activity date must stay inside its Budget period';
+  end if;
+
+  return new;
+end;
+$function$;
+
+create trigger participant_manual_financial_activity_link_guard
+before update of activity_date, activity_direction, status
+on public.participant_manual_financial_activity
+for each row
+execute function public.protect_linked_manual_inflow_v1();
+
+create or replace function public.archive_linked_manual_inflow_v1()
+returns trigger
+language plpgsql
+security invoker
+set search_path to ''
+as $function$
+begin
+  if old.status = 'active' and new.status = 'archived' then
+    update public.participant_financial_activity_period_links
+    set
+      status = 'archived',
+      archived_at = coalesce(new.archived_at, now()),
+      archive_reason = 'Source activity archived',
+      updated_at = now()
+    where manual_financial_activity_id = new.id
+      and status = 'active'
+      and archived_at is null;
+  end if;
+
+  return new;
+end;
+$function$;
+
+create trigger participant_manual_financial_activity_link_archive
+after update of status
+on public.participant_manual_financial_activity
+for each row
+execute function public.archive_linked_manual_inflow_v1();
