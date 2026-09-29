@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import AuthGate from "../AuthGate";
 import {
@@ -207,6 +207,7 @@ export default function MoneyCandidatePage() {
   const [completingExpired, setCompletingExpired] = useState(false);
   const [showPlanSetup, setShowPlanSetup] = useState(false);
   const [showOrientationHelp, setShowOrientationHelp] = useState(false);
+  const [focusDraftPlan, setFocusDraftPlan] = useState(false);
 
   const activePeriod = budgetPeriods.find((period) => period.status === "active") ?? null;
   const draftPeriod = budgetPeriods.find((period) => period.status === "draft") ?? null;
@@ -231,6 +232,15 @@ export default function MoneyCandidatePage() {
   const recentActivityPreview = draftPeriod ? draftActivity.slice(0, 4) : financialActivity.slice(0, 4);
   const recentExplainedCount = recentActivityPreview.filter((activity) => activity.activity_record_type === "imported" && explanationByTransactionId.get(activity.activity_id)?.status !== "archived" && explanationByTransactionId.has(activity.activity_id)).length;
 
+  useEffect(() => {
+    if (!focusDraftPlan || !draftPeriod || !showPlanSetup) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("money-plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setFocusDraftPlan(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusDraftPlan, draftPeriod, showPlanSetup]);
+
   function scrollToMoneySection(id: string) {
     window.requestAnimationFrame(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -250,7 +260,11 @@ export default function MoneyCandidatePage() {
     if (!Number.isFinite(expectedIncome) || expectedIncome < 0) { setBudgetNotice("Enter zero or more."); return; }
     const result = await createBudgetDraft({ programId: activeProgramId, periodStart: newBudgetDraft.periodStart, periodEnd: newBudgetDraft.periodEnd, expectedIncome, notes: newBudgetDraft.notes });
     setBudgetNotice(result.message);
-    if (result.ok) await refresh();
+    if (result.ok) {
+      setShowPlanSetup(true);
+      setFocusDraftPlan(true);
+      await refresh();
+    }
   }
 
   async function completeExpiredBudget() {
