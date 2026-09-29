@@ -84,6 +84,12 @@ export type ParticipantSupportReply = {
   created_at: string;
 };
 
+export type AssistedBudgetSupportLink = {
+  support_request_id: string;
+  budget_period_id: string;
+  budget_status: string;
+};
+
 export type ParticipantReplyResult =
   | { ok: true; row: ParticipantSupportReply; message: string }
   | { ok: false; message: string };
@@ -150,6 +156,9 @@ export function useParticipantSupport() {
   >([]);
   const [participantReplies, setParticipantReplies] = useState<
     ParticipantSupportReply[]
+  >([]);
+  const [assistedBudgetLinks, setAssistedBudgetLinks] = useState<
+    AssistedBudgetSupportLink[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -232,6 +241,54 @@ export function useParticipantSupport() {
     [],
   );
 
+  const loadAssistedBudgetLinks = useCallback(
+    async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
+      const linkResult = await supabase
+        .from("support_request_links")
+        .select("support_request_id, budget_period_id")
+        .eq("supported_person_id", person.id)
+        .eq("workspace_id", person.workspace_id)
+        .eq("program_id", activeParticipation.program_id)
+        .is("archived_at", null)
+        .not("budget_period_id", "is", null);
+
+      if (linkResult.error) throw linkResult.error;
+
+      const links = (linkResult.data ?? []) as Array<{
+        support_request_id: string;
+        budget_period_id: string | null;
+      }>;
+
+      const budgetIds = Array.from(new Set(
+        links
+          .map((item) => item.budget_period_id)
+          .filter((value): value is string => Boolean(value)),
+      ));
+
+      if (budgetIds.length === 0) return [];
+
+      const periodResult = await supabase
+        .from("participant_budget_periods")
+        .select("id, status")
+        .in("id", budgetIds);
+
+      if (periodResult.error) throw periodResult.error;
+
+      const statusById = new Map(
+        (periodResult.data ?? []).map((item) => [item.id as string, item.status as string]),
+      );
+
+      return links
+        .filter((item): item is { support_request_id: string; budget_period_id: string } => Boolean(item.budget_period_id))
+        .map((item) => ({
+          support_request_id: item.support_request_id,
+          budget_period_id: item.budget_period_id,
+          budget_status: statusById.get(item.budget_period_id) ?? "unknown",
+        }));
+    },
+    [],
+  );
+
   useEffect(() => {
     let mounted = true;
 
@@ -304,12 +361,13 @@ export function useParticipantSupport() {
       }
 
       try {
-        const [requestRows, eventRows, responseRows, replyRows] =
+        const [requestRows, eventRows, responseRows, replyRows, assistedBudgetRows] =
           await Promise.all([
             loadRequests(person, activeParticipation),
             loadStatusEvents(person, activeParticipation),
             loadParticipantResponses(person, activeParticipation),
             loadParticipantReplies(person, activeParticipation),
+            loadAssistedBudgetLinks(person, activeParticipation),
           ]);
 
         if (!mounted) return;
@@ -318,6 +376,7 @@ export function useParticipantSupport() {
         setStatusEvents(eventRows);
         setParticipantResponses(responseRows);
         setParticipantReplies(replyRows);
+        setAssistedBudgetLinks(assistedBudgetRows);
       } catch (error) {
         if (!mounted) return;
         setErrorMessage(
@@ -340,6 +399,7 @@ export function useParticipantSupport() {
     loadStatusEvents,
     loadParticipantResponses,
     loadParticipantReplies,
+    loadAssistedBudgetLinks,
   ]);
 
   async function refreshRequests() {
@@ -349,18 +409,20 @@ export function useParticipantSupport() {
     }
 
     try {
-      const [requestRows, eventRows, responseRows, replyRows] =
+      const [requestRows, eventRows, responseRows, replyRows, assistedBudgetRows] =
         await Promise.all([
           loadRequests(participant, participation),
           loadStatusEvents(participant, participation),
           loadParticipantResponses(participant, participation),
           loadParticipantReplies(participant, participation),
+          loadAssistedBudgetLinks(participant, participation),
         ]);
 
       setRequests(requestRows);
       setStatusEvents(eventRows);
       setParticipantResponses(responseRows);
       setParticipantReplies(replyRows);
+      setAssistedBudgetLinks(assistedBudgetRows);
 
       return requestRows;
     } catch (error) {
@@ -640,6 +702,7 @@ export function useParticipantSupport() {
     statusEvents,
     participantResponses,
     participantReplies,
+    assistedBudgetLinks,
     loading,
     working,
     errorMessage,
