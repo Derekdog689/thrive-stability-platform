@@ -81,6 +81,20 @@ export type FinancialActivityAllocation = {
   archived_at: string | null;
 };
 
+export type FinancialActivityPeriodLink = {
+  link_id: string;
+  workspace_id: string;
+  program_id: string;
+  supported_person_id: string;
+  activity_record_type: "imported" | "manual";
+  activity_id: string;
+  budget_period_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+};
+
 export type BudgetPeriod = {
   id: string;
   period_start: string;
@@ -285,6 +299,11 @@ const [
   setFinancialActivityAllocations,
 ] = useState<FinancialActivityAllocation[]>([]);
 
+const [
+  financialActivityPeriodLinks,
+  setFinancialActivityPeriodLinks,
+] = useState<FinancialActivityPeriodLink[]>([]);
+
 const [budgetPeriods, setBudgetPeriods] =
   useState<BudgetPeriod[]>([]);
 
@@ -346,6 +365,7 @@ const [budgetPeriods, setBudgetPeriods] =
   transactionResult,
   financialActivityResult,
   financialActivityAllocationResult,
+  financialActivityPeriodLinkResult,
   periodResult,
   programParticipantResult,
 ] = await Promise.all([
@@ -366,6 +386,10 @@ const [budgetPeriods, setBudgetPeriods] =
         ),
       supabase.rpc(
         "get_my_financial_activity_allocations_v1",
+      ),
+
+      supabase.rpc(
+        "get_my_financial_activity_period_links_v1",
       ),
 
       supabase
@@ -391,6 +415,7 @@ const [budgetPeriods, setBudgetPeriods] =
       transactionResult.error ??
       financialActivityResult.error ??
       financialActivityAllocationResult.error ??
+      financialActivityPeriodLinkResult.error ??
       periodResult.error ??
       programParticipantResult.error;
 
@@ -452,6 +477,11 @@ const [budgetPeriods, setBudgetPeriods] =
   (financialActivityAllocationResult.data ??
     []) as FinancialActivityAllocation[],
 );
+
+    setFinancialActivityPeriodLinks(
+      (financialActivityPeriodLinkResult.data ??
+        []) as FinancialActivityPeriodLink[],
+    );
 
     setBudgetPeriods(orderedPeriods);
 
@@ -539,6 +569,7 @@ setBudgetLines(
     transactions,
 financialActivity,
 financialActivityAllocations,
+financialActivityPeriodLinks,
 budgetPeriods,
 budgetLines,
     totalOutflow,
