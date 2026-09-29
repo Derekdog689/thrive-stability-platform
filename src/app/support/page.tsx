@@ -135,6 +135,10 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
   const events = statusEvents.filter((item) => item.support_request_id === request.id);
   const latestSupportMessage = entries.at(-1)?.content ?? null;
   const needsYou = request.status === "waiting_for_participant";
+  const assistedMoneyReview =
+    needsYou &&
+    request.participant_category === "budget_money" &&
+    Boolean(request.linked_budget_period_id);
 
   async function sendReply() {
     const result = await onSubmitReply(request, replyDraft);
@@ -155,9 +159,21 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
         <span className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-black ${needsYou ? "bg-amber-100 text-amber-900" : request.status === "completed" ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>{labelStatus(request.status)}</span>
       </div>
 
-      {!compact ? <div className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm font-bold ${needsYou ? "bg-amber-50 text-amber-950" : "bg-emerald-50/80 text-emerald-950"}`}>{needsYou ? "Support needs something from you." : request.status === "submitted" ? "Support has your request. You do not need to repeat it." : request.status === "acknowledged" ? "Support has seen this." : request.status === "in_progress" ? "Support is reviewing this." : request.status === "completed" ? "This request is resolved." : "This request is in your history."}</div> : null}
+      {!compact ? <div className={`mt-4 rounded-[1.25rem] px-4 py-3 text-sm font-bold ${needsYou ? "bg-amber-50 text-amber-950" : "bg-emerald-50/80 text-emerald-950"}`}>{assistedMoneyReview ? "Your starter Money plan is ready to review." : needsYou ? "Support needs something from you." : request.status === "submitted" ? "Support has your request. You do not need to repeat it." : request.status === "acknowledged" ? "Support has seen this." : request.status === "in_progress" ? "Support is reviewing this." : request.status === "completed" ? "This request is resolved." : "This request is in your history."}</div> : null}
 
-      {needsYou ? <section className="mt-4 rounded-[1.4rem] border border-amber-200 bg-amber-50 p-4">
+      {assistedMoneyReview ? <section className="mt-4 rounded-[1.4rem] border border-sky-200 bg-sky-50 p-4">
+        {latestSupportMessage ? <><p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-800">Support prepared</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{latestSupportMessage}</p></> : <p className="font-black text-sky-950">A starter Money plan is ready for you to review.</p>}
+        <Link href={`/budget?review=${encodeURIComponent(request.linked_budget_period_id ?? "")}`} className="mt-4 flex w-full items-center justify-center rounded-full bg-sky-700 px-4 py-3 font-black text-white">Review starter plan</Link>
+        <p className="mt-3 text-sm font-semibold leading-6 text-sky-900">Nothing becomes active until you choose to use the plan.</p>
+        <details className="mt-4 rounded-[1.1rem] border border-sky-200 bg-white/70">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-sky-900">Message Support</summary>
+          <div className="border-t border-sky-100 p-3">
+            <textarea value={replyDraft} onChange={(event) => setReplyDraft(event.target.value)} maxLength={4000} rows={3} className="w-full rounded-[1.2rem] border border-sky-200 bg-white px-4 py-3" placeholder="Write a message to Support" />
+            <button type="button" disabled={working || !replyDraft.trim()} onClick={() => void sendReply()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send message"}</button>
+            {replyNotice ? <p className="mt-2 text-sm font-bold text-slate-600">{replyNotice}</p> : null}
+          </div>
+        </details>
+      </section> : needsYou ? <section className="mt-4 rounded-[1.4rem] border border-amber-200 bg-amber-50 p-4">
         {latestSupportMessage ? <><p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Support said</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{latestSupportMessage}</p></> : <p className="font-black text-amber-950">A response is needed.</p>}
         <textarea value={replyDraft} onChange={(event) => setReplyDraft(event.target.value)} maxLength={4000} rows={3} className="mt-3 w-full rounded-[1.2rem] border border-amber-200 bg-white px-4 py-3" placeholder="Write your response" />
         <button type="button" disabled={working || !replyDraft.trim()} onClick={() => void sendReply()} className="mt-3 w-full rounded-full bg-emerald-700 px-4 py-3 font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send response"}</button>
