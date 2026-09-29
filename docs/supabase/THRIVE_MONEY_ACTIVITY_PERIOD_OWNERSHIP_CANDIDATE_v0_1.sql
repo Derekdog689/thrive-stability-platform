@@ -1,5 +1,6 @@
 -- THRIVE Money Activity Period Ownership Candidate v0.1
--- APPROVED FOR CONTROLLED INSTALLATION ON 2026-09-29.
+-- HISTORICAL CANDIDATE. LIVE INSTALL WAS RECONCILED/HARDENED ON 2026-09-29.
+-- Do not run this file wholesale against production; see the v0.2 implementation note.
 --
 -- Goal:
 -- Date overlap makes Financial Activity eligible for a Budget period.
