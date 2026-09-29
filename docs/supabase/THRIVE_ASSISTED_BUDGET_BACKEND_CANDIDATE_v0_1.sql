@@ -262,10 +262,22 @@ begin
     v_actor_id
   );
 
+  if v_request.status = 'submitted' then
+    update public.support_requests
+    set status = 'in_progress'
+    where id = v_request.id
+      and status = 'submitted';
+  elsif v_request.status = 'acknowledged' then
+    update public.support_requests
+    set status = 'in_progress'
+    where id = v_request.id
+      and status = 'acknowledged';
+  end if;
+
   update public.support_requests
   set status = 'waiting_for_participant'
   where id = v_request.id
-    and status in ('submitted', 'acknowledged', 'in_progress');
+    and status = 'in_progress';
 
   return v_budget_period_id;
 end;
