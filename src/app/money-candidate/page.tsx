@@ -420,6 +420,21 @@ export default function MoneyCandidatePage() {
     return { ok: true, message: "Category saved." };
   }
 
+  async function linkActivityToCurrentPlan(activity: FinancialActivity) {
+    if (!activePeriod) return { ok: false, message: "There is no active Money plan to add this to." };
+    if (activity.activity_direction !== "inflow") return { ok: false, message: "Money out joins a plan through a Budget category." };
+
+    const { error } = await supabase.rpc("link_my_financial_activity_to_budget_v1", {
+      p_activity_record_type: activity.activity_record_type,
+      p_activity_id: activity.activity_id,
+      p_budget_period_id: activePeriod.id,
+    });
+
+    if (error) return { ok: false, message: error.message };
+    await refresh();
+    return { ok: true, message: "Money in added to this plan." };
+  }
+
   async function updateManualActivity(activity: FinancialActivity, date: string, direction: "inflow" | "outflow", amount: number, description: string) {
     if (activity.activity_record_type !== "manual") return { ok: false, message: "Imported records cannot be edited here." };
     const { error } = await supabase.rpc("update_my_manual_financial_activity_v1", { p_activity_id: activity.activity_id, p_activity_date: date, p_activity_direction: direction, p_amount: amount, p_description: description });
@@ -479,6 +494,18 @@ export default function MoneyCandidatePage() {
         setActivityWorking(false);
         return;
       }
+    } else {
+      const linkResult = await supabase.rpc("link_my_financial_activity_to_budget_v1", {
+        p_activity_record_type: "manual",
+        p_activity_id: createResult.data as string,
+        p_budget_period_id: activePeriod.id,
+      });
+      if (linkResult.error) {
+        await refresh();
+        setActivityNotice(`Money in was saved, but it was not added to this plan: ${linkResult.error.message}`);
+        setActivityWorking(false);
+        return;
+      }
     }
 
     setActivityDate("");
@@ -488,7 +515,7 @@ export default function MoneyCandidatePage() {
     setActivityDirection("outflow");
     setShowAddActivity(false);
     await refresh();
-    setActivityNotice(activityDirection === "outflow" ? "Money out added to your Budget." : "Money in added.");
+    setActivityNotice(activityDirection === "outflow" ? "Money out added to this plan." : "Money in added to this plan.");
     setActivityWorking(false);
   }
 
