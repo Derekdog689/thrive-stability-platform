@@ -45,6 +45,7 @@ export type ParticipantSupportRequest = {
   status: SupportRequestStatus;
   created_at: string;
   updated_at: string;
+  linked_budget_period_id: string | null;
 };
 
 export type ParticipantSupportStatusEvent = {
@@ -117,6 +118,27 @@ export type SupportCreateResult =
 const requestSelect =
   "id, workspace_id, program_id, supported_person_id, participant_category, participant_message, requested_support, contact_preference, status, created_at, updated_at";
 
+type ParticipantSupportBudgetLink = {
+  support_request_id: string;
+  budget_period_id: string | null;
+};
+
+function attachBudgetLinks(
+  rows: Omit<ParticipantSupportRequest, "linked_budget_period_id">[],
+  links: ParticipantSupportBudgetLink[],
+): ParticipantSupportRequest[] {
+  const budgetByRequest = new Map(
+    links
+      .filter((link) => Boolean(link.budget_period_id))
+      .map((link) => [link.support_request_id, link.budget_period_id]),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    linked_budget_period_id: budgetByRequest.get(row.id) ?? null,
+  }));
+}
+
 const statusEventSelect =
   "id, workspace_id, program_id, supported_person_id, support_request_id, event_type, from_status, to_status, changed_at, change_note";
 
@@ -174,7 +196,24 @@ export function useParticipantSupport() {
         .order("created_at", { ascending: false });
 
       if (result.error) throw result.error;
-      return (result.data as ParticipantSupportRequest[] | null) ?? [];
+      return (result.data as Omit<ParticipantSupportRequest, "linked_budget_period_id">[] | null) ?? [];
+    },
+    [],
+  );
+
+  const loadBudgetLinks = useCallback(
+    async (person: SupportedPerson, activeParticipation: ProgramParticipation) => {
+      const result = await supabase
+        .from("support_request_links")
+        .select("support_request_id, budget_period_id")
+        .eq("supported_person_id", person.id)
+        .eq("workspace_id", person.workspace_id)
+        .eq("program_id", activeParticipation.program_id)
+        .not("budget_period_id", "is", null)
+        .is("archived_at", null);
+
+      if (result.error) throw result.error;
+      return (result.data as ParticipantSupportBudgetLink[] | null) ?? [];
     },
     [],
   );
@@ -304,9 +343,10 @@ export function useParticipantSupport() {
       }
 
       try {
-        const [requestRows, eventRows, responseRows, replyRows] =
+        const [requestRows, linkRows, eventRows, responseRows, replyRows] =
           await Promise.all([
             loadRequests(person, activeParticipation),
+            loadBudgetLinks(person, activeParticipation),
             loadStatusEvents(person, activeParticipation),
             loadParticipantResponses(person, activeParticipation),
             loadParticipantReplies(person, activeParticipation),
@@ -314,7 +354,7 @@ export function useParticipantSupport() {
 
         if (!mounted) return;
 
-        setRequests(requestRows);
+        setRequests(attachBudgetLinks(requestRows, linkRows));
         setStatusEvents(eventRows);
         setParticipantResponses(responseRows);
         setParticipantReplies(replyRows);
@@ -337,6 +377,7 @@ export function useParticipantSupport() {
     };
   }, [
     loadRequests,
+    loadBudgetLinks,
     loadStatusEvents,
     loadParticipantResponses,
     loadParticipantReplies,
@@ -349,20 +390,22 @@ export function useParticipantSupport() {
     }
 
     try {
-      const [requestRows, eventRows, responseRows, replyRows] =
+      const [requestRows, linkRows, eventRows, responseRows, replyRows] =
         await Promise.all([
           loadRequests(participant, participation),
+          loadBudgetLinks(participant, participation),
           loadStatusEvents(participant, participation),
           loadParticipantResponses(participant, participation),
           loadParticipantReplies(participant, participation),
         ]);
 
-      setRequests(requestRows);
+      const linkedRequests = attachBudgetLinks(requestRows, linkRows);
+      setRequests(linkedRequests);
       setStatusEvents(eventRows);
       setParticipantResponses(responseRows);
       setParticipantReplies(replyRows);
 
-      return requestRows;
+      return linkedRequests;
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -439,7 +482,10 @@ export function useParticipantSupport() {
       };
     }
 
-    const row = result.data as ParticipantSupportRequest;
+    const row = {
+      ...(result.data as Omit<ParticipantSupportRequest, "linked_budget_period_id">),
+      linked_budget_period_id: null,
+    } as ParticipantSupportRequest;
     let createMessage = "Your Support request was sent.";
 
     if (typeof window !== "undefined") {
