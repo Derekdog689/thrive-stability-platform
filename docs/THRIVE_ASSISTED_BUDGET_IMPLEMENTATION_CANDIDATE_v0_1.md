@@ -66,15 +66,20 @@ Admin preparation does not equal participant approval.
 
 Participant activation remains the final action.
 
-## Installation gate
+## Installed and verified
 
-Before production installation:
+Installed to the THRIVE Supabase project on 2026-09-29 after explicit approval.
 
-1. review candidate SQL;
-2. run database advisors;
-3. install in a controlled gate;
-4. execute the authenticated test plan;
-5. wire admin prototype to the RPC;
-6. make Money recognize Support-linked drafts;
-7. verify mobile participant flow;
-8. merge only after green validation.
+Verified:
+- non-admin preparation denied;
+- admin preparation creates the participant-owned draft;
+- Support link is created;
+- Support moves to waiting for participant;
+- admin direct activation is denied;
+- participant can edit and activate the same draft through existing Money RPCs;
+- malformed duplicate-category preparation rolls back without partial children;
+- the new prepare RPC is SECURITY INVOKER and does not produce a new Supabase security-advisor finding.
+
+Production admin route: `/admin/assisted-budget`.
+
+Participant review is integrated into the existing Money surface rather than a separate prototype route.
