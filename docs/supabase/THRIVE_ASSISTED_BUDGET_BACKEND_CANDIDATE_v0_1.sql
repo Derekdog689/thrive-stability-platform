@@ -1,5 +1,5 @@
 -- THRIVE Assisted Budget Backend Candidate v0.1
--- REVIEW ONLY. DO NOT EXECUTE FROM THIS FILE.
+-- INSTALLED AND VERIFIED IN THRIVE PRODUCTION SUPABASE ON 2026-09-29.
 --
 -- Purpose:
 -- 1. Allow a workspace admin to prepare a participant-owned Budget draft from
@@ -9,7 +9,7 @@
 -- 4. Enforce that only the supported person may move draft -> active.
 --
 -- Existing participant Budget RPCs remain authoritative for participant editing
--- and activation.
+-- and activation. Security hardened to SECURITY INVOKER plus scoped admin link RLS.
 
 create or replace function public.enforce_participant_budget_activation_owner_v1()
 returns trigger
