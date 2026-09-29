@@ -108,8 +108,15 @@ export default function TodayPage() {
 
   const [timeGreeting, setTimeGreeting] = useState("Hello");
   const [signingOut, setSigningOut] = useState(false);
+  const [goalsDoneForNow, setGoalsDoneForNow] = useState(false);
+
   useEffect(() => {
     setTimeGreeting(getTimeGreeting(new Date().getHours()));
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("done") === "goals") {
+      setGoalsDoneForNow(true);
+      window.history.replaceState({}, "", "/");
+    }
   }, []);
 
   async function handleSignOut() {
@@ -151,10 +158,10 @@ export default function TodayPage() {
     if (budgetExpired && activeBudgetPeriod) return { label: "Needs you", title: "Your Money plan ended", detail: "Review the finished plan when you are ready to set up the next one.", href: "/budget", action: "Review Money", icon: "money" as IconName };
     if (!todayCheckin) return { label: "Start here", title: "Check in", detail: "Tell THRIVE how things are going right now.", href: "/wellness", action: "Check in", icon: "wellness" as IconName };
     if (!todayCheckin.chosen_next_step) return { label: "Pick up where you left off", title: "Finish your check-in", detail: "Your earlier answers are saved. Choose what you want to do next, or leave it there.", href: "/wellness", action: "Continue", icon: "wellness" as IconName };
-    if (currentGoal?.next_step) return { label: "One thing you can continue", title: currentGoal.title, detail: currentGoal.next_step, href: "/goals", action: "Continue goal", icon: "goal" as IconName };
+    if (!goalsDoneForNow && currentGoal?.next_step) return { label: "One thing you can continue", title: currentGoal.title, detail: currentGoal.next_step, href: "/goals", action: "Continue goal", icon: "goal" as IconName };
     if (needsNextMoneyPlan) return { label: "When you're ready", title: "Start your next Money plan", detail: "Your last plan is complete. Set up the next one when it is useful.", href: "/budget", action: "Open Money", icon: "money" as IconName };
     return { label: "Right now", title: "You’re caught up", detail: "Nothing in THRIVE needs your attention. Come back when something changes or when you want to work on something.", href: "/", action: "", icon: "today" as IconName };
-  }, [isNewParticipant, supportNeedsParticipant, budgetExpired, activeBudgetPeriod, todayCheckin, currentGoal, needsNextMoneyPlan]);
+  }, [isNewParticipant, supportNeedsParticipant, budgetExpired, activeBudgetPeriod, todayCheckin, currentGoal, needsNextMoneyPlan, goalsDoneForNow]);
 
   if (loading) {
     return <AuthGate><main className="min-h-screen bg-[#edf5ef] px-4 py-10 text-slate-950"><div className="mx-auto max-w-2xl rounded-[2rem] border border-white/70 bg-white/70 p-8 shadow-sm backdrop-blur-xl"><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">THRIVE Now</p><h1 className="mt-3 text-3xl font-black">Getting things ready...</h1></div></main></AuthGate>;
@@ -177,6 +184,7 @@ export default function TodayPage() {
           </header>
 
           {errorMessage ? <section role="alert" className="mt-3 rounded-3xl border border-rose-200 bg-rose-50/90 p-4 text-rose-950 shadow-sm"><p className="font-black">Some parts of Today could not be loaded.</p></section> : null}
+          {goalsDoneForNow ? <section className="mt-3 rounded-3xl border border-emerald-100 bg-emerald-50/85 p-4 text-emerald-950 shadow-sm"><p className="font-black">Goal saved. You’re done with Goals for now.</p></section> : null}
 
           <section className="mt-3 rounded-[1.9rem] border border-white/75 bg-white/58 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl sm:p-7">
             <div className="flex items-start gap-4">
