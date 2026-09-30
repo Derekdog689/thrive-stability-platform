@@ -3,7 +3,7 @@ import { BottomNav, PreviewNotice, SceneHero } from "../_components";
 
 export default function MoneyCloseoutLiving() {
   return (
-    <main className="ls-root" style={{ background: "#0c4b48" }}>
+    <main className="ls-root ls-root--money">
       <PreviewNotice />
       <section className="ls-phone">
         <SceneHero
@@ -21,7 +21,7 @@ export default function MoneyCloseoutLiving() {
           </div>
         </SceneHero>
 
-        <section className="ls-section ls-section--dark">
+        <section className="ls-section ls-section--dark ls-money-return">
           <p className="ls-section-title">What changed</p>
           <h2 className="ls-h2">You stayed with the plan.</h2>
           <p className="ls-body">The month is closed. Your activity, categories, and remaining flexibility now become part of the bigger picture.</p>
