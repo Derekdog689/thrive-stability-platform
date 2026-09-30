@@ -211,6 +211,7 @@ export default function SupportPage() {
   const [goalContext, setGoalContext] = useState<GoalSupportContext | null>(null);
   const [wellnessContext, setWellnessContext] = useState<WellnessSupportContext | null>(null);
   const [moneyContext, setMoneyContext] = useState(false);
+  const [allowSeparateContextRequest, setAllowSeparateContextRequest] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -298,6 +299,13 @@ export default function SupportPage() {
   const openRequests = useMemo(() => requests.filter((request) => !["completed", "withdrawn", "archived"].includes(request.status)), [requests]);
   const pastRequests = useMemo(() => requests.filter((request) => ["completed", "withdrawn", "archived"].includes(request.status)), [requests]);
   const priorityRequest = useMemo(() => openRequests.find((request) => request.status === "waiting_for_participant") ?? openRequests[0] ?? null, [openRequests]);
+  const relatedWellnessOpenRequest = useMemo(
+    () =>
+      wellnessContext
+        ? openRequests.find((request) => request.participant_category === "wellness_support") ?? null
+        : null,
+    [openRequests, wellnessContext],
+  );
   const otherOpenRequests = useMemo(() => priorityRequest ? openRequests.filter((request) => request.id !== priorityRequest.id) : openRequests, [openRequests, priorityRequest]);
   const assistedBudgetByRequestId = useMemo(
     () => new Map(assistedBudgetLinks.map((item) => [item.support_request_id, item])),
@@ -309,12 +317,13 @@ export default function SupportPage() {
     priorityAssistedBudget?.budget_status !== "active";
   const selectedArea = participantAreas.find((area) => area.value === draft.participantCategory) ?? participantAreas.at(-1)!;
 
-  function beginCreate() { setGoalContext(null); setWellnessContext(null); setMoneyContext(false); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
+  function beginCreate() { setGoalContext(null); setWellnessContext(null); setMoneyContext(false); setAllowSeparateContextRequest(false); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
   function closeCreate() {
     setShowCreate(false);
     setGoalContext(null);
     setWellnessContext(null);
     setMoneyContext(false);
+    setAllowSeparateContextRequest(false);
     setDraft(emptyDraft);
     setStep(1);
     setNotice("");
@@ -356,7 +365,19 @@ export default function SupportPage() {
 
       {!showCreate && !goalContext && !wellnessContext && !moneyContext ? <button type="button" onClick={beginCreate} className="w-full rounded-[1.5rem] bg-emerald-700 px-5 py-4 text-left text-lg font-black text-white shadow-[0_12px_28px_rgba(4,120,87,0.18)]">+ Ask for support</button> : null}
 
-      {showCreate ? <form id="support-request-create" onSubmit={submit} className="rounded-[1.8rem] border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur-xl sm:p-7">
+      {wellnessContext && relatedWellnessOpenRequest && !allowSeparateContextRequest ? (
+        <section className="rounded-[1.8rem] border border-violet-200 bg-violet-50/90 p-5 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-700">Already open</p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">You already have a Support conversation about Wellness.</h2>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">Continue the existing thread so you do not have to start over. THRIVE will not merge or delete anything.</p>
+          <div className="mt-4">
+            <SupportCard request={relatedWellnessOpenRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(relatedWellnessOpenRequest.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact />
+          </div>
+          <button type="button" onClick={() => setAllowSeparateContextRequest(true)} className="mt-4 rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-black text-violet-900">Start a separate request instead</button>
+        </section>
+      ) : null}
+
+      {showCreate && (!wellnessContext || !relatedWellnessOpenRequest || allowSeparateContextRequest) ? <form id="support-request-create" onSubmit={submit} className="rounded-[1.8rem] border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur-xl sm:p-7">
         {moneyContext ? <section className="mb-5 rounded-[1.4rem] border border-sky-200 bg-sky-50 p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">Continuing from Money</p>
           <h2 className="mt-2 text-xl font-black text-slate-950">You do not need to figure out the whole plan first.</h2>
