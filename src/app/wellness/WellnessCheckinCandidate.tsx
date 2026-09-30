@@ -40,6 +40,11 @@ function nextStepRoute(
     participant_note: string | null;
   } | null,
 ) {
+  if (checkin?.recovery_support === "could_use_support") {
+    const recoveryParams = new URLSearchParams({ from: "wellness" });
+    return `/recovery-support?${recoveryParams.toString()}`;
+  }
+
   if (value !== "contact_supportive_person" && value !== "ask_for_help") return null;
   if (!checkin) return "/support";
 
@@ -444,6 +449,19 @@ export default function WellnessCheckinCandidate({
               ) : null}
             </div>
           ) : null}
+          {todayCheckin?.recovery_support === "could_use_support" ? (
+            <div className="mt-5 rounded-[1.7rem] border border-white/15 bg-white/8 p-4 backdrop-blur-xl">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">Recovery support</p>
+              <h3 className="mt-2 text-2xl font-black text-white">What would help first?</h3>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <Link href="/resources?context=recovery&intent=meeting" className="rounded-2xl bg-sky-500 px-4 py-4 font-black text-white">Find a meeting</Link>
+                <Link href="/resources?context=recovery&intent=reading" className="rounded-2xl bg-amber-400 px-4 py-4 font-black text-slate-950">Read something</Link>
+                <Link href="/support?from=recovery-support" className="rounded-2xl bg-violet-500 px-4 py-4 font-black text-white">Connect with someone</Link>
+                <Link href="/recovery-support?from=wellness" className="rounded-2xl bg-emerald-400 px-4 py-4 font-black text-slate-950">Build a routine</Link>
+              </div>
+            </div>
+          ) : null}
+
           {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
             <Link href={contextualReturn.actionHref} className="mt-5 inline-flex rounded-full bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300">
               {contextualReturn.actionLabel}
