@@ -3,18 +3,18 @@ import { BottomNav, LaneCard, PreviewNotice, SceneHero } from "../_components";
 
 export default function RecoveryLiving() {
   return (
-    <main className="ls-root">
+    <main className="ls-root ls-root--support">
       <PreviewNotice />
       <section className="ls-phone">
         <SceneHero
-          scene="morning"
+          scene="support"
           eyebrow="Recovery Support"
           title={<>Real options.<br />Real people.</>}
           copy="You choose what fits."
           rightLabel="Support"
         />
 
-        <section className="ls-section">
+        <section className="ls-section ls-support-panel">
           <p className="ls-section-title">What do you need right now?</p>
           <div className="ls-grid">
             <LaneCard icon="◎" iconClass="ls-icon--meeting" title="Find a meeting" copy="In person or online" href="/living-signal/meeting" />
