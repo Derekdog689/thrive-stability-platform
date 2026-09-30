@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0b4450"/><stop offset=".48" stop-color="#2f6b6a"/><stop offset="1" stop-color="#95b7a4"/></linearGradient>
+  <linearGradient id="mount" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#153f43"/><stop offset="1" stop-color="#0e2d34"/></linearGradient>
+  <linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#2f8583"/><stop offset="1" stop-color="#0a3540"/></linearGradient>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="9"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 .05 0"/></filter>
+</defs>
+<rect width="1600" height="1000" fill="url(#sky)"/>
+<circle cx="1270" cy="180" r="180" fill="#ffdfa2" opacity=".18"/>
+<path d="M0 505 200 365 355 460 575 250 760 470 970 305 1180 455 1395 285 1600 420V1000H0Z" fill="url(#mount)"/>
+<path d="M0 650 C310 590 560 675 840 625 S1285 600 1600 650V1000H0Z" fill="url(#water)"/>
+<path d="M0 720 C360 670 660 745 940 700 S1330 690 1600 720" fill="none" stroke="#dff8ec" stroke-width="6" stroke-opacity=".17"/>
+<g fill="#0d2b2d" opacity=".86"><path d="M100 630 145 475 190 630Z"/><path d="M1500 635 1545 475 1590 635Z"/></g>
+<rect width="1600" height="1000" filter="url(#grain)" opacity=".4"/>
+</svg>
