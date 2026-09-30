@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AuthGate from "../AuthGate";
 
 const paths = [
@@ -30,9 +29,13 @@ const paths = [
 ] as const;
 
 export default function RecoverySupportPage() {
-  const params = useSearchParams();
   const [showRoutine, setShowRoutine] = useState(false);
-  const fromWellness = params.get("from") === "wellness";
+  const [fromWellness, setFromWellness] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setFromWellness(params.get("from") === "wellness");
+  }, []);
 
   return (
     <AuthGate>
