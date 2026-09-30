@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthGate from "../AuthGate";
 import {
@@ -57,6 +58,10 @@ function ParticipantBottomNav() {
 }
 
 export default function ResourcesPage() {
+  const searchParams = useSearchParams();
+  const context = searchParams.get("context");
+  const intent = searchParams.get("intent");
+  const recoveryContext = context === "recovery";
   const [resources, setResources] = useState<ParticipantResource[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -93,10 +98,24 @@ export default function ResourcesPage() {
     [resources],
   );
 
-  const visibleResources = useMemo(
-    () => selectedCategory ? resources.filter((resource) => resource.category === selectedCategory) : resources,
-    [resources, selectedCategory],
-  );
+  const visibleResources = useMemo(() => {
+    let next = selectedCategory
+      ? resources.filter((resource) => resource.category === selectedCategory)
+      : resources;
+
+    if (recoveryContext) {
+      next = next.filter((resource) => resource.category === "recovery_community_support");
+      if (intent === "meeting") {
+        next = next.filter((resource) => resource.subcategory?.includes("meeting"));
+      } else if (intent === "reading") {
+        next = next.filter((resource) =>
+          ["recovery_reading", "recovery_literature", "recovery_education_peer_support"].includes(resource.subcategory ?? ""),
+        );
+      }
+    }
+
+    return next;
+  }, [resources, selectedCategory, recoveryContext, intent]);
 
   return (
     <AuthGate>
@@ -122,15 +141,25 @@ export default function ResourcesPage() {
             </div>
 
             <div className="relative z-10 mt-7 max-w-3xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Trusted starting points</p>
-              <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">What do you need today?</h1>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">
+                {recoveryContext ? "Recovery support" : "Trusted starting points"}
+              </p>
+              <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">
+                {recoveryContext && intent === "meeting"
+                  ? "You asked for a meeting."
+                  : recoveryContext && intent === "reading"
+                    ? "You asked for something to read."
+                    : "What do you need today?"}
+              </h1>
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
-                Pick a topic to see available places to start.
+                {recoveryContext
+                  ? "These are verified starting points. THRIVE does not invent meetings or copy stale lists."
+                  : "Pick a topic to see available places to start."}
               </p>
             </div>
           </header>
 
-          {!loading && !errorMessage && resources.length > 0 ? (
+          {!loading && !errorMessage && resources.length > 0 && !recoveryContext ? (
             <section className="mt-3 rounded-[1.7rem] border border-white/70 bg-white/40 p-3 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl sm:p-4">
               <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <button
@@ -179,7 +208,17 @@ export default function ResourcesPage() {
               <div className="mb-3 flex items-end justify-between gap-3 px-1">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Available now</p>
-                  <h2 className="mt-1 text-2xl font-black text-emerald-950">{selectedCategory ? categoryLabel(selectedCategory) : "Resources"}</h2>
+                  <h2 className="mt-1 text-2xl font-black text-emerald-950">
+                    {recoveryContext
+                      ? intent === "meeting"
+                        ? "Meeting finders"
+                        : intent === "reading"
+                          ? "Recovery reading"
+                          : "Recovery resources"
+                      : selectedCategory
+                        ? categoryLabel(selectedCategory)
+                        : "Resources"}
+                  </h2>
                 </div>
                 <span className="rounded-full border border-white/75 bg-white/55 px-3 py-1.5 text-xs font-black text-slate-600 backdrop-blur-xl">{visibleResources.length}</span>
               </div>
