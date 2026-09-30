@@ -3,18 +3,18 @@ import { BottomNav, PreviewNotice, SceneHero } from "../_components";
 
 export default function StoryLiving() {
   return (
-    <main className="ls-root">
+    <main className="ls-root ls-root--story">
       <PreviewNotice />
       <section className="ls-phone">
         <SceneHero
-          scene="morning"
+          scene="story"
           eyebrow="Your Story"
           title={<>A week of<br />real movement.</>}
           copy="Your journey, your way."
           rightLabel="Sep 23–30"
         />
 
-        <section className="ls-section">
+        <section className="ls-section ls-story-week">
           <p className="ls-section-title">This week</p>
           <div className="ls-timeline">
             <div className="ls-event"><strong>Completed a goal</strong><span>Become more consistent</span></div>
@@ -31,13 +31,14 @@ export default function StoryLiving() {
           <Link href="/living-signal/recovery" className="ls-button ls-button--blue" style={{ marginTop: 14 }}>Continue this thread</Link>
         </section>
 
-        <section className="ls-section">
+        <section className="ls-section ls-story-map-section">
           <p className="ls-section-title">Progress geography</p>
           <div className="ls-map">
-            <div className="ls-map-path" />
+            <div className="ls-map-route" aria-hidden="true" />
             <div className="ls-node ls-node--1">$</div>
             <div className="ls-node ls-node--2">◎</div>
             <div className="ls-node ls-node--3">♡</div>
+            <span className="ls-map-caption">Your actions are becoming a path.</span>
           </div>
         </section>
       </section>
