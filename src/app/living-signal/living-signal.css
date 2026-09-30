@@ -1188,3 +1188,213 @@
     height: 124px;
   }
 }
+
+
+/* Living Signal stabilization pass v0.4 */
+
+.ls-phone {
+  padding-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
+}
+
+.ls-bottom-nav {
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+.ls-section:last-child,
+.ls-section--completion,
+.ls-money-return,
+.ls-followup-panel,
+.ls-story-map-section {
+  scroll-margin-bottom: 156px;
+}
+
+.ls-scene-content {
+  padding: 22px 22px 24px;
+}
+
+.ls-hero-copy-block {
+  max-width: 90%;
+}
+
+.ls-scene--goal .ls-hero-copy-block,
+.ls-scene--lake .ls-hero-copy-block,
+.ls-scene--evening .ls-hero-copy-block,
+.ls-scene--meeting .ls-hero-copy-block {
+  max-width: 88%;
+}
+
+.ls-hero-title {
+  margin-top: 8px;
+  line-height: .96;
+}
+
+.ls-hero-copy {
+  margin-top: 14px;
+}
+
+.ls-scene--evening::before {
+  background:
+    radial-gradient(circle at 76% 10%, rgba(255,189,105,.26), transparent 22%),
+    radial-gradient(circle at 23% 14%, rgba(247,166,95,.14), transparent 28%),
+    linear-gradient(180deg, rgba(26,41,57,.00) 0%, rgba(17,38,52,.08) 46%, rgba(7,25,35,.18) 100%);
+  mix-blend-mode: screen;
+}
+
+.ls-scene--evening::after {
+  background:
+    linear-gradient(180deg, rgba(7,19,31,.08) 0%, rgba(7,24,35,.20) 42%, rgba(3,14,23,.62) 100%),
+    radial-gradient(circle at 78% 12%, rgba(255,187,97,.16), transparent 24%);
+}
+
+.ls-scene--evening .ls-atmosphere--light {
+  opacity: .24;
+  background:
+    linear-gradient(165deg, rgba(255,190,98,.60), rgba(255,141,72,.10) 55%, transparent 72%);
+}
+
+.ls-scene--evening .ls-atmosphere--mist {
+  opacity: .17;
+  background:
+    radial-gradient(ellipse at 28% 48%, rgba(231,184,142,.20), transparent 44%),
+    radial-gradient(ellipse at 73% 38%, rgba(138,172,186,.24), transparent 52%);
+}
+
+.ls-root--money .ls-stat {
+  background:
+    linear-gradient(180deg, rgba(233,244,241,.20), rgba(170,198,193,.12));
+  border-color: rgba(228,243,239,.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 14px 36px rgba(0,0,0,.10);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.ls-root--money .ls-stat strong {
+  letter-spacing: -.035em;
+  text-shadow: 0 2px 18px rgba(0,0,0,.18);
+}
+
+.ls-root--money .ls-money-return {
+  border-color: rgba(129,198,184,.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 26px 62px rgba(0,0,0,.14);
+}
+
+.ls-completion-moment {
+  width: 116px;
+  height: 116px;
+  margin-top: 10px;
+}
+
+.ls-completion-moment::after {
+  inset: 9px;
+}
+
+.ls-completion-moment .ls-check {
+  width: 66px;
+  height: 66px;
+  font-size: 36px;
+}
+
+.ls-completion-moment > p {
+  bottom: -20px;
+  font-size: 10px;
+}
+
+.ls-scene--goal .ls-scene-content {
+  padding-bottom: 30px;
+}
+
+.ls-map {
+  min-height: 322px;
+}
+
+.ls-map::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(238,245,241,.02), rgba(6,31,39,.16)),
+    radial-gradient(ellipse at 50% 76%, rgba(6,30,38,.08), transparent 48%);
+  mix-blend-mode: multiply;
+}
+
+.ls-map-route {
+  left: 16%;
+  top: 21%;
+  width: 68%;
+  height: 64%;
+  border-width: 2px;
+  opacity: .78;
+  filter:
+    drop-shadow(0 0 5px rgba(141,82,232,.48))
+    drop-shadow(0 0 8px rgba(242,164,47,.30));
+}
+
+.ls-node {
+  width: 42px;
+  height: 42px;
+  font-size: 16px;
+  box-shadow:
+    0 0 0 4px rgba(255,255,255,.20),
+    0 8px 22px rgba(14,44,54,.22);
+}
+
+.ls-node--1 { left: 19%; bottom: 22%; }
+.ls-node--2 { left: 44%; top: 44%; }
+.ls-node--3 { right: 21%; top: 22%; }
+
+.ls-map-caption {
+  left: 20px;
+  right: 20px;
+  bottom: 16px;
+  background: rgba(7,27,36,.58);
+  border-color: rgba(255,255,255,.11);
+  letter-spacing: .01em;
+}
+
+@media (max-width: 430px) {
+  .ls-phone {
+    padding-bottom: calc(188px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ls-bottom-nav {
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ls-scene-content {
+    padding: 20px 20px 24px;
+  }
+
+  .ls-hero-copy-block,
+  .ls-scene--goal .ls-hero-copy-block,
+  .ls-scene--lake .ls-hero-copy-block,
+  .ls-scene--evening .ls-hero-copy-block,
+  .ls-scene--meeting .ls-hero-copy-block {
+    max-width: 92%;
+  }
+
+  .ls-hero-title {
+    font-size: clamp(34px, 10.5vw, 46px);
+    line-height: .98;
+  }
+
+  .ls-completion-moment {
+    width: 106px;
+    height: 106px;
+  }
+
+  .ls-completion-moment .ls-check {
+    width: 60px;
+    height: 60px;
+    font-size: 34px;
+  }
+
+  .ls-map {
+    min-height: 310px;
+  }
+}
