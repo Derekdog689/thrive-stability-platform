@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-type Scene = "morning" | "evening" | "lake";
+type Scene = "morning" | "evening" | "lake" | "goal" | "story" | "support" | "meeting";
 
 const sceneUrl: Record<Scene, string> = {
   morning:
@@ -9,7 +9,15 @@ const sceneUrl: Record<Scene, string> = {
   evening:
     "https://images.unsplash.com/photo-1766221072212-cf2f9383221c?auto=format&fit=crop&fm=jpg&q=88&w=2200",
   lake:
-    "https://images.unsplash.com/photo-1770341989953-f3efb336f7eb?auto=format&fit=crop&fm=jpg&q=92&w=2200",
+    "https://images.unsplash.com/photo-1758255847444-2506073ca32e?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+  goal:
+    "https://images.unsplash.com/photo-1770347314659-7fd45b638f87?auto=format&fit=crop&fm=jpg&q=90&w=2200",
+  story:
+    "https://images.unsplash.com/photo-1770341989953-f3efb336f7eb?auto=format&fit=crop&fm=jpg&q=86&w=2200",
+  support:
+    "https://images.unsplash.com/photo-1770341989953-f3efb336f7eb?auto=format&fit=crop&fm=jpg&q=84&w=2200",
+  meeting:
+    "https://images.unsplash.com/photo-1766221072212-cf2f9383221c?auto=format&fit=crop&fm=jpg&q=88&w=2200",
 };
 
 export function SceneHero({
@@ -27,7 +35,7 @@ export function SceneHero({
   rightLabel?: string;
   children?: ReactNode;
 }) {
-  const dark = scene !== "morning";
+  const dark = scene === "evening" || scene === "lake" || scene === "goal" || scene === "meeting";
 
   return (
     <header
