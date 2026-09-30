@@ -4,9 +4,12 @@ import type { ReactNode } from "react";
 type Scene = "morning" | "evening" | "lake";
 
 const sceneUrl: Record<Scene, string> = {
-  morning: "/living-signal/sunrise-valley.svg",
-  evening: "/living-signal/evening-sanctuary.svg",
-  lake: "/living-signal/teal-lake.svg",
+  morning:
+    "https://images.unsplash.com/photo-1770341989953-f3efb336f7eb?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+  evening:
+    "https://images.unsplash.com/photo-1766221072212-cf2f9383221c?auto=format&fit=crop&fm=jpg&q=88&w=2200",
+  lake:
+    "https://images.unsplash.com/photo-1770341989953-f3efb336f7eb?auto=format&fit=crop&fm=jpg&q=92&w=2200",
 };
 
 export function SceneHero({
@@ -25,17 +28,22 @@ export function SceneHero({
   children?: ReactNode;
 }) {
   const dark = scene !== "morning";
+
   return (
     <header
-      className={`ls-scene ${dark ? "ls-scene--dark ls-dark" : ""}`}
+      className={`ls-scene ls-scene--${scene} ${dark ? "ls-scene--dark ls-dark" : ""}`}
       style={{ backgroundImage: `url('${sceneUrl[scene]}')` }}
     >
+      <span className="ls-atmosphere ls-atmosphere--mist" aria-hidden="true" />
+      <span className="ls-atmosphere ls-atmosphere--light" aria-hidden="true" />
+      <span className="ls-atmosphere ls-atmosphere--water" aria-hidden="true" />
+
       <div className="ls-scene-content">
         <div className="ls-brand">
           <div className="ls-brandmark"><span className="ls-leaf" /><span>THRIVE</span></div>
           {rightLabel ? <span className="ls-chip">{rightLabel}</span> : null}
         </div>
-        <div>
+        <div className="ls-hero-copy-block">
           <p className="ls-kicker">{eyebrow}</p>
           <h1 className="ls-hero-title">{title}</h1>
           {copy ? <p className="ls-hero-copy">{copy}</p> : null}
@@ -95,9 +103,5 @@ export function LaneCard({
 }
 
 export function PreviewNotice() {
-  return (
-    <div style={{ margin: "0 auto 10px", width: "min(100%,760px)", padding: "10px 14px", fontSize: 12, fontWeight: 900, color: "#52606f" }}>
-      Visual-first candidate · controlled preview data · production untouched
-    </div>
-  );
+  return null;
 }
