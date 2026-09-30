@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthGate from "../AuthGate";
 import {
@@ -58,14 +57,19 @@ function ParticipantBottomNav() {
 }
 
 export default function ResourcesPage() {
-  const searchParams = useSearchParams();
-  const context = searchParams.get("context");
-  const intent = searchParams.get("intent");
+  const [context, setContext] = useState<string | null>(null);
+  const [intent, setIntent] = useState<string | null>(null);
   const recoveryContext = context === "recovery";
   const [resources, setResources] = useState<ParticipantResource[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setContext(params.get("context"));
+    setIntent(params.get("intent"));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
