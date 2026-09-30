@@ -1,15 +1,18 @@
 # THRIVE Living Signal Vertical Slice Visual Board v0.1
 
 Date: 2026-09-30
-Status: review-only visual specification
+Status: approved visual direction
+Approved: 2026-09-30
 Parent: THRIVE Vertical Proving Slice v0.1
 Production impact: none
 
 ## Purpose
 
-Define the eight screen states that the next visual board must show using the Living Signal direction.
+Define the eight screen states for the first vertical proving slice using the Living Signal direction.
 
-## Required states
+This visual direction is approved as the target experience for implementation planning. Approval does not authorize production code, schema changes, resource inserts, or deployment.
+
+## Approved states
 
 1. Wellness check-in showing an explicit Recovery Support need.
 2. Wellness return with four concrete paths:
@@ -24,7 +27,7 @@ Define the eight screen states that the next visual board must show using the Li
 7. Follow-up asking specifically about the chosen action.
 8. Story showing the participant-confirmed thread carried forward.
 
-## Visual requirements
+## Approved visual requirements
 
 - mobile-first;
 - Android-friendly proportions;
@@ -37,7 +40,13 @@ Define the eight screen states that the next visual board must show using the Li
 - no generic white-card wall;
 - no childish trophies;
 - no fake clinical dashboard;
-- actual visual personality.
+- actual visual personality;
+- environmental illustration;
+- layered depth and texture;
+- progress geography;
+- meaningful completion moments;
+- clear lane accents;
+- calm, visually engaging scenery that supports the experience without replacing usefulness.
 
 ## Important mock-data rule
 
@@ -54,6 +63,18 @@ Built on Today
 Same THRIVE.
 A more human experience.
 
-## Review question
+## Approval conclusion
 
-Does this look compelling enough to want to open, while still making the next useful action obvious?
+The Living Signal direction is approved for the first vertical proving slice.
+
+The approved visual board demonstrates the desired participant experience across Wellness, Today, Recovery Support, Resources, Meeting/Resource Result, Follow-up, and Story.
+
+## Next gate
+
+Before implementation approval, reconcile and review:
+
+1. Recovery Resource Content Candidate v0.1;
+2. Vertical Slice Code-Change Map v0.1;
+3. the smallest implementation sequence that preserves the approved Living Signal experience without unnecessary schema or backend expansion.
+
+No production implementation is authorized by this visual approval alone.
