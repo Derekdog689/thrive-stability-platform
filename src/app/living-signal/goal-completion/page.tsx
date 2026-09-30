@@ -3,20 +3,23 @@ import { BottomNav, PreviewNotice, SceneHero } from "../_components";
 
 export default function GoalCompletionLiving() {
   return (
-    <main className="ls-root">
+    <main className="ls-root ls-root--goal">
       <PreviewNotice />
       <section className="ls-phone">
         <SceneHero
-          scene="morning"
+          scene="goal"
           eyebrow="Goal completion"
           title={<>You put in<br />the work.</>}
           copy="This is progress."
           rightLabel="Completed"
         >
-          <div className="ls-check">✓</div>
+          <div className="ls-completion-moment" aria-label="Goal completed">
+            <div className="ls-check">✓</div>
+            <p>Completed</p>
+          </div>
         </SceneHero>
 
-        <section className="ls-section">
+        <section className="ls-section ls-section--completion">
           <p className="ls-section-title">Completed</p>
           <h2 className="ls-h2">Become more consistent</h2>
           <p className="ls-body">3 days practiced</p>
