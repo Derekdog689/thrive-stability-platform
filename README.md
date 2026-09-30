@@ -2,85 +2,433 @@
 
 THRIVE is a DSS Enterprises person-centered financial capability, personal stability, and recovery-informed support platform.
 
-THRIVE is designed to help one supported person at a time understand what is happening, make their own choices, build practical plans, explain their own context, and reach for help when they want it.
+THRIVE is not primarily a tracker.
 
-The platform is not designed to shame, diagnose, surveil, or silently assign intent. It separates observable facts, participant explanations, patterns, support activity, and conclusions.
+THRIVE is being built as a **responsive support environment** that helps one supported person at a time understand what is happening, decide what matters, act on practical next steps, find useful resources, ask for help, see progress, and carry their story forward.
 
-Johnny is the first modeled real-world person. Synthetic participants are used during development and controlled proof work.
+The participant remains the decision-maker.
 
----
-
-## Core Product Model
-
-THRIVE is being built as a set of independent participant-facing modules connected through a future feedback layer.
-
-```text
-WELLNESS
-"How am I doing?"
-
-GOALS
-"What am I trying to do?"
-
-BUDGET
-"What did I plan?"
-
-BANK ACTIVITY
-"What actually happened?"
-
-TRANSACTION CONTEXT
-"What do I say happened?"
-
-SUPPORT
-"Where do I want human help?"
-
-RESOURCES
-"Where can I find help or options for myself?"
-
-        ↓
-
-THRIVE FEEDBACK LAYER
-
-        ↓
-
-TODAY
-"What should I pay attention to now?"
-
-REPORTS
-"What has been happening over time?"
-```
-
-Each module remains independently owned and governed.
-
-The feedback layer may compare authorized facts across modules, but it must not merge authority, fabricate conclusions, or treat correlation as causation.
+THRIVE should not shame, diagnose, surveil, silently assign intent, or convert correlation into causation.
 
 ---
 
-## Person-Centered Interaction Model
+## Product North Star
 
-THRIVE should help the participant move through this loop:
+The old interaction tendency was:
 
 ```text
-NOTICE
-→ PLAN
-→ OBSERVE
-→ EXPLAIN
-→ COMPARE
-→ ADJUST
-→ CHOOSE SUPPORT
+input
+→ summary
+→ card
 ```
+
+The target THRIVE experience is:
+
+```text
+input
+→ understand
+→ useful return
+→ concrete action
+→ real resource
+→ follow-up
+→ adaptation
+→ visible progress
+→ Story
+```
+
+The experience standard is:
+
+> **Calm enough to trust, alive enough to return to, direct enough to help.**
+
+THRIVE should do more of the cognitive lifting while the participant keeps control.
+
+---
+
+## Current Product Direction
+
+The current application foundations are functioning across:
+
+- Today
+- Wellness
+- Goals
+- Money
+- Support
+- Resources
+- participant history
+- cross-lane synthesis
+- Money closeout
+
+The current challenge is no longer basic capability.
+
+The current challenge is **participant value, continuity, visual life, follow-up, and usefulness after input is collected**.
+
+The active experience-reset roadmap is:
+
+`docs/THRIVE_EXPERIENCE_RESET_ROADMAP_v1_0.md`
+
+Supporting design candidates remain preserved as historical design evidence:
+
+- `docs/THRIVE_EXPERIENCE_RESET_v0_1.md`
+- `docs/THRIVE_VISUAL_EXPERIENCE_DIRECTION_v0_1.md`
+- `docs/THRIVE_RECOVERY_SUPPORT_PROVING_GROUND_v0_1.md`
+
+---
+
+## Experience Architecture
+
+THRIVE is organized around five participant-facing experience pillars.
+
+### 1. Value
+
+Every meaningful participant input should return something useful.
+
+A return should help the participant:
+
+- notice something;
+- understand something;
+- decide something;
+- do something;
+- find something;
+- continue something.
+
+### 2. Direction
+
+THRIVE should translate reflection into clear next choices.
+
+The product should not assume the participant already knows how to turn insight into action.
+
+### 3. Resources
+
+THRIVE should bring useful resources to the participant rather than merely tell the participant to go find help.
+
+A useful resource experience should answer:
+
+- What is this?
+- Why would I use it?
+- What do I need?
+- Where do I go?
+- What happens next?
+
+### 4. Story
+
+Story is the accumulation layer.
+
+It should help the participant understand:
+
+- what happened;
+- what changed;
+- what was completed;
+- what keeps coming back;
+- what remains unfinished;
+- what should carry forward.
+
+Story may connect authorized facts across lanes while preserving the source and ownership of each record.
+
+### 5. Visual Life
+
+Meaningful events should visibly feel different from routine states.
+
+Visual life may include:
+
+- atmosphere;
+- motion;
+- progress geography;
+- completion artifacts;
+- partial-completion states;
+- layered depth;
+- environmental illustration;
+- stronger lane identity;
+- visual surprise;
+- responsive identity;
+- negative space;
+- typography with emotional tone.
+
+Visual design is part of the experience contract, not a cosmetic pass added at the end.
+
+---
+
+## Cross-Cutting Follow-Up
+
+THRIVE should remember:
+
+- what was offered;
+- what the participant chose;
+- what was attempted;
+- what helped;
+- what did not;
+- what should change next.
+
+Follow-up should reference the actual prior action.
+
+Generic repetition is not the target.
+
+---
+
+## Participant Modules
+
+### Today
+
+Today is the participant's living home surface.
+
+It should answer:
+
+- What matters now?
+- What changed?
+- What did I accomplish?
+- What is still carrying forward?
+- What is worth doing next?
+
+Today is an action and orientation surface, not an authority engine.
+
+### Wellness
+
+Wellness supports voluntary participant reflection.
+
+It may help the participant notice patterns, choose a practical next step, connect to resources, or continue a prior thread.
+
+Wellness must not fabricate:
+
+- diagnoses;
+- relapse conclusions;
+- emergency determinations;
+- incapacity;
+- motives.
+
+### Goals
+
+Goals help the participant work toward something that matters.
+
+Goals should support visible movement states such as:
+
+- started;
+- moving;
+- paused;
+- resumed;
+- partially completed;
+- completed;
+- carried forward.
+
+Completion should not simply disappear into history.
+
+### Money
+
+Money helps the participant create and work a practical money plan.
+
+The current Money system supports:
+
+- expected income;
+- categories;
+- planned amounts;
+- manual activity;
+- transaction-to-plan relationships;
+- active plan review;
+- completed plan history;
+- Money closeout.
+
+Bank and transaction data remain observational evidence.
+
+Money should increasingly help the participant understand what changed and what may be worth carrying into the next cycle.
+
+### Support
+
+Support provides a persistent participant-to-authorized-human assistance loop.
+
+The approved human lifecycle remains:
+
+```text
+submitted
+→ acknowledged
+→ in_progress
+→ waiting_for_participant
+→ in_progress
+→ completed
+```
+
+Participant language remains:
+
+```text
+Received
+→ Acknowledged
+→ In review
+→ Waiting for you
+→ In review
+→ Resolved
+```
+
+The participant can:
+
+- create a request;
+- follow progress;
+- read participant-visible updates;
+- reply when needed;
+- retain history.
+
+Support should evolve toward better continuity so a participant returning to the same explicit issue can continue an open thread rather than accidentally creating repeated dead-end requests.
+
+Historical records must not be silently merged or deleted.
+
+### Resources
+
+Resources are becoming a first-class support subsystem.
+
+The current useful lesson is that direct destinations work best.
+
+Existing Social Security and SNAP pathways are strong examples because they move the participant close to the place they actually need to go.
+
+211 remains useful but can be inconsistent or confusing.
+
+The future resource architecture includes:
+
+1. **Live verified resources**
+   - meeting finders;
+   - current public resources;
+   - community directories.
+
+2. **Curated THRIVE library**
+   - DSS-approved links;
+   - recovery literature references;
+   - worksheets;
+   - financial education;
+   - employment;
+   - transportation;
+   - housing;
+   - education;
+   - practical support.
+
+3. **Participant-saved resources**
+   - resources the participant chooses to keep.
+
+4. **Guided pathways**
+   - step-by-step support that helps the participant move from need to action.
+
+Resources should not become a generic link directory.
+
+### Story
+
+Story is the participant-facing continuity layer.
+
+It should preserve the identity of Wellness, Goals, Money, Support, and Resources while showing what those lanes add up to over time.
+
+Story should be visually distinct from ordinary card feeds.
+
+---
+
+## Recovery Support Proving Ground
+
+Recovery Support is the first proving ground for the complete THRIVE value loop.
+
+Target loop:
+
+```text
+need
+→ understand
+→ real resource
+→ participant action
+→ follow-up
+→ adaptation
+→ visible progress
+→ Story
+```
+
+The candidate includes four practical paths:
+
+- **Find something**
+  - meeting or resource
+
+- **Read something**
+  - recovery literature or educational material
+
+- **Connect with someone**
+  - support-circle expansion
+
+- **Build something**
+  - participant-chosen recovery routine
+
+THRIVE should bring real, source-grounded options.
+
+It should not stop at:
+
+> Find a meeting.
+
+The intended experience is closer to:
+
+> Here are current meeting options. Pick one, save one, or show another.
+
+Only participant-confirmed follow-through should become completion evidence.
+
+No sobriety score.
+No recovery-performance ranking.
+
+---
+
+## Visual Direction
+
+The working design direction is **Living Signal**.
+
+Living Signal is not one palette and not one trend.
+
+It is a design system built around:
+
+- atmosphere;
+- signal;
+- motion;
+- accumulation.
+
+### Visual inspiration ingredients
+
+These are design references, not locked themes:
+
+- deep stormy teal / charcoal;
+- parchment / soft cream;
+- navy / indigo / lilac;
+- warm amber milestone accents;
+- soft translucent layering;
+- subtle grain or linen texture;
+- low-opacity elevation shadows;
+- organic curves;
+- environmental imagery;
+- layered depth;
+- contextual daypart atmosphere.
+
+The exact THRIVE palette remains subject to visual review.
+
+### Time-Based Atmosphere
+
+A future visual system may explore:
+
+- brighter morning atmosphere;
+- balanced afternoon state;
+- deeper evening presentation.
+
+Time-based atmosphere must not be confused with inferred emotional state.
+
+### Cumulative Progress
+
+THRIVE should prefer cumulative growth over brittle streak pressure.
 
 Examples:
 
-- Wellness helps the participant notice how they are doing.
-- Goals identify what matters to them.
-- Budget records what they intend to do with available money.
-- Bank activity provides observational financial evidence.
-- Transaction Context lets the participant add their own explanation.
-- THRIVE compares plan and evidence without assigning intent.
-- Today surfaces useful next steps.
-- Reports show history and patterns over time.
-- Support lets the participant ask DSS or another authorized human for help.
-- Resources lets the participant privately explore community, peer, educational, or practical support options without automatically creating a support request.
+- You checked in 18 times this month.
+- You came back after two days away.
+- You completed 4 actions this week.
+- You resumed this Goal after pausing it.
+
+One missed day should not erase prior effort.
+
+### Meaningful Motion
+
+Motion should communicate meaning.
+
+Candidate motion language:
+
+- arrive;
+- advance;
+- resolve;
+- carry;
+- open;
+- acknowledge.
+
+Avoid constant animation, flashy failure states, or celebration without significance.
 
 ---
 
@@ -88,287 +436,47 @@ Examples:
 
 ### THRIVE and the Trust Engine
 
-Johnny's THRIVE personal support spine and the Trust Engine are independent systems.
+The THRIVE personal support spine and the Trust Engine are independent systems.
 
-THRIVE may compare authorized verified facts from an external trust system when appropriate, but it must not merge ownership, fiduciary authority, approvals, decision-making, ledgers, consent, or responsibility.
+THRIVE may compare authorized facts across systems when appropriate.
 
-The trustee remains responsible for fiduciary decisions in the Trust Engine.
+THRIVE must not merge:
+
+- ownership;
+- fiduciary authority;
+- approvals;
+- ledgers;
+- consent;
+- decision-making;
+- responsibility.
 
 ### Bank Data
 
 Bank data is observational evidence.
 
-A displayed transaction does not establish intent, irresponsibility, relapse, incapacity, trust misuse, legal wrongdoing, clinical conclusions, or fiduciary conclusions.
+A displayed transaction does not establish:
 
-Participant explanations remain separate from imported bank evidence.
+- intent;
+- irresponsibility;
+- relapse;
+- incapacity;
+- trust misuse;
+- legal wrongdoing;
+- clinical conclusions;
+- fiduciary conclusions.
+
+Participant explanations remain separate from imported financial evidence.
 
 ### Facts, Patterns, Explanations, Conclusions
 
 THRIVE must distinguish:
 
-1. **Fact** — what an authorized source actually shows.
+1. **Fact** — what an authorized source directly shows.
 2. **Pattern** — a repeatable relationship or trend in observed information.
-3. **Explanation** — context supplied by the participant or an authorized human.
+3. **Explanation** — context supplied by the participant or authorized human.
 4. **Conclusion** — an interpretation requiring appropriate authority and evidence.
 
-THRIVE should explain before flagging.
-
----
-
-## Primary Participant Modules
-
-### Today
-
-Provide the participant with a practical starting point for the day.
-
-Today should eventually summarize useful cross-module signals such as Wellness availability, active Goal next steps, Budget status, recent account activity needing participant context, open Support requests, and relevant self-directed Resources.
-
-Today is an action surface, not an authority engine.
-
-### My Program
-
-Show the program and participation context connected to the supported person.
-
-### Wellness
-
-Provide voluntary, non-clinical reflection.
-
-Wellness input may contribute to participant-facing feedback, but it must not automatically create clinical findings, relapse conclusions, or emergency determinations.
-
-### Goals
-
-Help the participant define what matters and keep the next step visible.
-
-Goals may later connect to Budget, Wellness, Resources, and Today through transparent references.
-
-### Budget
-
-Help the participant create and work their own practical money plan.
-
-The participant can enter expected income, create and edit categories, set and adjust planned amounts, activate a Budget, review totals, see what remains unplanned, compare the plan with available account activity, and adjust the active plan when appropriate.
-
-DSS or another authorized support person may assist, suggest, demonstrate, or help prepare a Budget. The participant remains able to work their own plan.
-
-Transaction allocations are relationships within a Budget period. They help connect observed account activity to the participant's plan without turning THRIVE into an accounting system.
-
-Budget lifecycle behavior remains under active human-usability review. A participant-facing `archive allocation` action is not approved. Budget-level archive semantics must preserve the historical plan, allocations, totals, and transaction relationships while closing editing for the archived Budget.
-
-### Bank Activity
-
-Show participant-owned financial evidence from authorized sources.
-
-Bank activity remains distinct from participant explanations and Budget planning.
-
-The financial evidence foundation includes sources, import batches, staged transactions, ownership mapping, review state, derived allocation reads, and participant-facing summaries.
-
-The current operational gap is Financial Ingestion. THRIVE still needs a deliberate, traceable workflow for authorized statements and other approved financial sources.
-
-### Transaction Context
-
-Let the participant add their own context to an imported transaction without changing the bank record.
-
-The ordinary participant path supports viewing existing context, creating participant-owned draft context, editing the participant's own draft, and persistent readback after refresh.
-
-The imported transaction remains separate and unchanged.
-
-The current lifecycle still requires semantic review because ordinary participant context remains in `draft` status without a complete participant-facing submit or finalize transition.
-
-### Support
-
-Let the participant directly ask an authorized human for assistance through a complete participant and reviewer communication loop.
-
-The currently approved human lifecycle is:
-
-submitted -> acknowledged -> in_progress -> waiting_for_participant -> in_progress -> completed
-
-Participant-facing language remains:
-
-Received -> Acknowledged -> In review -> Waiting for you -> In review -> Resolved
-
-The participant can create a Support request, follow progress, read participant-visible reviewer messages, reply when Support is waiting for information, and retain completed or withdrawn requests in history.
-
-The authorized reviewer can acknowledge the request, start work, send updates, request information, read participant replies, resume work, complete the request, and review closed requests as read-only history.
-
-Participant reply submission does not automatically change reviewer-controlled lifecycle status.
-
-Reviewer timing guidance is informational only. It does not automatically change status, create reminders, infer urgency, or create clinical, legal, fiduciary, or behavioral conclusions.
-
-A Support request does not itself create external sharing consent, expanded authority, clinical intervention, emergency escalation, or Trust Engine action.
-
-Support is working infrastructure for its currently approved human loop. Further expansion requires a separately approved product gate or a verified defect.
-
-### Resources
-
-Give the participant a self-directed way to explore help without automatically involving DSS or another support person.
-
-Future resource areas may include peer and recovery support, community groups, food assistance, transportation, housing, employment and reentry, legal aid, financial education, health and wellness resources, recreation or sober community activities, and faith or community organizations.
-
-Browsing Resources should not automatically create a Support request or Trust notification.
-
-### Reports
-
-Show history and patterns over time.
-
-Reports must preserve source distinctions and should not imply causation where only correlation or coincidence has been observed.
-
----
-
-## THRIVE Feedback Layer
-
-The Feedback Layer is the planned connective tissue between modules.
-
-Its job is to compare authorized information and produce understandable participant-facing feedback without fabricating intent or authority.
-
-Preferred participant choices may include:
-
-- Review Budget
-- View Goal
-- Add transaction context
-- Browse Resources
-- Ask for Support
-- Dismiss for now
-
-Human support should generally remain participant-chosen unless a separately authorized workflow explicitly requires otherwise.
-
----
-
-## Current Participant Usability State
-
-The original synthetic-participant usability sequence established controlled proof for ordinary participant behavior across Wellness, Support, Transaction Context, and Budget.
-
-That synthetic sequence has served its primary purpose and should now be treated as regression and authorization evidence rather than the default human-usability environment.
-
-### Wellness
-
-Verified ordinary participant behavior includes:
-
-- authenticated participant read;
-- ordinary participant check-in save;
-- persistent readback after refresh;
-- recent-history / multi-checkin support;
-- voluntary participant reflection;
-- no automatic Support request, clinical finding, emergency action, Goal, relapse conclusion, or capacity judgment.
-
-### Support
-
-Verified ordinary participant behavior includes:
-
-- participant request history;
-- ordinary request creation;
-- participant-friendly status display;
-- persistent readback;
-- reviewer participant-visible messages;
-- participant reply while the request is `waiting_for_participant`;
-- participant reply history preserved after refresh;
-- completed requests displayed as `Resolved`;
-- withdrawn and completed requests preserved in history;
-- separation between participant-owned request content and reviewer-controlled lifecycle, routing, assignment, and completion.
-
-Verified reviewer behavior includes:
-
-- acknowledgement;
-- start work;
-- participant-visible updates;
-- information requests;
-- follow-up questions while waiting for the participant;
-- participant reply review;
-- resume work;
-- completion;
-- read-only closed-request history.
-
-The verified human lifecycle is:
-
-submitted -> acknowledged -> in_progress -> waiting_for_participant -> in_progress -> completed
-
-Participant reply submission does not automatically change reviewer-controlled lifecycle status.
-
-Reviewer timing guidance remains informational only and does not create reminders, automatic escalation, or clinical, legal, fiduciary, or behavioral conclusions.
-
-### Transaction Context
-
-Verified ordinary participant behavior includes:
-
-- participant-owned transaction read through the financial path;
-- existing participant context display;
-- ordinary draft context creation;
-- ordinary draft context editing;
-- persistent readback;
-- imported transaction remains separate and unchanged.
-
-Current lifecycle gap:
-
-- ordinary participant context remains in `draft` status;
-- a complete participant-facing submit or finalize transition is not yet defined.
-
-### Budget
-
-Verified ordinary participant behavior includes:
-
-- participant Budget draft creation;
-- expected-income entry;
-- category creation;
-- category editing;
-- Budget activation;
-- active-plan editing;
-- planned, recorded, and remaining amounts;
-- participant-owned account activity;
-- transaction-to-Budget allocation relationships;
-- Budget lifecycle history;
-- historical allocation visibility.
-
-Current lifecycle gap:
-
-- participant-facing `archive allocation` behavior was rejected during human-usability review;
-- Budget-level complete/archive semantics still need final reconciliation;
-- archived Budgets should preserve their plan, allocations, totals, and transaction relationships while closing editing.
-
-### Test Strategy Transition
-
-The existing 2099 synthetic participant and related harnesses remain preserved as regression, authorization, edge-case, and historical evidence.
-
-They should not be deleted.
-
-After the current Budget layer is closed, that tester should be retired from ordinary usability work.
-
-Future ordinary usability testing should use current-time periods, realistic workflows, and application-created data wherever the intended UI path exists.
-
-Current Budget state:
-
-- participant Budget creation is installed and working;
-- participant expected-income entry is working;
-- participant category creation and editing are working;
-- Budget activation is working;
-- active-plan editing is working;
-- participant transaction allocation controls are connected;
-- derived allocation reads are connected;
-- Budget lifecycle history and historical allocation visibility are working.
-
-The remaining Budget gap is human lifecycle semantics at the Budget-period level.
-
-A participant-facing `archive allocation` action is not approved.
-
-The next Budget phase is to reconcile complete/archive behavior for the Budget itself while preserving the historical plan, allocations, totals, and transaction relationships.
-
----
-
-## Current Product Sequence
-
-```text
-1. Documentation / control-spine reconciliation   ← CURRENT
-2. Finish Budget human lifecycle semantics
-3. Retire the 2099 tester from ordinary usability
-4. Establish a current-time usability tester
-5. Complete Financial Ingestion
-6. Build Admin / onboarding
-7. Reconcile Transaction Context lifecycle
-8. Continue THRIVE Feedback Layer
-9. Continue Today synthesis
-10. Continue Reports history / pattern layer
-11. Add Resources / self-directed support
-12. Real-device, security, and deployment readiness
-```
-
-This order may be adjusted when live database findings require a safer dependency sequence.
+Explain before flagging.
 
 ---
 
@@ -391,40 +499,108 @@ inspect
 ```
 
 Rules:
-- no blind rebuilds
-- no guessing current schema
-- inspect live database and current files before changing architecture
-- prefer the smallest safe next step
-- do not silently broaden scope
-- no hard deletes during the current MVP
-- no fabricated consent, clinical findings, historical check-ins, explanations, or authority
-- no production SQL, RLS, or schema changes without a reviewed candidate and explicit approval
-- no service-role use without explicit approval
-- no deployment, push, or merge without explicit approval
-- build and verify before committing stable milestones
 
-### Participant Lifecycle Semantics
+- inspect live schema and current files before changing architecture;
+- prefer the smallest safe next step;
+- do not silently broaden scope;
+- no hard deletes during the current MVP;
+- no fabricated consent, findings, check-ins, explanations, or authority;
+- no production SQL or schema changes without an approved candidate;
+- no service-role use without explicit approval;
+- no Trust Engine synchronization without separate approval;
+- preserve historical records;
+- keep participant-facing lifecycle semantics intentional.
 
-Participant-facing lifecycle words are product contracts.
+---
 
-Before exposing actions or statuses such as `draft`, `completed`, `archived`, `withdrawn`, or `historical`, define and verify:
+## Current Experience Reset Roadmap
 
-- what the participant sees before the action;
-- what the participant expects the action to mean;
-- what remains visible afterward;
-- what remains counted afterward;
-- what remains editable afterward;
-- how history is preserved.
+### Phase 1 — Single Source of Truth
 
-Backend status names, audit mechanics, and test-harness behavior must not automatically become participant-facing product semantics.
+The Experience Reset Roadmap v1.0 is the master experience direction.
 
-Human usability determines whether the participant experience is correct.
+### Phase 2 — Visual Direction Board
+
+Create review-only mockups for:
+
+- Today after ordinary check-in;
+- Today after meaningful completion;
+- Story week view;
+- Goal completion;
+- Money closeout;
+- Recovery Support resource flow;
+- partial completion;
+- no active Goals / no active Money plan while Story remains meaningful.
+
+### Phase 3 — Recovery Support Proving Ground
+
+Prove the complete value loop before spreading the pattern across the app.
+
+### Phase 4 — Story Layer
+
+Build Story as the accumulation surface across authorized participant lanes.
+
+### Phase 5 — Visual System Rollout
+
+Apply the approved visual language across Today, Wellness, Goals, Money, Support, Resources, and Story.
+
+### Phase 6 — Resource Expansion
+
+Grow Resources into a guided, current, source-grounded subsystem.
+
+### Phase 7 — Follow-Up and Adaptation
+
+Make the product remember what was tried and change its next return.
+
+### Phase 8 — Production Hardening
+
+After experience validation:
+
+- reconcile live schema;
+- identify minimum writes;
+- verify mobile;
+- verify accessibility;
+- verify motion and performance;
+- validate resource sources;
+- test edge cases;
+- preview;
+- phone-test;
+- merge under the approved workflow.
+
+---
+
+## Current Gate
+
+Approved:
+
+- Experience Reset roadmap direction;
+- visual exploration direction;
+- Recovery Support proving-ground direction;
+- consolidation into a single roadmap;
+- README evolution.
+
+Not yet approved:
+
+- production implementation;
+- schema changes;
+- Trust Engine changes;
+- new resource persistence;
+- location persistence;
+- deployment;
+- merge to `main`.
+
+The next gate is:
+
+> **review-only visual direction board / screen mockups + smallest Recovery Support implementation reconciliation**
+
+No production implementation should occur until that candidate is separately approved.
 
 ---
 
 ## Technical Stack
 
-Current application stack includes:
+Current stack includes:
+
 - Next.js App Router
 - React
 - TypeScript
@@ -433,53 +609,26 @@ Current application stack includes:
 - Supabase Auth
 - Row Level Security
 - GitHub
-- local development through VS Code / Git Bash
+- Vercel
+- local development through VS Code / Git Bash when a local checkout is used
 
 ---
 
 ## Current Checkpoint
 
-Current safe code checkpoint:
+Production `main` remains at:
 
-`fd3acb1 Complete THRIVE Support participant reply workflow`
+`df36d74ae220680a21fced17d372528b6e91b656`
 
-Current documentation continuity checkpoint:
+The Experience Reset documentation work is being prepared on a review branch and is not production behavior.
 
-Checkpoint 068
-
-Support Participant Reply and Resolution Loop Complete
-
-Last verified production build:
-
-PASS
-
-30 / 30 routes generated
-
-Current working gate:
-
-Documentation and product-control reconciliation
-
-Support is now working infrastructure for its currently approved participant/reviewer human loop.
-
-The current remaining participant-product gaps are centered on:
-
-- Budget-level complete/archive semantics;
-- operational Financial Ingestion;
-- Admin / onboarding;
-- Transaction Context lifecycle beyond persistent draft status;
-- future Feedback Layer, Today, Reports, Resources, real-device, security, and deployment-readiness work.
-
-The most recent participant-facing Budget archive-allocation experiment failed human-usability review and was not committed.
-
-Budget-level lifecycle semantics remain the next planned product gate after documentation reconciliation is complete.
-
-No Johnny activation, Trust Engine synchronization, new production SQL, deployment, merge, or push is implied by this checkpoint.
+No production SQL, schema change, Trust Engine synchronization, service-role action, or deployment is implied by the experience-reset documentation.
 
 ---
 
 ## Product Principle
 
-THRIVE exists to help the person understand, plan, choose, and connect.
+THRIVE exists to help the person understand, choose, act, connect, and see progress.
 
 The intended experience is not:
 
@@ -489,15 +638,15 @@ system observes
 → system controls
 ```
 
-The intended experience is:
+It is:
 
 ```text
-person reflects
-→ person plans
-→ THRIVE shows evidence
-→ person adds context
-→ THRIVE explains
-→ person chooses what to do next
+person shares
+→ THRIVE understands
+→ THRIVE brings something useful
+→ person chooses
+→ THRIVE follows up
+→ the experience adapts
+→ progress remains visible
+→ Story carries it forward
 ```
-
-That person-centered loop is the organizing principle for future work.
