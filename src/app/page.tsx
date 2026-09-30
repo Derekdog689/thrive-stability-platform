@@ -213,6 +213,7 @@ export default function TodayPage() {
     if (budgetExpired && activeBudgetPeriod) return { label: "Needs you", title: "Your Money plan ended", detail: "Review the finished plan when you are ready to set up the next one.", href: "/budget", action: "Review Money", icon: "money" as IconName };
     if (!todayCheckin) return { label: "Start here", title: "Check in", detail: "Tell THRIVE how things are going right now.", href: "/wellness", action: "Check in", icon: "wellness" as IconName };
     if (!todayCheckin.chosen_next_step) return { label: "Pick up where you left off", title: "Finish your check-in", detail: "Your earlier answers are saved. Choose what you want to do next, or leave it there.", href: "/wellness", action: "Continue", icon: "wellness" as IconName };
+    if (todayCheckin.recovery_support === "could_use_support") return { label: "Worth continuing", title: "Recovery support is still on your radar", detail: "You said recovery support could help. THRIVE can take you to meetings, readings, people, or a simple routine.", href: "/recovery-support?from=today", action: "Explore recovery support", icon: "support" as IconName };
     if (!goalsDoneForNow && currentGoal?.next_step) return { label: "One thing you can continue", title: currentGoal.title, detail: currentGoal.next_step, href: "/goals", action: "Continue goal", icon: "goal" as IconName };
     if (needsNextMoneyPlan) return { label: "When you're ready", title: "Start your next Money plan", detail: "Your last plan is complete. Set up the next one when it is useful.", href: "/budget", action: "Open Money", icon: "money" as IconName };
     return { label: "Right now", title: "You’re caught up", detail: "Nothing in THRIVE needs your attention. Come back when something changes or when you want to work on something.", href: "/", action: "", icon: "today" as IconName };
@@ -226,8 +227,10 @@ export default function TodayPage() {
     <AuthGate>
       <main className="thrive-today-bg min-h-screen pb-32 text-slate-950">
         <section className="mx-auto max-w-5xl px-3 pb-10 pt-3 sm:px-6 sm:pt-6">
-          <header className="thrive-ambient relative overflow-hidden rounded-[2rem] border border-white/65 bg-white/28 px-5 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl sm:px-7 sm:py-5">
-            <div className="thrive-orb thrive-orb-one" /><div className="thrive-orb thrive-orb-two" />
+          <header
+            className="thrive-ambient relative overflow-hidden rounded-[2rem] border border-white/65 bg-cover bg-center px-5 py-4 shadow-[0_22px_65px_rgba(15,23,42,0.14)] sm:px-7 sm:py-5"
+            style={{ backgroundImage: "linear-gradient(180deg,rgba(255,255,255,.42),rgba(246,239,228,.76)),url('/living-signal-morning.svg')" }}
+          >
             <div className="relative z-10 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/72 text-base font-black text-emerald-900 shadow-sm">T</div><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-800">DSS Enterprises</p><p className="text-xs font-black text-emerald-950">THRIVE</p></div></div>
               <button type="button" onClick={handleSignOut} disabled={signingOut} className="rounded-full border border-white/80 bg-white/55 px-3 py-2 text-[11px] font-black text-emerald-950 backdrop-blur-xl transition active:scale-95 disabled:opacity-60">{signingOut ? "Signing out" : "Log out"}</button>
@@ -299,6 +302,14 @@ export default function TodayPage() {
               <Link href="/budget" className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-white/85 bg-white/72 p-4 transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><Icon name="money" className="h-6 w-6 text-cyan-800" /><div><p className="font-black text-slate-950">Money</p><p className="mt-1 text-xs font-semibold text-slate-500">Your plan and activity</p></div></div><span className="shrink-0 text-xs font-black text-cyan-900">{budgetExpired ? "Plan ended" : activeBudgetPeriod ? `${formatMoneyShort(budgetRemaining)} left` : needsNextMoneyPlan ? "Next plan" : "No plan"}</span></Link>
               <Link href="/support" className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-white/85 bg-white/72 p-4 transition active:scale-[0.99]"><div className="flex min-w-0 items-center gap-3"><Icon name="support" className="h-6 w-6 text-violet-800" /><div><p className="font-black text-slate-950">Support</p><p className="mt-1 text-xs font-semibold text-slate-500">Questions and replies</p></div></div><span className="shrink-0 text-xs font-black text-violet-800">{supportLaneLabel}</span></Link>
             </div>
+            <Link href="/story-candidate" className="mt-4 flex items-center justify-between rounded-[1.35rem] border border-indigo-100/80 bg-indigo-50/72 p-4 text-indigo-950 shadow-sm transition active:scale-[0.99]">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-700">Story</p>
+                <p className="mt-1 text-lg font-black">See what all of this is adding up to.</p>
+                <p className="mt-1 text-xs font-semibold text-indigo-700/80">Wellness, Goals, Money, and Support stay separate, but your movement can still make sense together.</p>
+              </div>
+              <span className="ml-4 text-2xl font-black">›</span>
+            </Link>
           </section>
         </section>
         <TodayBottomNav />

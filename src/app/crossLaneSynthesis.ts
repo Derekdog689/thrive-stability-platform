@@ -51,6 +51,11 @@ function readableStatus(value: string) {
 }
 
 function buildSupportHref(checkin: WellnessCheckinRow) {
+  if (checkin.recovery_support === "could_use_support") {
+    const recoveryParams = new URLSearchParams({ from: "wellness", checkin: checkin.id });
+    return `/recovery-support?${recoveryParams.toString()}`;
+  }
+
   const params = new URLSearchParams({ from: "wellness" });
 
   const values: Array<[string, string | null]> = [
@@ -156,7 +161,10 @@ export function buildCrossLaneSynthesis({
           fact: "Support is available if you want another person in the loop.",
         },
       ],
-      actionLabel: "Open Support",
+      actionLabel:
+        todayCheckin.recovery_support === "could_use_support"
+          ? "Explore recovery support"
+          : "Open Support",
       actionHref: buildSupportHref(todayCheckin),
     };
   }

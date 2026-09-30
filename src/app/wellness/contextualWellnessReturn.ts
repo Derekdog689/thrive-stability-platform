@@ -90,6 +90,15 @@ function wellnessSupportHref(todayCheckin: WellnessCheckinRow) {
 }
 
 function routeForChoice(todayCheckin: WellnessCheckinRow) {
+  if (todayCheckin.recovery_support === "could_use_support") {
+    const params = new URLSearchParams({ from: "wellness" });
+    if (todayCheckin.id) params.set("checkin", todayCheckin.id);
+    return {
+      actionLabel: "Explore recovery support",
+      actionHref: `/recovery-support?${params.toString()}`,
+    };
+  }
+
   if (
     todayCheckin.support_needed === "yes" ||
     todayCheckin.chosen_next_step === "ask_for_help" ||
