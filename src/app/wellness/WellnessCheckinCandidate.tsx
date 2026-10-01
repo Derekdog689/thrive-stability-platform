@@ -5,6 +5,7 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildContextualWellnessReturn } from "./contextualWellnessReturn";
 import WellnessCheckinPreview from "./WellnessCheckinPreview";
+import WellnessExpandedExperience from "./WellnessExpandedExperience";
 import {
   type WellnessCheckinRow,
   type WellnessDraft,
@@ -183,9 +184,23 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
       : recentCheckins[0] ?? null;
 
   const selectedSignals: WellnessReflectionKey[] =
-    flow.phase === "expanded" || flow.phase === "saving"
+    flow.phase === "depth_select" ||
+    flow.phase === "depth_reflect" ||
+    flow.phase === "depth_note" ||
+    flow.phase === "saving"
       ? flow.selectedSignals
       : [];
+
+  const quickFlowVisible =
+    flow.phase === "signal" ||
+    flow.phase === "depth_choice" ||
+    (flow.phase === "saving" && flow.depth === "quick");
+
+  const expandedFlowVisible =
+    flow.phase === "depth_select" ||
+    flow.phase === "depth_reflect" ||
+    flow.phase === "depth_note" ||
+    (flow.phase === "saving" && flow.depth === "expanded");
 
   const displayCheckin =
     flow.phase === "return" ? savedCheckin : todayCheckin;
@@ -357,25 +372,58 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
         </section>
       ) : null}
 
-      {flow.phase !== "current" && flow.phase !== "return" ? (
+      {quickFlowVisible ? (
         <WellnessCheckinPreview
           experienceMode={experienceMode}
           referenceCheckin={referenceCheckin}
           draft={draft}
           onDraftChange={setDraft}
           flow={flow}
-          selectedSignals={selectedSignals}
           onSelectOverall={(value) =>
             dispatch({ type: "SELECT_OVERALL", value })
           }
           onDoneForNow={() => void complete("quick")}
           onLookCloser={() => dispatch({ type: "LOOK_CLOSER" })}
-          onToggleSignal={(key) => dispatch({ type: "TOGGLE_SIGNAL", key })}
-          onFinishExpanded={() => void complete("expanded")}
-          onBackToQuick={() => dispatch({ type: "BACK_TO_QUICK" })}
           actionMessage={actionMessage}
           writeEnabled={writeEnabled}
           focusOnMount={Boolean(todayCheckin)}
+        />
+      ) : null}
+
+      {expandedFlowVisible ? (
+        <WellnessExpandedExperience
+          flow={flow as Extract<
+            typeof flow,
+            | { phase: "depth_select" }
+            | { phase: "depth_reflect" }
+            | { phase: "depth_note" }
+            | { phase: "saving"; depth: "expanded" }
+          >}
+          draft={draft}
+          referenceCheckin={referenceCheckin}
+          experienceMode={experienceMode}
+          writeEnabled={writeEnabled}
+          actionMessage={actionMessage}
+          onDraftChange={setDraft}
+          onToggleSignal={(key) =>
+            dispatch({ type: "TOGGLE_SIGNAL", key })
+          }
+          onContinueDepth={() =>
+            dispatch({ type: "CONTINUE_DEPTH" })
+          }
+          onNextSignal={() =>
+            dispatch({ type: "NEXT_SIGNAL" })
+          }
+          onPreviousSignal={() =>
+            dispatch({ type: "PREVIOUS_SIGNAL" })
+          }
+          onBackToSelection={() =>
+            dispatch({ type: "BACK_TO_SELECTION" })
+          }
+          onBackToQuick={() =>
+            dispatch({ type: "BACK_TO_QUICK" })
+          }
+          onFinishExpanded={() => void complete("expanded")}
         />
       ) : null}
 
