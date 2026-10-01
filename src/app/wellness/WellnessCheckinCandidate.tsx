@@ -1,96 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
+import { useRouter } from "next/navigation";
 import { buildContextualWellnessReturn } from "./contextualWellnessReturn";
 import WellnessCheckinPreview from "./WellnessCheckinPreview";
-import { type WellnessDraft, useWellnessCheckinCandidate } from "./useWellnessCheckinCandidate";
+import {
+  type WellnessCheckinRow,
+  type WellnessDraft,
+  useWellnessCheckinCandidate,
+} from "./useWellnessCheckinCandidate";
+import {
+  INITIAL_WELLNESS_FLOW_STATE,
+  wellnessFlowReducer,
+  type WellnessReflectionKey,
+} from "./wellnessFlowMachine";
+import {
+  wellnessOverallLabel,
+  type WellnessCheckinDepth,
+  type WellnessOverallDay,
+} from "./wellnessVocabulary";
 
 function formatValue(value: string | null | undefined) {
   if (!value) return "Not selected";
-  if (value === "hard") return "Struggling";
   return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function nextStepLabel(value: string | null | undefined) {
   const labels: Record<string, string> = {
-    review_today_plan: "Keep it going",
+    review_today_plan: "Keep one thing steady",
     choose_one_task: "Do one useful thing",
     take_a_break: "Take a break",
     food_water_rest: "Handle a basic need",
-    contact_supportive_person: "Talk to someone",
-    ask_for_help: "Ask THRIVE for help",
+    contact_supportive_person: "Talk to someone supportive",
+    ask_for_help: "Open Support",
     other: "Something else",
-    nothing_right_now: "Nothing right now",
   };
   return value ? labels[value] ?? formatValue(value) : null;
 }
 
-function nextStepRoute(
-  value: string | null | undefined,
-  checkin?: {
-    overall_day: string | null;
-    stress: string | null;
-    sleep: string | null;
-    energy: string | null;
-    confidence: string | null;
-    routine: string | null;
-    recovery_support: string | null;
-    support_needed: string | null;
-    chosen_next_step: string | null;
-    participant_note: string | null;
-  } | null,
-) {
-  if (value !== "contact_supportive_person" && value !== "ask_for_help") return null;
-  if (!checkin) return "/support";
-
-  const params = new URLSearchParams({ from: "wellness" });
-  const values: Array<[string, string | null]> = [
-    ["overall", checkin.overall_day],
-    ["nextStep", checkin.chosen_next_step],
-    ["stress", checkin.stress],
-    ["sleep", checkin.sleep],
-    ["energy", checkin.energy],
-    ["confidence", checkin.confidence],
-    ["routine", checkin.routine],
-    ["recoverySupport", checkin.recovery_support],
-    ["supportNeeded", checkin.support_needed],
-  ];
-
-  for (const [key, current] of values) {
-    if (current) params.set(key, current);
-  }
-
-  const note = checkin.participant_note?.trim() ?? "";
-  if (note && (note.includes("?") || /^(how|what|why|where|when|who|can|could|should|do|does|is|are|would)\b/i.test(note))) {
-    params.set("question", note);
-  }
-
-  return `/support?${params.toString()}`;
-}
-
-function nextStepIcon(value: string | null | undefined) {
-  const icons: Record<string, string> = {
-    review_today_plan: "✓",
-    choose_one_task: "◎",
-    take_a_break: "Ⅱ",
-    food_water_rest: "◇",
-    contact_supportive_person: "♡",
-    ask_for_help: "♡",
-    other: "+",
-    nothing_right_now: "·",
-  };
-  return value ? icons[value] ?? "•" : "•";
-}
-
-function overallVisual(value: string | null | undefined) {
-  const key = value?.toLowerCase().replaceAll(" ", "_") ?? "";
+function overallVisual(value: WellnessOverallDay | null | undefined) {
   const visuals: Record<string, { dot: string; ring: string; badge: string; text: string }> = {
     good: {
       dot: "bg-[#21a8b0]",
       ring: "shadow-[0_0_0_8px_rgba(16,185,129,0.10)]",
       badge: "bg-emerald-50 text-[#0e6f78]",
       text: "text-[#0e6f78]",
+    },
+    better: {
+      dot: "bg-[#6d9f8d]",
+      ring: "shadow-[0_0_0_8px_rgba(109,159,141,0.12)]",
+      badge: "bg-[#eef8f3] text-[#426f60]",
+      text: "text-[#426f60]",
     },
     okay: {
       dot: "bg-sky-500",
@@ -111,39 +72,23 @@ function overallVisual(value: string | null | undefined) {
       text: "text-amber-900",
     },
   };
-  return visuals[key] ?? visuals.not_sure;
+  return visuals[value ?? "not_sure"] ?? visuals.not_sure;
 }
 
 function detailSentence(label: string, value: string) {
-  const plainValue = formatValue(value).toLowerCase();
-  if (label === "Stress") return `Stress feels ${plainValue}.`;
-  if (label === "Sleep") return `Sleep feels ${plainValue}.`;
-  if (label === "Energy") return `Energy feels ${plainValue}.`;
-  if (label === "Confidence") return `Confidence feels ${plainValue}.`;
-  if (label === "Routine") return `Routine feels ${plainValue}.`;
-  if (label === "Recovery") return `Recovery support feels ${plainValue}.`;
-  if (label === "Support") return `Support feels ${plainValue}.`;
-  return `${label}: ${formatValue(value)}`;
-}
-
-function signalMeta(label: string) {
-  const values: Record<string, { icon: string; accent: string; soft: string }> = {
-    Stress: { icon: "≈", accent: "#ef8f56", soft: "rgba(239,143,86,.14)" },
-    Sleep: { icon: "☾", accent: "#d79a42", soft: "rgba(215,154,66,.14)" },
-    Energy: { icon: "✦", accent: "#2e91b5", soft: "rgba(46,145,181,.14)" },
-    Confidence: { icon: "◎", accent: "#8b66c8", soft: "rgba(139,102,200,.15)" },
-    Routine: { icon: "↻", accent: "#d96f72", soft: "rgba(217,111,114,.14)" },
-    Recovery: { icon: "♡", accent: "#7454c7", soft: "rgba(116,84,199,.15)" },
-    Support: { icon: "◌", accent: "#5b6fcb", soft: "rgba(91,111,203,.15)" },
-  };
-  return values[label] ?? { icon: "•", accent: "#21a8b0", soft: "rgba(33,168,176,.14)" };
+  const plain = formatValue(value).toLowerCase();
+  if (label === "Recovery") return `Recovery support feels ${plain}.`;
+  if (label === "Support") return `Support feels ${plain}.`;
+  return `${label} feels ${plain}.`;
 }
 
 function dateLabel(dateKey: string, today: string) {
   if (dateKey === today) return "Today";
   const [year, month, day] = dateKey.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" }).format(date);
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
 function shiftDateKey(dateKey: string, days: number) {
@@ -162,92 +107,72 @@ const emptyDraft: WellnessDraft = {
   routine: null,
   recoverySupport: null,
   supportNeeded: null,
-  chosenNextStep: null,
   participantNote: "",
 };
 
-type WellnessCheckinCandidateProps = {
-  onHeroChange?: (text: string) => void;
-};
+type Props = { onHeroChange?: (text: string) => void };
 
-export default function WellnessCheckinCandidate({
-  onHeroChange,
-}: WellnessCheckinCandidateProps) {
+export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
+  const router = useRouter();
   const [draft, setDraft] = useState<WellnessDraft>(emptyDraft);
+  const [flow, dispatch] = useReducer(
+    wellnessFlowReducer,
+    INITIAL_WELLNESS_FLOW_STATE,
+  );
   const [actionMessage, setActionMessage] = useState("");
-  const [isCheckingInAgain, setIsCheckingInAgain] = useState(false);
-  const [isFinishingSavedCheckin, setIsFinishingSavedCheckin] = useState(false);
-  const [justSaved, setJustSaved] = useState(false);
+  const [savedCheckin, setSavedCheckin] = useState<WellnessCheckinRow | null>(null);
   const [historyDay, setHistoryDay] = useState<string | null>(null);
 
-  const { recentCheckins, todayCheckin, today, executeInsertCandidate, executeSameDayUpdate, writeEnabled } = useWellnessCheckinCandidate();
+  const {
+    recentCheckins,
+    todayCheckin,
+    today,
+    loading,
+    createCompletedCheckin,
+    updateCompletedCheckinAction,
+    writeEnabled,
+  } = useWellnessCheckinCandidate();
 
-  const savedDraft = useMemo<WellnessDraft>(() => {
-    if (!todayCheckin) return draft;
-    return {
-      overallDay: todayCheckin.overall_day,
-      stress: todayCheckin.stress,
-      sleep: todayCheckin.sleep,
-      energy: todayCheckin.energy,
-      confidence: todayCheckin.confidence,
-      routine: todayCheckin.routine,
-      recoverySupport: todayCheckin.recovery_support,
-      supportNeeded: todayCheckin.support_needed,
-      chosenNextStep: todayCheckin.chosen_next_step,
-      participantNote: todayCheckin.participant_note ?? "",
-    };
-  }, [draft, todayCheckin]);
-
-  async function handleSaveCandidate() {
-    const result = await executeInsertCandidate(draft);
-    if (!result.ok) {
-      setActionMessage(result.message);
-      setJustSaved(false);
-      return result;
+  useEffect(() => {
+    if (!loading && !todayCheckin && flow.phase === "current") {
+      dispatch({ type: "START_NEW_CHECKIN" });
     }
-    setDraft(emptyDraft);
-    setActionMessage("");
-    setIsCheckingInAgain(false);
-    setJustSaved(true);
-    return result;
-  }
+  }, [flow.phase, loading, todayCheckin]);
 
-  async function handleUpdateCandidate() {
-    const result = await executeSameDayUpdate(draft);
-    if (!result.ok) {
-      setActionMessage(result.message);
-      setJustSaved(false);
-      return result;
+  useEffect(() => {
+    if (!onHeroChange) return;
+    if (flow.phase === "current") {
+      onHeroChange(todayCheckin ? "How are things going now?" : "How are things right now?");
+      return;
     }
-    setDraft(emptyDraft);
-    setActionMessage("");
-    setIsFinishingSavedCheckin(false);
-    setJustSaved(true);
-    return result;
-  }
+    if (flow.phase === "return") {
+      onHeroChange("You checked in.");
+      return;
+    }
+    onHeroChange(todayCheckin ? "What’s going on with you now?" : "How are things right now?");
+  }, [flow.phase, onHeroChange, todayCheckin]);
 
-  const recentCheckinsByDate = useMemo(() => recentCheckins.reduce<Record<string, typeof recentCheckins>>((groups, checkin) => {
-    if (!groups[checkin.checkin_date]) groups[checkin.checkin_date] = [];
-    groups[checkin.checkin_date].push(checkin);
-    return groups;
-  }, {}), [recentCheckins]);
-
-  const recentCheckinDates = Object.keys(recentCheckinsByDate);
-  const weekKeys = useMemo(() => Array.from({ length: 7 }, (_, index) => shiftDateKey(today, index - 6)), [today]);
-  const dayCount = new Set(recentCheckins.map((checkin) => checkin.checkin_date)).size;
-  const reflectionCount = recentCheckins.length;
-  const selectedDayKey = historyDay ?? (recentCheckinDates.includes(today) ? today : recentCheckinDates[0] ?? null);
-  const selectedDayRows = selectedDayKey ? recentCheckinsByDate[selectedDayKey] ?? [] : [];
-  const resumeHistory = useMemo(
+  const recentByDate = useMemo(
     () =>
-      todayCheckin
-        ? recentCheckins.filter((checkin) => checkin.id !== todayCheckin.id)
-        : recentCheckins,
-    [recentCheckins, todayCheckin],
+      recentCheckins.reduce<Record<string, WellnessCheckinRow[]>>((groups, row) => {
+        (groups[row.checkin_date] ??= []).push(row);
+        return groups;
+      }, {}),
+    [recentCheckins],
   );
-  const focusMode = !todayCheckin || isCheckingInAgain;
+
+  const recentDates = Object.keys(recentByDate);
+  const weekKeys = useMemo(
+    () => Array.from({ length: 7 }, (_, index) => shiftDateKey(today, index - 6)),
+    [today],
+  );
+  const selectedDayKey =
+    historyDay ?? (recentDates.includes(today) ? today : recentDates[0] ?? null);
+  const selectedDayRows = selectedDayKey ? recentByDate[selectedDayKey] ?? [] : [];
+  const dayCount = new Set(recentCheckins.map((row) => row.checkin_date)).size;
+
   const experienceMode =
-    isCheckingInAgain && todayCheckin
+    todayCheckin && flow.phase !== "current" && flow.phase !== "return"
       ? "same_day"
       : recentCheckins.length > 0
         ? "later"
@@ -255,287 +180,407 @@ export default function WellnessCheckinCandidate({
   const referenceCheckin =
     experienceMode === "same_day"
       ? todayCheckin
-      : experienceMode === "later"
-        ? recentCheckins[0] ?? null
-        : null;
+      : recentCheckins[0] ?? null;
 
-  useEffect(() => {
-    if (!onHeroChange) return;
+  const selectedSignals: WellnessReflectionKey[] =
+    flow.phase === "expanded" || flow.phase === "saving"
+      ? flow.selectedSignals
+      : [];
 
-    if (!todayCheckin) {
-      onHeroChange("How are things right now?");
-      return;
-    }
+  const displayCheckin =
+    flow.phase === "return" ? savedCheckin : todayCheckin;
 
-    if (isCheckingInAgain) {
-      onHeroChange("What’s going on with you now?");
-      return;
-    }
-
-    onHeroChange("How are things going now?");
-  }, [isCheckingInAgain, isFinishingSavedCheckin, onHeroChange, todayCheckin]);
-
-  const todayDetails = todayCheckin ? [
-    ["Stress", todayCheckin.stress],
-    ["Sleep", todayCheckin.sleep],
-    ["Energy", todayCheckin.energy],
-    ["Confidence", todayCheckin.confidence],
-    ["Routine", todayCheckin.routine],
-    ["Recovery", todayCheckin.recovery_support],
-    ["Support", todayCheckin.support_needed],
-  ].filter(([, value]) => Boolean(value)) as [string, string][] : [];
-
-  const primaryTodayDetail = todayDetails[0] ?? null;
-  const secondaryTodayDetails = todayDetails.slice(1);
-  const todayOverallVisual = overallVisual(todayCheckin?.overall_day);
-  const todayNextRoute = nextStepRoute(todayCheckin?.chosen_next_step, todayCheckin);
   const contextualReturn = useMemo(
-    () => buildContextualWellnessReturn(todayCheckin, recentCheckins),
-    [todayCheckin, recentCheckins],
+    () =>
+      buildContextualWellnessReturn(
+        flow.phase === "return" ? savedCheckin : null,
+        recentCheckins,
+      ),
+    [flow.phase, recentCheckins, savedCheckin],
   );
+
+  async function complete(depth: WellnessCheckinDepth) {
+    if (!draft.overallDay || !writeEnabled) return;
+
+    const selected = selectedSignals;
+    dispatch(
+      depth === "quick"
+        ? { type: "DONE_FOR_NOW" }
+        : { type: "FINISH_EXPANDED" },
+    );
+
+    const result = await createCompletedCheckin(draft, depth);
+
+    if (!result.ok) {
+      setActionMessage(result.message);
+      dispatch({ type: "SAVE_FAILED", depth, selectedSignals: selected });
+      return;
+    }
+
+    setActionMessage("");
+    setSavedCheckin(result.row);
+    dispatch({ type: "SAVE_SUCCEEDED", checkinId: result.row.id });
+  }
+
+  async function chooseAction(
+    value: string,
+    href?: string | null,
+  ) {
+    if (!savedCheckin) return;
+
+    const result = await updateCompletedCheckinAction({
+      checkinId: savedCheckin.id,
+      chosenNextStep: value,
+    });
+
+    if (!result.ok) {
+      setActionMessage(result.message);
+      return;
+    }
+
+    setSavedCheckin(result.row);
+    setActionMessage("");
+
+    if (href) router.push(href);
+  }
+
+  function startNewCheckin() {
+    setDraft(emptyDraft);
+    setSavedCheckin(null);
+    setActionMessage("");
+    dispatch({ type: "START_NEW_CHECKIN" });
+  }
+
+  const currentDetails = displayCheckin
+    ? ([
+        ["Stress", displayCheckin.stress],
+        ["Sleep", displayCheckin.sleep],
+        ["Energy", displayCheckin.energy],
+        ["Confidence", displayCheckin.confidence],
+        ["Routine", displayCheckin.routine],
+        ["Recovery", displayCheckin.recovery_support],
+        ["Support", displayCheckin.support_needed],
+      ].filter(([, value]) => Boolean(value)) as [string, string][])
+    : [];
+
+  const currentVisual = overallVisual(displayCheckin?.overall_day);
+
+  const supportRelevant =
+    savedCheckin?.support_needed === "yes" ||
+    savedCheckin?.recovery_support === "could_use_support";
+
+  const pauseRelevant =
+    savedCheckin?.stress === "high" ||
+    savedCheckin?.sleep === "poor" ||
+    savedCheckin?.energy === "low";
+
+  const taskRelevant =
+    savedCheckin?.confidence === "low" ||
+    savedCheckin?.routine === "mixed" ||
+    savedCheckin?.routine === "off_track";
 
   return (
     <div className="space-y-6">
-      {todayCheckin && !focusMode && !justSaved ? (
-        <section className="wellness-current-state overflow-hidden rounded-[2rem] border border-white/65 bg-[#f7f2e8]/64 shadow-[0_22px_58px_rgba(8,35,46,0.10)] backdrop-blur-2xl">
+      {flow.phase === "current" && todayCheckin ? (
+        <section className="overflow-hidden rounded-[2rem] border border-white/65 bg-[#f7f2e8]/64 shadow-[0_22px_58px_rgba(8,35,46,0.10)] backdrop-blur-2xl">
           <div className="relative p-5 sm:p-8">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-200/34 blur-2xl" />
-            <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-amber-200/34 blur-3xl" />
-
-            <div className="relative">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#137e86]">Today</p>
-                <span className="rounded-full border border-cyan-100/80 bg-[#fbf7ef]/82 px-3 py-1.5 text-xs font-black text-[#0b6871] shadow-sm backdrop-blur-xl">Your check-in</span>
-              </div>
-
-              <div className="mt-5 flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/78 shadow-sm">
-                  <span className={`h-5 w-5 rounded-full ${todayOverallVisual.dot} ${todayOverallVisual.ring}`} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-black uppercase tracking-wide text-slate-500">Latest check-in</p>
-                  <h2 className={`mt-1 text-4xl font-black tracking-tight sm:text-5xl ${todayOverallVisual.text}`}>{formatValue(todayCheckin.overall_day)}</h2>
-                </div>
-              </div>
-
-              {primaryTodayDetail ? (
-                <p className="mt-5 text-xl font-bold leading-7 text-slate-700">{detailSentence(primaryTodayDetail[0], primaryTodayDetail[1])}</p>
-              ) : null}
-
-              {secondaryTodayDetails.length > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {secondaryTodayDetails.map(([label, value]) => (
-                    <span key={label} className="rounded-full border border-white/80 bg-white/68 px-3 py-2 text-xs font-bold text-slate-600 backdrop-blur-xl">{detailSentence(label, value)}</span>
-                  ))}
-                </div>
-              ) : null}
-
-              {todayCheckin.chosen_next_step ? (
-                todayNextRoute ? (
-                  <Link href={todayNextRoute} className="mt-6 flex items-center gap-4 rounded-[1.6rem] border border-cyan-200/80/80 bg-emerald-700 px-5 py-5 text-white shadow-[0_14px_32px_rgba(4,120,87,0.20)] transition hover:bg-emerald-800">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/14 text-xl">{nextStepIcon(todayCheckin.chosen_next_step)}</div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">Next</p>
-                      <p className="mt-1 text-xl font-black leading-6">{nextStepLabel(todayCheckin.chosen_next_step)}</p>
-                    </div>
-                    <span className="text-2xl font-black text-emerald-100">›</span>
-                  </Link>
-                ) : (
-                  <div className="mt-6 rounded-[1.6rem] border border-cyan-100/80 bg-emerald-50/82 px-5 py-5 text-emerald-950 shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-[#0e6f78]">{nextStepIcon(todayCheckin.chosen_next_step)}</div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#147a84]">Next</p>
-                        <p className="mt-1 text-xl font-black leading-6">{nextStepLabel(todayCheckin.chosen_next_step)}</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              ) : (
-                <div className="mt-6 rounded-[1.6rem] border border-white/65 bg-[linear-gradient(145deg,rgba(232,244,245,.86),rgba(248,241,231,.82))] px-5 py-5 text-[#173644] shadow-[0_12px_34px_rgba(9,43,54,.08)]">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">For now</p>
-                  <p className="mt-1 text-lg font-black leading-6">No next step saved.</p>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">Come back whenever it’s useful.</p>
-                </div>
-              )}
-
-              {todayCheckin.participant_note ? (
-                <details className="mt-4 rounded-2xl border border-white/80 bg-white/62 backdrop-blur-xl">
-                  <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-slate-700">Your note <span className="ml-1 text-[#0f7d86]">⌄</span></summary>
-                  <p className="border-t border-white/80 px-4 pb-4 pt-3 leading-7 text-slate-700">{todayCheckin.participant_note}</p>
-                </details>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setDraft(emptyDraft);
-                  setActionMessage("");
-                  setJustSaved(false);
-                  setIsFinishingSavedCheckin(false);
-                  setIsCheckingInAgain(true);
-                }}
-                className="mt-5 rounded-full border border-cyan-200/80 bg-[#fbf7ef]/80 px-4 py-2.5 text-sm font-black text-[#0b6671] shadow-sm transition hover:bg-white"
-              >
-                Check in again
-              </button>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#137e86]">
+                Today
+              </p>
+              <span className="rounded-full border border-cyan-100/80 bg-[#fbf7ef]/82 px-3 py-1.5 text-xs font-black text-[#0b6871]">
+                Your latest check-in
+              </span>
             </div>
+
+            <div className="mt-5 flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/90 bg-white/78">
+                <span className={`h-5 w-5 rounded-full ${currentVisual.dot} ${currentVisual.ring}`} />
+              </div>
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide text-slate-500">
+                  Right now
+                </p>
+                <h2 className={`mt-1 text-4xl font-black tracking-tight ${currentVisual.text}`}>
+                  {wellnessOverallLabel(todayCheckin.overall_day)}
+                </h2>
+              </div>
+            </div>
+
+            {currentDetails.length > 0 ? (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {currentDetails.map(([label, value]) => (
+                  <span
+                    key={label}
+                    className="rounded-full border border-white/80 bg-white/68 px-3 py-2 text-xs font-bold text-slate-600"
+                  >
+                    {detailSentence(label, value)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-5 text-sm font-semibold leading-6 text-slate-600">
+                You kept this one quick. The moment is still part of your Wellness history.
+              </p>
+            )}
+
+            {todayCheckin.participant_note ? (
+              <details className="mt-4 rounded-2xl border border-white/80 bg-white/62">
+                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-slate-700">
+                  Your note <span className="ml-1 text-[#0f7d86]">⌄</span>
+                </summary>
+                <p className="border-t border-white/80 px-4 pb-4 pt-3 leading-7 text-slate-700">
+                  {todayCheckin.participant_note}
+                </p>
+              </details>
+            ) : null}
+
+            {todayCheckin.chosen_next_step ? (
+              <div className="mt-5 rounded-[1.4rem] border border-cyan-100 bg-white/64 px-4 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#147a84]">
+                  You chose
+                </p>
+                <p className="mt-1 font-black text-[#173644]">
+                  {nextStepLabel(todayCheckin.chosen_next_step)}
+                </p>
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={startNewCheckin}
+              className="mt-5 rounded-full border border-cyan-200/80 bg-[#fbf7ef]/80 px-4 py-2.5 text-sm font-black text-[#0b6671] shadow-sm"
+            >
+              Check in again
+            </button>
           </div>
         </section>
       ) : null}
 
-      {focusMode ? (
+      {flow.phase !== "current" && flow.phase !== "return" ? (
         <WellnessCheckinPreview
-          recentCheckins={recentCheckins}
           experienceMode={experienceMode}
           referenceCheckin={referenceCheckin}
           draft={draft}
           onDraftChange={setDraft}
-          onSaveCandidate={handleSaveCandidate}
-          onUpdateCandidate={handleUpdateCandidate}
-          hasSavedCheckin={false}
+          flow={flow}
+          selectedSignals={selectedSignals}
+          onSelectOverall={(value) =>
+            dispatch({ type: "SELECT_OVERALL", value })
+          }
+          onDoneForNow={() => void complete("quick")}
+          onLookCloser={() => dispatch({ type: "LOOK_CLOSER" })}
+          onToggleSignal={(key) => dispatch({ type: "TOGGLE_SIGNAL", key })}
+          onFinishExpanded={() => void complete("expanded")}
+          onBackToQuick={() => dispatch({ type: "BACK_TO_QUICK" })}
           actionMessage={actionMessage}
           writeEnabled={writeEnabled}
-          focusOnMount={isCheckingInAgain}
-          resumeMode={false}
+          focusOnMount={Boolean(todayCheckin)}
         />
       ) : null}
 
-      {justSaved ? (
-        <section className="wellness-saved-return overflow-hidden rounded-[2rem] border border-white/12 bg-[radial-gradient(circle_at_84%_10%,rgba(240,179,94,.20),transparent_28%),linear-gradient(160deg,#0a4050,#092f3b_66%,#102b35)] p-6 text-white shadow-[0_28px_74px_rgba(4,25,34,0.24)] sm:p-8">
+      {flow.phase === "return" && savedCheckin ? (
+        <section className="overflow-hidden rounded-[2rem] border border-white/12 bg-[radial-gradient(circle_at_84%_10%,rgba(240,179,94,.20),transparent_28%),linear-gradient(160deg,#0a4050,#092f3b_66%,#102b35)] p-6 text-white shadow-[0_28px_74px_rgba(4,25,34,0.24)] sm:p-8">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#67d7ce]/18 text-2xl text-[#8ce8df] shadow-[0_0_0_1px_rgba(140,232,223,.22)]">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#67d7ce]/18 text-2xl text-[#8ce8df]">
               ✓
             </span>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#8ce8df]">Saved</p>
-              <h2 className="mt-1 text-2xl font-black sm:text-3xl">This moment is part of your Story.</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#8ce8df]">
+                Saved
+              </p>
+              <h2 className="mt-1 text-2xl font-black">
+                This moment is part of your Story.
+              </h2>
             </div>
           </div>
 
           <div className="mt-6 rounded-[1.6rem] border border-white/10 bg-white/6 p-5 backdrop-blur-xl">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8ce8df]">THRIVE noticed</p>
-            <h3 className="mt-2 text-xl font-black text-white">{contextualReturn?.headline ?? "Your check-in is saved."}</h3>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8ce8df]">
+              THRIVE noticed
+            </p>
+            <h3 className="mt-2 text-xl font-black text-white">
+              {contextualReturn?.headline ?? "Your check-in is saved."}
+            </h3>
             {contextualReturn?.detail ? (
-              <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">{contextualReturn.detail}</p>
-            ) : null}
-            {contextualReturn?.choiceLabel ? (
-              <p className="mt-3 text-sm font-bold text-[#f3d3a1]">{contextualReturn.choiceLabel}</p>
-            ) : null}
-
-            {todayDetails.length > 0 ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {todayDetails.map(([label, value]) => {
-                  const meta = signalMeta(label);
-                  return (
-                    <span
-                      key={label}
-                      className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-black"
-                      style={{
-                        color: meta.accent,
-                        background: meta.soft,
-                        borderColor: `${meta.accent}55`,
-                      }}
-                    >
-                      <span aria-hidden="true">{meta.icon}</span>
-                      {label}: {formatValue(value)}
-                    </span>
-                  );
-                })}
-              </div>
+              <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">
+                {contextualReturn.detail}
+              </p>
             ) : null}
           </div>
 
-          {contextualReturn?.noteQuestion ? (
-            <div className="mt-4 rounded-[1.5rem] border border-violet-300/15 bg-violet-300/8 p-5">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-200">You asked</p>
-              <p className="mt-2 font-black leading-7 text-white">“{contextualReturn.noteQuestion}”</p>
-              {contextualReturn.noteResponse ? (
-                <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">{contextualReturn.noteResponse}</p>
-              ) : null}
-            </div>
+          {savedCheckin.participant_note ? (
+            <details className="mt-4 rounded-[1.4rem] border border-white/12 bg-white/5">
+              <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-[#8ce8df]">
+                Your reflection
+              </summary>
+              <p className="border-t border-white/10 px-4 pb-4 pt-3 text-sm font-semibold leading-6 text-slate-300">
+                {savedCheckin.participant_note}
+              </p>
+            </details>
           ) : null}
 
-          <div className="mt-7">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">What fits right now?</p>
-            <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">Your check-in is already saved. These are options, not requirements.</p>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
-                <Link href={contextualReturn.actionHref} className="rounded-[1.35rem] border border-[#6f5bd3]/25 bg-[#6f5bd3]/18 px-5 py-4 font-black text-white transition hover:bg-[#6f5bd3]/28">
-                  <span className="mr-2 text-violet-200">♡</span>{contextualReturn.actionLabel}
-                </Link>
-              ) : null}
-              <Link href="/living-signal/recovery" className="rounded-[1.35rem] border border-[#48a9d8]/25 bg-[#48a9d8]/16 px-5 py-4 font-black text-white transition hover:bg-[#48a9d8]/24">
-                <span className="mr-2 text-sky-200">◎</span>Find support options
-              </Link>
-              <Link href="/goals" className="rounded-[1.35rem] border border-[#b37bd8]/25 bg-[#b37bd8]/16 px-5 py-4 font-black text-white transition hover:bg-[#b37bd8]/24">
-                <span className="mr-2 text-fuchsia-200">◉</span>Continue a goal
-              </Link>
-              <Link href="/budget" className="rounded-[1.35rem] border border-[#4fc39c]/25 bg-[#4fc39c]/14 px-5 py-4 font-black text-white transition hover:bg-[#4fc39c]/22">
-                <span className="mr-2 text-emerald-200">$</span>Review money
-              </Link>
+          {(supportRelevant || pauseRelevant || taskRelevant) ? (
+            <div className="mt-7">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                If something would help
+              </p>
+              <div className="mt-4 grid gap-3">
+                {supportRelevant ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void chooseAction(
+                        "ask_for_help",
+                        contextualReturn?.actionHref ?? "/support",
+                      )
+                    }
+                    className="rounded-[1.35rem] border border-[#6f5bd3]/25 bg-[#6f5bd3]/18 px-5 py-4 text-left font-black text-white"
+                  >
+                    Open Support
+                  </button>
+                ) : null}
+                {pauseRelevant ? (
+                  <button
+                    type="button"
+                    onClick={() => void chooseAction("take_a_break")}
+                    className="rounded-[1.35rem] border border-[#48a9d8]/25 bg-[#48a9d8]/16 px-5 py-4 text-left font-black text-white"
+                  >
+                    Take a break
+                  </button>
+                ) : null}
+                {taskRelevant ? (
+                  <button
+                    type="button"
+                    onClick={() => void chooseAction("choose_one_task")}
+                    className="rounded-[1.35rem] border border-[#4fc39c]/25 bg-[#4fc39c]/14 px-5 py-4 text-left font-black text-white"
+                  >
+                    Choose one useful thing
+                  </button>
+                ) : null}
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="mt-6 text-sm font-semibold leading-6 text-slate-300">
+              You do not need to turn this check-in into another task.
+            </p>
+          )}
+
+          {actionMessage ? (
+            <p className="mt-4 rounded-xl bg-amber-100/10 px-4 py-3 text-sm font-bold text-amber-100">
+              {actionMessage}
+            </p>
+          ) : null}
 
           <div className="mt-7 border-t border-white/10 pt-5">
-            <Link href="/living-signal/today" className="flex w-full items-center justify-center rounded-[1.4rem] bg-[linear-gradient(135deg,#56d2c9,#36a9b5)] px-5 py-4 font-black text-[#082c35] shadow-[0_14px_34px_rgba(54,169,181,.18)]">
+            <Link
+              href="/living-signal/today"
+              className="flex w-full items-center justify-center rounded-[1.4rem] bg-[linear-gradient(135deg,#56d2c9,#36a9b5)] px-5 py-4 font-black text-[#082c35]"
+            >
               Done for now
             </Link>
-            <Link href="/living-signal/story" className="mt-3 flex w-full items-center justify-center rounded-[1.4rem] border border-white/16 bg-white/5 px-5 py-4 font-black text-white">
-              View your Story
-            </Link>
+            <button
+              type="button"
+              onClick={startNewCheckin}
+              className="mt-3 flex w-full items-center justify-center rounded-[1.4rem] border border-white/16 bg-white/5 px-5 py-4 font-black text-white"
+            >
+              Check in again
+            </button>
           </div>
         </section>
       ) : null}
 
-      {recentCheckinDates.length > 0 && !focusMode && !justSaved ? (
-        <section className="wellness-week-history rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
+      {flow.phase === "current" && recentDates.length > 0 ? (
+        <section className="rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-[#147a84]">Your week</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">Check-ins</h2>
+              <p className="text-xs font-black uppercase tracking-wide text-[#147a84]">
+                Your week
+              </p>
+              <h2 className="mt-2 text-2xl font-black text-slate-950">
+                Check-ins
+              </h2>
             </div>
-            <p className="text-sm font-black text-slate-500">{dayCount} days · {reflectionCount} total</p>
+            <p className="text-sm font-black text-slate-500">
+              {dayCount} days · {recentCheckins.length} total
+            </p>
           </div>
 
           <div className="mt-6 grid grid-cols-7 gap-2">
             {weekKeys.map((dateKey) => {
-              const rows = recentCheckinsByDate[dateKey] ?? [];
+              const rows = recentByDate[dateKey] ?? [];
               const checked = rows.length > 0;
               const selected = selectedDayKey === dateKey;
               return (
-                <button key={dateKey} type="button" onClick={() => checked && setHistoryDay(dateKey)} disabled={!checked} className={`min-w-0 rounded-[1.25rem] border px-1 py-3 text-center shadow-sm transition ${selected ? "border-[#1c8fa0] bg-[linear-gradient(180deg,rgba(178,235,235,.78),rgba(231,246,244,.72))]" : checked ? "border-cyan-100/70 bg-white/72" : "border-white/60 bg-white/38"}`}>
-                  <span className="block text-[9px] font-black uppercase tracking-wide text-slate-500">{dateLabel(dateKey, today)}</span>
+                <button
+                  key={dateKey}
+                  type="button"
+                  onClick={() => checked && setHistoryDay(dateKey)}
+                  disabled={!checked}
+                  className={`min-w-0 rounded-[1.25rem] border px-1 py-3 text-center shadow-sm ${
+                    selected
+                      ? "border-[#1c8fa0] bg-[linear-gradient(180deg,rgba(178,235,235,.78),rgba(231,246,244,.72))]"
+                      : checked
+                        ? "border-cyan-100/70 bg-white/72"
+                        : "border-white/60 bg-white/38"
+                  }`}
+                >
+                  <span className="block text-[9px] font-black uppercase tracking-wide text-slate-500">
+                    {dateLabel(dateKey, today)}
+                  </span>
                   <span className={`mx-auto mt-3 block h-4 w-4 rounded-full ${checked ? "bg-[#21a8b0]" : "bg-slate-200"}`} />
-                  {rows.length > 1 ? <span className="mt-2 block text-[9px] font-black text-[#0e6f78]">{rows.length}</span> : <span className="mt-2 block h-[11px]" />}
+                  <span className="mt-2 block text-[9px] font-black text-[#0e6f78]">
+                    {rows.length || ""}
+                  </span>
                 </button>
               );
             })}
           </div>
 
           {selectedDayRows.length > 0 ? (
-            <div className="mt-5 rounded-[1.7rem] border border-white/70 bg-[linear-gradient(180deg,rgba(235,244,246,.88),rgba(248,241,231,.78))] p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-black text-slate-950">{selectedDayKey === today ? "Today" : selectedDayKey}</p>
-                <span className="text-xs font-bold text-slate-500">{selectedDayRows.length} check-in{selectedDayRows.length === 1 ? "" : "s"}</span>
-              </div>
-              <div className="mt-3 space-y-3">
-                {selectedDayRows.map((checkin) => {
-                  const checkinTime = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date(checkin.created_at));
-                  const historyOverallVisual = overallVisual(checkin.overall_day);
-                  return (
-                    <article key={checkin.id} className="rounded-[1.4rem] border border-white/80 bg-white/76 p-4 shadow-[0_10px_28px_rgba(9,37,47,.07)] backdrop-blur-xl">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-black text-slate-950">{checkinTime}</span>
-                        <span className={`rounded-full px-3 py-1 text-xs font-black ${historyOverallVisual.badge}`}>{formatValue(checkin.overall_day)}</span>
-                      </div>
-                      {checkin.chosen_next_step ? <p className="mt-3 text-sm font-bold text-slate-700">Next: {nextStepLabel(checkin.chosen_next_step)}</p> : null}
-                      {checkin.participant_note ? <details className="mt-3"><summary className="cursor-pointer text-sm font-black text-[#0e6f78]">Read note</summary><p className="mt-2 text-sm leading-6 text-slate-700">{checkin.participant_note}</p></details> : null}
-                    </article>
-                  );
-                })}
-              </div>
+            <div className="mt-5 space-y-3">
+              {selectedDayRows.map((checkin) => {
+                const visual = overallVisual(checkin.overall_day);
+                const time = new Intl.DateTimeFormat("en-US", {
+                  timeZone: "America/New_York",
+                  hour: "numeric",
+                  minute: "2-digit",
+                }).format(new Date(checkin.created_at));
+
+                return (
+                  <article
+                    key={checkin.id}
+                    className="rounded-[1.4rem] border border-white/80 bg-white/76 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-black text-slate-950">{time}</span>
+                      <span className={`rounded-full px-3 py-1 text-xs font-black ${visual.badge}`}>
+                        {wellnessOverallLabel(checkin.overall_day)}
+                      </span>
+                    </div>
+                    {checkin.checkin_depth ? (
+                      <p className="mt-2 text-xs font-bold uppercase tracking-wide text-slate-400">
+                        {checkin.checkin_depth === "quick" ? "Quick check-in" : "Looked closer"}
+                      </p>
+                    ) : null}
+                    {checkin.chosen_next_step ? (
+                      <p className="mt-3 text-sm font-bold text-slate-700">
+                        Chose: {nextStepLabel(checkin.chosen_next_step)}
+                      </p>
+                    ) : null}
+                    {checkin.participant_note ? (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-sm font-black text-[#0e6f78]">
+                          Read note
+                        </summary>
+                        <p className="mt-2 text-sm leading-6 text-slate-700">
+                          {checkin.participant_note}
+                        </p>
+                      </details>
+                    ) : null}
+                  </article>
+                );
+              })}
             </div>
           ) : null}
         </section>
