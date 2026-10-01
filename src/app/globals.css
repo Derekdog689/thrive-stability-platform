@@ -718,3 +718,16 @@ main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-amber-200.bg-amber-50
     top: auto;
   }
 }
+
+
+/* Wellness expanded viewport ownership */
+html.wellness-expanded-open,
+body.wellness-expanded-open {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html.wellness-expanded-open .wellness-bottom-nav,
+body.wellness-expanded-open .wellness-bottom-nav {
+  display: none !important;
+}
