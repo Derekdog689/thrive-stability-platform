@@ -321,17 +321,6 @@ export default function LiveToday({ mode }: { mode: Mode }) {
       };
     }
 
-    if (!wellness.todayCheckin.chosen_next_step) {
-      return {
-        label: "Pick up where you left off",
-        title: "Finish your check-in",
-        detail:
-          "Your earlier answers are saved. Choose what you want to do next, or leave it there.",
-        href: "/wellness",
-        action: "Continue",
-      };
-    }
-
     if (currentGoal?.next_step) {
       return {
         label: "One thing you can continue",
