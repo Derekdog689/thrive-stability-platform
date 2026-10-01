@@ -299,7 +299,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
   return (
     <div className="space-y-6">
       {flow.phase === "current" && todayCheckin ? (
-        <section className="overflow-hidden rounded-[2rem] border border-white/65 bg-[#f7f2e8]/64 shadow-[0_22px_58px_rgba(8,35,46,0.10)] backdrop-blur-2xl">
+        <section className="wellness-current-state overflow-hidden rounded-[2rem] border border-white/65 bg-[#f7f2e8]/64 shadow-[0_22px_58px_rgba(8,35,46,0.10)] backdrop-blur-2xl">
           <div className="relative p-5 sm:p-8">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#137e86]">
@@ -431,7 +431,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
       ) : null}
 
       {flow.phase === "return" && savedCheckin ? (
-        <section className="overflow-hidden rounded-[2rem] border border-white/12 bg-[radial-gradient(circle_at_84%_10%,rgba(240,179,94,.20),transparent_28%),linear-gradient(160deg,#0a4050,#092f3b_66%,#102b35)] p-6 text-white shadow-[0_28px_74px_rgba(4,25,34,0.24)] sm:p-8">
+        <section className="wellness-saved-return overflow-hidden rounded-[2rem] border border-white/12 bg-[radial-gradient(circle_at_84%_10%,rgba(240,179,94,.20),transparent_28%),linear-gradient(160deg,#0a4050,#092f3b_66%,#102b35)] p-6 text-white shadow-[0_28px_74px_rgba(4,25,34,0.24)] sm:p-8">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#67d7ce]/18 text-2xl text-[#8ce8df]">
               ✓
@@ -542,7 +542,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
       ) : null}
 
       {flow.phase === "current" && recentDates.length > 0 ? (
-        <section className="rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
+        <section className="wellness-week-history rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-[#147a84]">
