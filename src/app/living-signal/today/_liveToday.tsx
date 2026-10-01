@@ -12,6 +12,14 @@ import { LaneCard, SceneHero } from "../_components";
 
 type Mode = "auto" | "morning" | "evening";
 
+type PrimaryAction = {
+  label: string;
+  title: string;
+  detail: string;
+  href: "/wellness" | "/goals" | "/budget" | "/support" | "/living-signal/today";
+  action: string;
+};
+
 function easternHour() {
   const hour = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
@@ -71,23 +79,43 @@ function formatTime(value: string | null | undefined) {
   });
 }
 
-function supportLabel(status: string | null | undefined) {
+function daySignal(value: string | null | undefined) {
+  switch (value) {
+    case "good":
+      return "Feeling good";
+    case "okay":
+      return "Doing alright";
+    case "hard":
+      return "Hard day";
+    case "not_sure":
+      return "Not sure today";
+    default:
+      return "Check in";
+  }
+}
+
+function supportState(status: string | null | undefined) {
   switch (status) {
     case "waiting_for_participant":
-      return "Needs your reply";
+      return "Needs reply";
     case "in_progress":
-      return "In progress";
+      return "In review";
     case "acknowledged":
-      return "Received";
     case "submitted":
-      return "Submitted";
+      return "Received";
     case "completed":
       return "Completed";
-    case "withdrawn":
-      return "Withdrawn";
     default:
-      return status ? status.replaceAll("_", " ") : "Support is available";
+      return status ? status.replaceAll("_", " ") : "Available";
   }
+}
+
+function formatMoneyShort(value: number) {
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
+  });
 }
 
 function LiveBottomNav() {
@@ -123,38 +151,92 @@ export default function LiveToday({ mode }: { mode: Mode }) {
 
   const today = businessDateKey();
 
-  const currentGoal = useMemo(
-    () =>
-      goals.activeGoals.find((goal) => goal.progress_status === "in_progress") ??
-      goals.activeGoals.find((goal) => goal.progress_status === "not_started") ??
-      goals.activeGoals.find((goal) => goal.progress_status === "paused") ??
-      null,
-    [goals.activeGoals],
+  const activeBudgetPeriod =
+    financial.budgetPeriods.find((period) => period.status === "active") ?? null;
+  const draftBudgetPeriod =
+    financial.budgetPeriods.find((period) => period.status === "draft") ?? null;
+  const hasCompletedBudget = financial.budgetPeriods.some(
+    (period) => period.status === "completed",
+  );
+  const needsNextMoneyPlan =
+    !activeBudgetPeriod && !draftBudgetPeriod && hasCompletedBudget;
+  const budgetExpired =
+    activeBudgetPeriod ? activeBudgetPeriod.period_end < today : false;
+
+  const activeBudgetLines = activeBudgetPeriod
+    ? financial.budgetLines.filter(
+        (line) => line.budget_period_id === activeBudgetPeriod.id && line.is_active,
+      )
+    : [];
+  const budgetRemaining = activeBudgetLines.reduce(
+    (sum, line) => sum + toNumber(line.derived_remaining_amount),
+    0,
   );
 
-  const activeBudgetPeriod = useMemo(
-    () =>
-      financial.budgetPeriods.find((period) => period.status === "active") ??
-      financial.budgetPeriods.find((period) => period.status === "draft") ??
-      null,
-    [financial.budgetPeriods],
+  const currentGoal =
+    goals.activeGoals.find((goal) => goal.progress_status === "in_progress") ??
+    goals.activeGoals.find((goal) => goal.progress_status === "not_started") ??
+    null;
+
+  const openGoalCount = goals.activeGoals.filter(
+    (goal) => !["completed", "archived"].includes(goal.progress_status),
+  ).length;
+
+  const assistedBudgetByRequestId = new Map(
+    support.assistedBudgetLinks.map((item) => [item.support_request_id, item]),
   );
 
-  const latestSupportRequest = support.requests[0] ?? null;
+  const unresolvedSupportRequest =
+    support.requests.find(
+      (request) => !["completed", "withdrawn", "archived"].includes(request.status),
+    ) ?? null;
 
-  const wellnessMoved = Boolean(wellness.todayCheckin);
-  const goalMoved = goals.activeGoals.some(
-    (goal) => timestampDateKey(goal.updated_at) === today,
+  const assistedBudgetReviewRequest =
+    support.requests.find((request) => {
+      const linked = assistedBudgetByRequestId.get(request.id);
+      return (
+        request.status === "waiting_for_participant" &&
+        request.participant_category === "budget_money" &&
+        linked?.budget_status === "draft"
+      );
+    }) ?? null;
+
+  const assistedBudgetReviewLink = assistedBudgetReviewRequest
+    ? assistedBudgetByRequestId.get(assistedBudgetReviewRequest.id) ?? null
+    : null;
+
+  const unresolvedAssistedLink = unresolvedSupportRequest
+    ? assistedBudgetByRequestId.get(unresolvedSupportRequest.id) ?? null
+    : null;
+
+  const supportNeedsParticipant =
+    unresolvedSupportRequest?.status === "waiting_for_participant" &&
+    unresolvedAssistedLink?.budget_status !== "active" &&
+    !assistedBudgetReviewRequest;
+
+  const supportLaneLabel = assistedBudgetReviewRequest
+    ? "Plan ready"
+    : unresolvedAssistedLink?.budget_status === "active"
+      ? "Plan active"
+      : supportState(unresolvedSupportRequest?.status);
+
+  const todayCheckins = wellness.recentCheckins.filter(
+    (checkin) => checkin.checkin_date === today,
   );
-  const moneyMoved = financial.financialActivity.some(
+
+  const goalEvents = goals.goals.filter(
+    (goal) =>
+      goal.progress_status !== "archived" &&
+      timestampDateKey(goal.updated_at) === today,
+  );
+
+  const moneyEvents = financial.financialActivity.filter(
     (activity) => activity.activity_date === today,
   );
-  const supportMoved = support.requests.some(
-    (request) => timestampDateKey(request.updated_at) === today,
-  );
 
-  const movementCount = [wellnessMoved, goalMoved, moneyMoved, supportMoved].filter(Boolean).length;
-  const movementPercent = Math.round((movementCount / 4) * 100);
+  const supportEvents = support.statusEvents.filter(
+    (event) => timestampDateKey(event.changed_at) === today,
+  );
 
   const participantName =
     goals.participant?.preferred_name?.trim() ||
@@ -162,34 +244,6 @@ export default function LiveToday({ mode }: { mode: Mode }) {
     support.participantName ||
     financial.participantName ||
     "Participant";
-
-  const budgetRemaining = activeBudgetPeriod
-    ? financial.budgetLines
-        .filter((line) => line.budget_period_id === activeBudgetPeriod.id)
-        .reduce((sum, line) => sum + toNumber(line.derived_remaining_amount), 0)
-    : 0;
-
-  const wellnessCopy = wellness.todayCheckin
-    ? `Checked in${formatTime(wellness.todayCheckin.updated_at) ? ` · ${formatTime(wellness.todayCheckin.updated_at)}` : ""}`
-    : "Ready when you are";
-
-  const goalCopy = currentGoal
-    ? goalMoved
-      ? `Moved today${formatTime(currentGoal.updated_at) ? ` · ${formatTime(currentGoal.updated_at)}` : ""}`
-      : `Next · ${currentGoal.next_step}`
-    : "No active goal right now";
-
-  const moneyCopy = activeBudgetPeriod
-    ? activeBudgetPeriod.status === "draft"
-      ? "Plan draft ready to finish"
-      : `${budgetRemaining.toLocaleString("en-US", {
-          style: "currency",
-          currency: "USD",
-          maximumFractionDigits: 0,
-        })} left in plan`
-    : "No current Money plan";
-
-  const supportCopy = supportLabel(latestSupportRequest?.status);
 
   const synthesis = buildCrossLaneSynthesis({
     todayCheckin: wellness.todayCheckin,
@@ -207,6 +261,186 @@ export default function LiveToday({ mode }: { mode: Mode }) {
     goals.errorMessage ||
     support.errorMessage ||
     financial.errorMessage;
+
+  const isNewParticipant =
+    !loading &&
+    wellness.recentCheckins.length === 0 &&
+    goals.goals.length === 0 &&
+    financial.budgetPeriods.length === 0;
+
+  const primaryAction: PrimaryAction = useMemo(() => {
+    if (isNewParticipant) {
+      return {
+        label: "Start here",
+        title: "Check in",
+        detail: "Tell THRIVE how things are going right now.",
+        href: "/wellness",
+        action: "Check in",
+      };
+    }
+
+    if (assistedBudgetReviewRequest && assistedBudgetReviewLink) {
+      return {
+        label: "Needs you",
+        title: "Your starter Money plan is ready",
+        detail:
+          "Review what Support prepared. Change anything you want before you use it.",
+        href: "/budget",
+        action: "Review plan",
+      };
+    }
+
+    if (supportNeedsParticipant) {
+      return {
+        label: "Needs you",
+        title: "Support needs your reply",
+        detail: "There is a message waiting for you.",
+        href: "/support",
+        action: "Reply",
+      };
+    }
+
+    if (budgetExpired && activeBudgetPeriod) {
+      return {
+        label: "Needs you",
+        title: "Your Money plan ended",
+        detail:
+          "Review the finished plan when you are ready to set up the next one.",
+        href: "/budget",
+        action: "Review Money",
+      };
+    }
+
+    if (!wellness.todayCheckin) {
+      return {
+        label: "Start here",
+        title: "Check in",
+        detail: "Tell THRIVE how things are going right now.",
+        href: "/wellness",
+        action: "Check in",
+      };
+    }
+
+    if (!wellness.todayCheckin.chosen_next_step) {
+      return {
+        label: "Pick up where you left off",
+        title: "Finish your check-in",
+        detail:
+          "Your earlier answers are saved. Choose what you want to do next, or leave it there.",
+        href: "/wellness",
+        action: "Continue",
+      };
+    }
+
+    if (currentGoal?.next_step) {
+      return {
+        label: "One thing you can continue",
+        title: currentGoal.title,
+        detail: currentGoal.next_step,
+        href: "/goals",
+        action: "Continue goal",
+      };
+    }
+
+    if (needsNextMoneyPlan) {
+      return {
+        label: "When you're ready",
+        title: "Start your next Money plan",
+        detail: "Your last plan is complete. Set up the next one when it is useful.",
+        href: "/budget",
+        action: "Open Money",
+      };
+    }
+
+    return {
+      label: "Right now",
+      title: "You're caught up",
+      detail:
+        "Nothing in THRIVE needs your attention. Come back when something changes or when you want to work on something.",
+      href: "/living-signal/today",
+      action: "",
+    };
+  }, [
+    isNewParticipant,
+    assistedBudgetReviewRequest,
+    assistedBudgetReviewLink,
+    supportNeedsParticipant,
+    budgetExpired,
+    activeBudgetPeriod,
+    wellness.todayCheckin,
+    currentGoal,
+    needsNextMoneyPlan,
+  ]);
+
+  const currentWellness = daySignal(wellness.todayCheckin?.overall_day);
+  const currentGoals =
+    openGoalCount > 0
+      ? openGoalCount === 1
+        ? "Open"
+        : `${openGoalCount} open`
+      : "No active goal";
+
+  const currentMoney = budgetExpired
+    ? "Plan ended"
+    : activeBudgetPeriod
+      ? `${formatMoneyShort(budgetRemaining)} left`
+      : draftBudgetPeriod
+        ? "Draft"
+        : needsNextMoneyPlan
+          ? "Next plan"
+          : "No plan";
+
+  const movementRows = [
+    ...(todayCheckins.length > 0
+      ? [
+          {
+            icon: "♡",
+            iconClass: "ls-icon--wellness",
+            title:
+              todayCheckins.length === 1
+                ? "Wellness check-in"
+                : `${todayCheckins.length} Wellness check-ins`,
+            copy: `Latest: ${daySignal(todayCheckins[0]?.overall_day)}${formatTime(todayCheckins[0]?.created_at) ? ` · ${formatTime(todayCheckins[0]?.created_at)}` : ""}`,
+            href: "/wellness",
+          },
+        ]
+      : []),
+    ...goalEvents.slice(0, 1).map((goal) => ({
+      icon: "◎",
+      iconClass: "ls-icon--goal",
+      title:
+        goal.progress_status === "completed"
+          ? "Goal completed"
+          : "Goal moved today",
+      copy: goal.title,
+      href: "/goals",
+    })),
+    ...(moneyEvents.length > 0
+      ? [
+          {
+            icon: "$",
+            iconClass: "ls-icon--money",
+            title:
+              moneyEvents.length === 1
+                ? "Money activity recorded"
+                : `${moneyEvents.length} Money activities recorded`,
+            copy: "Recorded in your Financial Activity today",
+            href: "/financial-activity",
+          },
+        ]
+      : []),
+    ...(supportEvents.length > 0
+      ? [
+          {
+            icon: "♡",
+            iconClass: "ls-icon--support",
+            title: "Support moved today",
+            copy: supportLaneLabel,
+            href: "/support",
+          },
+        ]
+      : []),
+  ];
 
   const displayMode = resolvedMode(mode);
   const isEvening = displayMode === "evening";
@@ -229,44 +463,42 @@ export default function LiveToday({ mode }: { mode: Mode }) {
             }
             copy={
               isEvening
-                ? movementCount > 0
-                  ? "You showed up today. That matters."
-                  : "Today is still part of the story."
+                ? "Same THRIVE. A quieter look at what matters now."
                 : "Built on today."
             }
             rightLabel="Today"
           >
             <div className={`ls-progress ${isEvening ? "ls-progress--dark" : ""}`}>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <p
                   className="ls-kicker"
                   style={{ color: isEvening ? "#f4c978" : "#167b73" }}
                 >
-                  Today&apos;s movement
+                  {primaryAction.label}
                 </p>
                 <p style={{ marginTop: 5, fontSize: 24, fontWeight: 950 }}>
-                  {loading
-                    ? "Connecting your THRIVE..."
-                    : movementCount === 1
-                      ? "1 area moved today"
-                      : `${movementCount} areas moved today`}
+                  {loading ? "Connecting your THRIVE..." : primaryAction.title}
                 </p>
+                {!loading ? (
+                  <p className="ls-card-copy" style={{ marginTop: 6 }}>
+                    {primaryAction.detail}
+                  </p>
+                ) : null}
               </div>
-              <div className="ls-ring-wrap">
-                <div
-                  className="ls-ring"
-                  style={{ ["--p" as string]: `${movementPercent}%` }}
+              {!loading && primaryAction.action ? (
+                <Link
+                  href={primaryAction.href}
+                  className="ls-chip"
+                  style={{ textDecoration: "none", color: "#0b2630" }}
                 >
-                  <span>{movementPercent}%</span>
-                </div>
-              </div>
+                  {primaryAction.action}
+                </Link>
+              ) : null}
             </div>
           </SceneHero>
 
           <section className={`ls-section ${isEvening ? "ls-section--dark" : ""}`}>
-            <p className="ls-section-title">
-              {isEvening ? "What moved" : "Your movement"}
-            </p>
+            <p className="ls-section-title">Your THRIVE right now</p>
 
             {errorMessage ? (
               <div className={`ls-card ${isEvening ? "ls-card--dark" : ""}`}>
@@ -281,26 +513,26 @@ export default function LiveToday({ mode }: { mode: Mode }) {
               <div className="ls-grid">
                 <LaneCard
                   dark={isEvening}
-                  icon={wellnessMoved ? "✓" : "♡"}
+                  icon="♡"
                   iconClass="ls-icon--wellness"
-                  title="Wellness check-in"
-                  copy={wellnessCopy}
+                  title="Wellness"
+                  copy={currentWellness}
                   href="/wellness"
                 />
                 <LaneCard
                   dark={isEvening}
-                  icon={goalMoved ? "✓" : "◎"}
+                  icon="◎"
                   iconClass="ls-icon--goal"
-                  title={currentGoal?.title ?? "Goals"}
-                  copy={goalCopy}
+                  title="Goals"
+                  copy={currentGoals}
                   href="/goals"
                 />
                 <LaneCard
                   dark={isEvening}
                   icon="$"
                   iconClass="ls-icon--money"
-                  title="Money plan"
-                  copy={moneyCopy}
+                  title="Money"
+                  copy={currentMoney}
                   href="/budget"
                 />
                 <LaneCard
@@ -308,20 +540,50 @@ export default function LiveToday({ mode }: { mode: Mode }) {
                   icon="♡"
                   iconClass="ls-icon--support"
                   title="Support"
-                  copy={supportCopy}
+                  copy={supportLaneLabel}
                   href="/support"
                 />
               </div>
             ) : null}
+          </section>
 
-            {synthesis ? (
-              <div
-                className={`ls-card ${isEvening ? "ls-card--dark" : ""}`}
-                style={{ marginTop: 14 }}
-              >
+          <section className={`ls-section ${isEvening ? "ls-section--dark" : ""}`}>
+            <p className="ls-section-title">What moved today</p>
+
+            {movementRows.length > 0 ? (
+              <div className="ls-grid">
+                {movementRows.map((row) => (
+                  <LaneCard
+                    key={`${row.href}:${row.title}`}
+                    dark={isEvening}
+                    icon={row.icon}
+                    iconClass={row.iconClass}
+                    title={row.title}
+                    copy={row.copy}
+                    href={row.href}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className={`ls-card ${isEvening ? "ls-card--dark" : ""}`}>
+                <span>
+                  <span className="ls-card-title" style={{ display: "block" }}>
+                    Nothing new is recorded yet today.
+                  </span>
+                  <span className="ls-card-copy" style={{ display: "block", marginTop: 4 }}>
+                    THRIVE will keep this space factual as your day changes.
+                  </span>
+                </span>
+              </div>
+            )}
+          </section>
+
+          {synthesis ? (
+            <section className={`ls-section ${isEvening ? "ls-section--dark" : ""}`}>
+              <p className="ls-section-title">Worth noticing</p>
+              <div className={`ls-card ${isEvening ? "ls-card--dark" : ""}`}>
                 <span style={{ minWidth: 0 }}>
-                  <span className="ls-section-title">{synthesis.eyebrow}</span>
-                  <span className="ls-card-title" style={{ display: "block", marginTop: 6 }}>
+                  <span className="ls-card-title" style={{ display: "block" }}>
                     {synthesis.headline}
                   </span>
                   <span className="ls-card-copy" style={{ display: "block", marginTop: 6 }}>
@@ -329,13 +591,24 @@ export default function LiveToday({ mode }: { mode: Mode }) {
                   </span>
                 </span>
                 {synthesis.actionHref && synthesis.actionLabel ? (
-                  <Link href={synthesis.actionHref} className="ls-arrow" aria-label={synthesis.actionLabel}>
+                  <Link
+                    href={synthesis.actionHref}
+                    className="ls-arrow"
+                    aria-label={synthesis.actionLabel}
+                  >
                     ›
                   </Link>
                 ) : null}
               </div>
-            ) : null}
+            </section>
+          ) : null}
 
+          <section className={`ls-section ${isEvening ? "ls-section--dark" : ""}`}>
+            <p className="ls-section-title">Your Story</p>
+            <h2 className="ls-h2">Keep the thread.</h2>
+            <p className="ls-body">
+              What you finish, what changes, and what is still carrying can become part of the bigger picture.
+            </p>
             <Link
               href="/living-signal/story"
               className="ls-button ls-button--blue"
