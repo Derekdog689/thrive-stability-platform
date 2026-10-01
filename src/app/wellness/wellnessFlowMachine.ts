@@ -26,6 +26,10 @@ export type WellnessFlowState =
       currentSignalIndex: number;
     }
   | {
+      phase: "depth_return";
+      selectedSignals: WellnessReflectionKey[];
+    }
+  | {
       phase: "depth_note";
       selectedSignals: WellnessReflectionKey[];
     }
@@ -106,7 +110,7 @@ export function wellnessFlowReducer(
       if (state.phase !== "depth_reflect") return state;
       if (state.currentSignalIndex >= state.selectedSignals.length - 1) {
         return {
-          phase: "depth_note",
+          phase: "depth_return",
           selectedSignals: state.selectedSignals,
         };
       }
@@ -116,11 +120,17 @@ export function wellnessFlowReducer(
       };
 
     case "PREVIOUS_SIGNAL":
-      if (state.phase === "depth_note") {
+      if (state.phase === "depth_return") {
         return {
           phase: "depth_reflect",
           selectedSignals: state.selectedSignals,
           currentSignalIndex: Math.max(0, state.selectedSignals.length - 1),
+        };
+      }
+      if (state.phase === "depth_note") {
+        return {
+          phase: "depth_return",
+          selectedSignals: state.selectedSignals,
         };
       }
       if (state.phase !== "depth_reflect") return state;
@@ -138,6 +148,7 @@ export function wellnessFlowReducer(
     case "BACK_TO_SELECTION":
       if (
         state.phase !== "depth_reflect" &&
+        state.phase !== "depth_return" &&
         state.phase !== "depth_note"
       ) {
         return state;
@@ -148,7 +159,7 @@ export function wellnessFlowReducer(
       };
 
     case "GO_TO_NOTE":
-      if (state.phase !== "depth_reflect") return state;
+      if (state.phase !== "depth_return") return state;
       return {
         phase: "depth_note",
         selectedSignals: state.selectedSignals,
@@ -178,6 +189,7 @@ export function wellnessFlowReducer(
       if (
         state.phase !== "depth_select" &&
         state.phase !== "depth_reflect" &&
+        state.phase !== "depth_return" &&
         state.phase !== "depth_note"
       ) {
         return state;
