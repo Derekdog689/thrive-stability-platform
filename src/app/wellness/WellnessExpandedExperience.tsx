@@ -12,10 +12,7 @@ import {
 
 type ExpandedFlow = Extract<
   WellnessFlowState,
-  | { phase: "depth_select" }
-  | { phase: "depth_reflect" }
-  | { phase: "depth_note" }
-  | { phase: "saving"; depth: "expanded" }
+  { phase: "depth_select" | "depth_reflect" | "depth_note" | "saving" }
 >;
 
 type Props = {
