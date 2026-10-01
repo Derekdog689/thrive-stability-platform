@@ -86,10 +86,10 @@ function overallVisual(value: string | null | undefined) {
   const key = value?.toLowerCase().replaceAll(" ", "_") ?? "";
   const visuals: Record<string, { dot: string; ring: string; badge: string; text: string }> = {
     good: {
-      dot: "bg-emerald-500",
+      dot: "bg-[#21a8b0]",
       ring: "shadow-[0_0_0_8px_rgba(16,185,129,0.10)]",
-      badge: "bg-emerald-50 text-emerald-800",
-      text: "text-emerald-800",
+      badge: "bg-emerald-50 text-[#0e6f78]",
+      text: "text-[#0e6f78]",
     },
     okay: {
       dot: "bg-sky-500",
@@ -283,15 +283,15 @@ export default function WellnessCheckinCandidate({
   return (
     <div className="space-y-6">
       {todayCheckin && !focusMode && !justSaved ? (
-        <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/64 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl">
+        <section className="overflow-hidden rounded-[2rem] border border-white/65 bg-[#f7f2e8]/64 shadow-[0_22px_58px_rgba(8,35,46,0.10)] backdrop-blur-2xl">
           <div className="relative p-5 sm:p-8">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-emerald-100/70 blur-2xl" />
-            <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-amber-100/50 blur-3xl" />
+            <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-200/34 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-amber-200/34 blur-3xl" />
 
             <div className="relative">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Today</p>
-                <span className="rounded-full border border-emerald-100 bg-white/76 px-3 py-1.5 text-xs font-black text-emerald-800 shadow-sm backdrop-blur-xl">Your check-in</span>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#137e86]">Today</p>
+                <span className="rounded-full border border-cyan-100/80 bg-[#fbf7ef]/82 px-3 py-1.5 text-xs font-black text-[#0b6871] shadow-sm backdrop-blur-xl">Your check-in</span>
               </div>
 
               <div className="mt-5 flex items-center gap-4">
@@ -318,7 +318,7 @@ export default function WellnessCheckinCandidate({
 
               {todayCheckin.chosen_next_step ? (
                 todayNextRoute ? (
-                  <Link href={todayNextRoute} className="mt-6 flex items-center gap-4 rounded-[1.6rem] border border-emerald-200/80 bg-emerald-700 px-5 py-5 text-white shadow-[0_14px_32px_rgba(4,120,87,0.20)] transition hover:bg-emerald-800">
+                  <Link href={todayNextRoute} className="mt-6 flex items-center gap-4 rounded-[1.6rem] border border-cyan-200/80/80 bg-emerald-700 px-5 py-5 text-white shadow-[0_14px_32px_rgba(4,120,87,0.20)] transition hover:bg-emerald-800">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/14 text-xl">{nextStepIcon(todayCheckin.chosen_next_step)}</div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">Next</p>
@@ -327,18 +327,18 @@ export default function WellnessCheckinCandidate({
                     <span className="text-2xl font-black text-emerald-100">›</span>
                   </Link>
                 ) : (
-                  <div className="mt-6 rounded-[1.6rem] border border-emerald-100 bg-emerald-50/82 px-5 py-5 text-emerald-950 shadow-sm">
+                  <div className="mt-6 rounded-[1.6rem] border border-cyan-100/80 bg-emerald-50/82 px-5 py-5 text-emerald-950 shadow-sm">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-emerald-800">{nextStepIcon(todayCheckin.chosen_next_step)}</div>
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-[#0e6f78]">{nextStepIcon(todayCheckin.chosen_next_step)}</div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Next</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#147a84]">Next</p>
                         <p className="mt-1 text-xl font-black leading-6">{nextStepLabel(todayCheckin.chosen_next_step)}</p>
                       </div>
                     </div>
                   </div>
                 )
               ) : (
-                <div className="mt-6 rounded-[1.6rem] border border-slate-200/80 bg-slate-50/82 px-5 py-5 text-slate-800 shadow-sm">
+                <div className="mt-6 rounded-[1.6rem] border border-white/65 bg-[linear-gradient(145deg,rgba(232,244,245,.86),rgba(248,241,231,.82))] px-5 py-5 text-[#173644] shadow-[0_12px_34px_rgba(9,43,54,.08)]">
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">For now</p>
                   <p className="mt-1 text-lg font-black leading-6">No next step saved.</p>
                   <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">Come back whenever it’s useful.</p>
@@ -347,7 +347,7 @@ export default function WellnessCheckinCandidate({
 
               {todayCheckin.participant_note ? (
                 <details className="mt-4 rounded-2xl border border-white/80 bg-white/62 backdrop-blur-xl">
-                  <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-slate-700">Your note <span className="ml-1 text-emerald-700">⌄</span></summary>
+                  <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-slate-700">Your note <span className="ml-1 text-[#0f7d86]">⌄</span></summary>
                   <p className="border-t border-white/80 px-4 pb-4 pt-3 leading-7 text-slate-700">{todayCheckin.participant_note}</p>
                 </details>
               ) : null}
@@ -361,7 +361,7 @@ export default function WellnessCheckinCandidate({
                   setIsFinishingSavedCheckin(false);
                   setIsCheckingInAgain(true);
                 }}
-                className="mt-5 rounded-full border border-emerald-200 bg-white/72 px-4 py-2.5 text-sm font-black text-emerald-900 shadow-sm transition hover:bg-white"
+                className="mt-5 rounded-full border border-cyan-200/80 bg-[#fbf7ef]/80 px-4 py-2.5 text-sm font-black text-[#0b6671] shadow-sm transition hover:bg-white"
               >
                 Check in again
               </button>
@@ -388,15 +388,15 @@ export default function WellnessCheckinCandidate({
       ) : null}
 
       {justSaved ? (
-        <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
-          <p className="text-xs font-black uppercase tracking-wide text-emerald-300">Saved</p>
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_82%_12%,rgba(240,179,94,.18),transparent_28%),linear-gradient(160deg,#0a3442,#082632_68%,#0b2730)] p-6 text-white shadow-[0_26px_70px_rgba(4,25,34,0.22)] sm:p-8">
+          <p className="text-xs font-black uppercase tracking-wide text-[#89d7d5]">Saved</p>
           <h2 className="mt-2 text-2xl font-black sm:text-3xl">{contextualReturn?.headline ?? "Your check-in is saved."}</h2>
           {contextualReturn?.detail ? (
             <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-300">{contextualReturn.detail}</p>
           ) : null}
           {contextualReturn?.choiceLabel ? (
             <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900 px-5 py-4">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-300">Something you chose</p>
+              <p className="text-xs font-black uppercase tracking-wide text-[#89d7d5]">Something you chose</p>
               <p className="mt-2 font-black text-white">{contextualReturn.choiceLabel}</p>
             </div>
           ) : null}
@@ -406,14 +406,14 @@ export default function WellnessCheckinCandidate({
               <p className="mt-2 font-black leading-7 text-white">“{contextualReturn.noteQuestion}”</p>
               {contextualReturn.noteResponse ? (
                 <>
-                  <p className="mt-4 text-xs font-black uppercase tracking-wide text-emerald-300">A place to start</p>
+                  <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#89d7d5]">A place to start</p>
                   <p className="mt-2 font-semibold leading-7 text-slate-200">{contextualReturn.noteResponse}</p>
                 </>
               ) : null}
             </div>
           ) : null}
           {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
-            <Link href={contextualReturn.actionHref} className="mt-5 inline-flex rounded-full bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300">
+            <Link href={contextualReturn.actionHref} className="mt-5 inline-flex rounded-full bg-[#44c6bd] px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-[#61d5cd]">
               {contextualReturn.actionLabel}
             </Link>
           ) : null}
@@ -421,7 +421,7 @@ export default function WellnessCheckinCandidate({
           <div className="mt-7 border-t border-slate-800 pt-6">
             <p className="text-xs font-black uppercase tracking-wide text-slate-400">If you want to keep going</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Link href="/goals" className="rounded-2xl bg-emerald-400 px-5 py-4 font-black text-slate-950 hover:bg-emerald-300">Continue a goal</Link>
+              <Link href="/goals" className="rounded-2xl bg-[#44c6bd] px-5 py-4 font-black text-slate-950 hover:bg-[#61d5cd]">Continue a goal</Link>
               <Link href="/budget" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Review money</Link>
               {!contextualReturn?.actionHref?.startsWith("/support") ? (
                 <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
@@ -433,10 +433,10 @@ export default function WellnessCheckinCandidate({
       ) : null}
 
       {recentCheckinDates.length > 0 && !focusMode && !justSaved ? (
-        <section className="rounded-3xl border border-emerald-100 bg-white/82 p-5 shadow-sm backdrop-blur-xl sm:p-8">
+        <section className="rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Your week</p>
+              <p className="text-xs font-black uppercase tracking-wide text-[#147a84]">Your week</p>
               <h2 className="mt-2 text-2xl font-black text-slate-950">Check-ins</h2>
             </div>
             <p className="text-sm font-black text-slate-500">{dayCount} days · {reflectionCount} total</p>
@@ -448,17 +448,17 @@ export default function WellnessCheckinCandidate({
               const checked = rows.length > 0;
               const selected = selectedDayKey === dateKey;
               return (
-                <button key={dateKey} type="button" onClick={() => checked && setHistoryDay(dateKey)} disabled={!checked} className={`min-w-0 rounded-2xl border px-1 py-3 text-center transition ${selected ? "border-emerald-600 bg-emerald-100" : checked ? "border-emerald-200 bg-white" : "border-slate-100 bg-slate-50"}`}>
+                <button key={dateKey} type="button" onClick={() => checked && setHistoryDay(dateKey)} disabled={!checked} className={`min-w-0 rounded-[1.25rem] border px-1 py-3 text-center shadow-sm transition ${selected ? "border-[#1c8fa0] bg-[linear-gradient(180deg,rgba(178,235,235,.78),rgba(231,246,244,.72))]" : checked ? "border-cyan-100/70 bg-white/72" : "border-white/60 bg-white/38"}`}>
                   <span className="block text-[9px] font-black uppercase tracking-wide text-slate-500">{dateLabel(dateKey, today)}</span>
-                  <span className={`mx-auto mt-3 block h-4 w-4 rounded-full ${checked ? "bg-emerald-500" : "bg-slate-200"}`} />
-                  {rows.length > 1 ? <span className="mt-2 block text-[9px] font-black text-emerald-800">{rows.length}</span> : <span className="mt-2 block h-[11px]" />}
+                  <span className={`mx-auto mt-3 block h-4 w-4 rounded-full ${checked ? "bg-[#21a8b0]" : "bg-slate-200"}`} />
+                  {rows.length > 1 ? <span className="mt-2 block text-[9px] font-black text-[#0e6f78]">{rows.length}</span> : <span className="mt-2 block h-[11px]" />}
                 </button>
               );
             })}
           </div>
 
           {selectedDayRows.length > 0 ? (
-            <div className="mt-5 rounded-3xl bg-slate-50 p-4">
+            <div className="mt-5 rounded-[1.7rem] border border-white/70 bg-[linear-gradient(180deg,rgba(235,244,246,.88),rgba(248,241,231,.78))] p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <p className="font-black text-slate-950">{selectedDayKey === today ? "Today" : selectedDayKey}</p>
                 <span className="text-xs font-bold text-slate-500">{selectedDayRows.length} check-in{selectedDayRows.length === 1 ? "" : "s"}</span>
@@ -468,13 +468,13 @@ export default function WellnessCheckinCandidate({
                   const checkinTime = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date(checkin.created_at));
                   const historyOverallVisual = overallVisual(checkin.overall_day);
                   return (
-                    <article key={checkin.id} className="rounded-2xl bg-white p-4 shadow-sm">
+                    <article key={checkin.id} className="rounded-[1.4rem] border border-white/80 bg-white/76 p-4 shadow-[0_10px_28px_rgba(9,37,47,.07)] backdrop-blur-xl">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-black text-slate-950">{checkinTime}</span>
                         <span className={`rounded-full px-3 py-1 text-xs font-black ${historyOverallVisual.badge}`}>{formatValue(checkin.overall_day)}</span>
                       </div>
                       {checkin.chosen_next_step ? <p className="mt-3 text-sm font-bold text-slate-700">Next: {nextStepLabel(checkin.chosen_next_step)}</p> : null}
-                      {checkin.participant_note ? <details className="mt-3"><summary className="cursor-pointer text-sm font-black text-emerald-800">Read note</summary><p className="mt-2 text-sm leading-6 text-slate-700">{checkin.participant_note}</p></details> : null}
+                      {checkin.participant_note ? <details className="mt-3"><summary className="cursor-pointer text-sm font-black text-[#0e6f78]">Read note</summary><p className="mt-2 text-sm leading-6 text-slate-700">{checkin.participant_note}</p></details> : null}
                     </article>
                   );
                 })}
