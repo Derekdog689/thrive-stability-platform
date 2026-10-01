@@ -283,7 +283,7 @@ export default function WellnessCheckinCandidate({
   return (
     <div className="space-y-6">
       {todayCheckin && !focusMode && !justSaved ? (
-        <section className="overflow-hidden rounded-[2rem] border border-white/65 bg-[#f7f2e8]/64 shadow-[0_22px_58px_rgba(8,35,46,0.10)] backdrop-blur-2xl">
+        <section className="wellness-current-state overflow-hidden rounded-[2rem] border border-white/65 bg-[#f7f2e8]/64 shadow-[0_22px_58px_rgba(8,35,46,0.10)] backdrop-blur-2xl">
           <div className="relative p-5 sm:p-8">
             <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-200/34 blur-2xl" />
             <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-amber-200/34 blur-3xl" />
@@ -388,7 +388,7 @@ export default function WellnessCheckinCandidate({
       ) : null}
 
       {justSaved ? (
-        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_82%_12%,rgba(240,179,94,.18),transparent_28%),linear-gradient(160deg,#0a3442,#082632_68%,#0b2730)] p-6 text-white shadow-[0_26px_70px_rgba(4,25,34,0.22)] sm:p-8">
+        <section className="wellness-saved-return overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_82%_12%,rgba(240,179,94,.18),transparent_28%),linear-gradient(160deg,#0a3442,#082632_68%,#0b2730)] p-6 text-white shadow-[0_26px_70px_rgba(4,25,34,0.22)] sm:p-8">
           <p className="text-xs font-black uppercase tracking-wide text-[#89d7d5]">Saved</p>
           <h2 className="mt-2 text-2xl font-black sm:text-3xl">{contextualReturn?.headline ?? "Your check-in is saved."}</h2>
           {contextualReturn?.detail ? (
@@ -433,7 +433,7 @@ export default function WellnessCheckinCandidate({
       ) : null}
 
       {recentCheckinDates.length > 0 && !focusMode && !justSaved ? (
-        <section className="rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
+        <section className="wellness-week-history rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-[#147a84]">Your week</p>
