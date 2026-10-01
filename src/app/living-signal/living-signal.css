@@ -1465,3 +1465,106 @@
     padding-top: 0;
   }
 }
+
+
+/* Living Signal closeout presentation contract v0.2
+   Shared across Today and future participant lanes. */
+.ls-root {
+  --ls-readable-copy: 16px;
+}
+
+.ls-card-copy {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ls-body,
+.ls-hero-copy {
+  font-size: var(--ls-readable-copy);
+  line-height: 1.62;
+}
+
+.ls-layered-scene {
+  top: 8px;
+  z-index: 0;
+}
+
+.ls-layered-content {
+  z-index: 4;
+  margin-top: -52px;
+  padding-top: 0;
+}
+
+.ls-layered-content::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 7%;
+  right: 7%;
+  top: -34px;
+  height: 72px;
+  border-radius: 999px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(238,246,243,.48));
+  filter: blur(15px);
+}
+
+.ls-layered-content > .ls-section:first-child {
+  margin-top: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.62), rgba(248,250,247,.76));
+  border-color: rgba(255,255,255,.82);
+  backdrop-filter: blur(20px) saturate(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  box-shadow:
+    0 -20px 44px rgba(10,36,44,.06),
+    0 22px 60px rgba(14,36,44,.09);
+}
+
+.ls-today-live[style] .ls-layered-content::before {
+  background: linear-gradient(180deg, rgba(7,27,36,.06), rgba(10,35,45,.54));
+}
+
+.ls-today-live[style] .ls-layered-content > .ls-section:first-child {
+  background:
+    linear-gradient(180deg, rgba(9,31,42,.68), rgba(7,28,39,.84));
+  border-color: rgba(255,255,255,.13);
+}
+
+.ls-today-live .ls-section {
+  scroll-margin-top: 1rem;
+}
+
+.ls-today-live .ls-card-copy,
+.ls-today-live .ls-body {
+  max-width: 62ch;
+}
+
+@media (max-width: 430px) {
+  .ls-root {
+    --ls-readable-copy: 16px;
+  }
+
+  .ls-card-copy {
+    font-size: 14px;
+    line-height: 1.52;
+  }
+
+  .ls-layered-content {
+    margin-top: -44px;
+  }
+
+  .ls-section {
+    padding: 17px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-layered-content {
+    margin-top: 14px;
+  }
+
+  .ls-layered-content::before {
+    display: none;
+  }
+}
