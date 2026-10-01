@@ -939,3 +939,133 @@ body.wellness-expanded-open .wellness-bottom-nav {
     margin-top: 14px !important;
   }
 }
+
+
+/* Wellness fixed environment prototype v0.9
+   The scenery is environmental, not owned by the hero.
+   Foreground scrolls over a fixed image while a fixed veil increases depth. */
+.wellness-living-signal {
+  isolation: isolate;
+  background: #eaf1ef;
+}
+
+.wellness-fixed-environment {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 82% 12%, rgba(244,188,101,.30), transparent 26%),
+    linear-gradient(180deg, rgba(248,241,231,.02) 0%, rgba(21,117,127,.05) 36%, rgba(5,35,47,.28) 100%),
+    url('https://images.unsplash.com/photo-1660692791363-670f606977b9?auto=format&fit=crop&fm=jpg&q=88&w=2200');
+  background-size: cover;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  transform: translateZ(0);
+}
+
+.wellness-fixed-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(239,247,244,.03) 0%,
+      rgba(239,247,244,.08) 23%,
+      rgba(239,247,244,.28) 44%,
+      rgba(239,247,244,.62) 68%,
+      rgba(239,247,244,.88) 100%
+    );
+}
+
+.wellness-scroll-content {
+  position: relative;
+  z-index: 2;
+}
+
+.wellness-scenic-stage {
+  position: relative !important;
+  top: auto !important;
+  z-index: 2 !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(4,38,49,.10)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.wellness-scenic-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(3,31,41,.10) 58%, rgba(3,31,41,.18) 100%);
+}
+
+.wellness-scenic-stage > * {
+  position: relative;
+  z-index: 2;
+}
+
+.wellness-scenic-foreground {
+  position: relative;
+  z-index: 5;
+  margin-top: 18px !important;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(250,248,241,.46) 0%,
+      rgba(247,249,246,.60) 18%,
+      rgba(243,248,246,.74) 46%,
+      rgba(240,246,245,.88) 100%
+    ) !important;
+  backdrop-filter: blur(16px) saturate(1.04);
+  -webkit-backdrop-filter: blur(16px) saturate(1.04);
+}
+
+.wellness-scenic-foreground::before {
+  background: linear-gradient(
+    180deg,
+    rgba(236,247,244,.02),
+    rgba(242,248,245,.54)
+  );
+}
+
+.wellness-current-state,
+.wellness-week-history,
+.wellness-final-reflection,
+.wellness-return-stage {
+  backdrop-filter: blur(18px) saturate(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(1.04);
+}
+
+@media (max-width: 639px) {
+  .wellness-fixed-environment {
+    background-position: 50% 45%;
+  }
+
+  .wellness-fixed-veil {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(239,247,244,.02) 0%,
+        rgba(239,247,244,.06) 20%,
+        rgba(239,247,244,.24) 42%,
+        rgba(239,247,244,.58) 66%,
+        rgba(239,247,244,.90) 100%
+      );
+  }
+
+  .wellness-scenic-foreground {
+    margin-top: 16px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wellness-fixed-environment {
+    transform: none;
+  }
+}
