@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import type {
+  WellnessCheckinDepth,
+  WellnessOverallDay,
+} from "./wellnessVocabulary";
 
 export type WellnessCheckinRow = {
   id: string;
@@ -9,7 +13,8 @@ export type WellnessCheckinRow = {
   program_id: string;
   supported_person_id: string;
   checkin_date: string;
-  overall_day: string;
+  overall_day: WellnessOverallDay;
+  checkin_depth: WellnessCheckinDepth | null;
   stress: string | null;
   sleep: string | null;
   energy: string | null;
@@ -41,7 +46,7 @@ type ProgramParticipation = {
 };
 
 export type WellnessDraft = {
-  overallDay: string | null;
+  overallDay: WellnessOverallDay | null;
   stress: string | null;
   sleep: string | null;
   energy: string | null;
@@ -49,7 +54,6 @@ export type WellnessDraft = {
   routine: string | null;
   recoverySupport: string | null;
   supportNeeded: string | null;
-  chosenNextStep: string | null;
   participantNote: string;
 };
 
@@ -65,19 +69,19 @@ export type WellnessWriteResult =
         | "write_disabled"
         | "missing_identity"
         | "missing_overall_day"
-        | "already_exists"
         | "not_allowed"
         | "connection_error"
         | "unknown";
       message: string;
     };
 
-export type WellnessInsertCandidate = {
+export type CompletedWellnessInsert = {
   workspace_id: string;
   program_id: string;
   supported_person_id: string;
   checkin_date: string;
-  overall_day: string;
+  overall_day: WellnessOverallDay;
+  checkin_depth: WellnessCheckinDepth;
   stress: string | null;
   sleep: string | null;
   energy: string | null;
@@ -85,11 +89,14 @@ export type WellnessInsertCandidate = {
   routine: string | null;
   recovery_support: string | null;
   support_needed: string | null;
-  chosen_next_step: string | null;
+  chosen_next_step: null;
   participant_note: string | null;
   status: "active";
   created_by: string;
 };
+
+const wellnessSelect =
+  "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, checkin_depth, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at";
 
 function businessDateKey() {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -99,59 +106,34 @@ function businessDateKey() {
     day: "2-digit",
   }).formatToParts(new Date());
 
-  const values = Object.fromEntries(
-    parts.map((part) => [part.type, part.value]),
-  );
-
-  const year = values.year;
-  const month = values.month;
-  const day = values.day;
-
-  if (!year || !month || !day) {
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  if (!values.year || !values.month || !values.day) {
     throw new Error("Unable to resolve the THRIVE business date.");
   }
 
-  return `${year}-${month}-${day}`;
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function shiftDateKey(dateKey: string, days: number) {
   const [year, month, day] = dateKey.split("-").map(Number);
-
   const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCDate(date.getUTCDate() + days);
 
-  const shiftedYear = date.getUTCFullYear();
-  const shiftedMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const shiftedDay = String(date.getUTCDate()).padStart(2, "0");
-
-  return `${shiftedYear}-${shiftedMonth}-${shiftedDay}`;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
 export function useWellnessCheckinCandidate() {
-  const [participant, setParticipant] =
-    useState<SupportedPerson | null>(null);
-
-  const [participation, setParticipation] =
-    useState<ProgramParticipation | null>(null);
-
-  const [todayCheckins, setTodayCheckins] =
-    useState<WellnessCheckinRow[]>([]);
-
-  const todayCheckin = todayCheckins[0] ?? null;
-  const [recentCheckins, setRecentCheckins] =
-  useState<WellnessCheckinRow[]>([]);
-
-  const [authenticatedUserId, setAuthenticatedUserId] =
-    useState<string | null>(null);
-
+  const [participant, setParticipant] = useState<SupportedPerson | null>(null);
+  const [participation, setParticipation] = useState<ProgramParticipation | null>(null);
+  const [todayCheckins, setTodayCheckins] = useState<WellnessCheckinRow[]>([]);
+  const [recentCheckins, setRecentCheckins] = useState<WellnessCheckinRow[]>([]);
+  const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const todayCheckin = todayCheckins[0] ?? null;
   const today = useMemo(() => businessDateKey(), []);
-  const recentWindowStart = useMemo(
-  () => shiftDateKey(today, -6),
-  [today],
-);
+  const recentWindowStart = useMemo(() => shiftDateKey(today, -6), [today]);
 
   useEffect(() => {
     let mounted = true;
@@ -201,9 +183,7 @@ export function useWellnessCheckinCandidate() {
 
       const participationResult = await supabase
         .from("program_participants")
-        .select(
-          "id, workspace_id, program_id, supported_person_id, status",
-        )
+        .select("id, workspace_id, program_id, supported_person_id, status")
         .eq("supported_person_id", person.id)
         .eq("workspace_id", person.workspace_id)
         .eq("status", "active")
@@ -226,57 +206,40 @@ export function useWellnessCheckinCandidate() {
         return;
       }
 
-      const checkinResult = await supabase
-        .from("participant_wellness_checkins")
-        .select(
-          "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
-        )
-        .eq("supported_person_id", person.id)
-.eq("program_id", activeParticipation.program_id)
-.eq("workspace_id", person.workspace_id)
-.eq("checkin_date", today)
-.eq("status", "active")
-.order("created_at", { ascending: false });
+      const [todayResult, recentResult] = await Promise.all([
+        supabase
+          .from("participant_wellness_checkins")
+          .select(wellnessSelect)
+          .eq("supported_person_id", person.id)
+          .eq("program_id", activeParticipation.program_id)
+          .eq("workspace_id", person.workspace_id)
+          .eq("checkin_date", today)
+          .eq("status", "active")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("participant_wellness_checkins")
+          .select(wellnessSelect)
+          .eq("supported_person_id", person.id)
+          .eq("program_id", activeParticipation.program_id)
+          .eq("workspace_id", person.workspace_id)
+          .gte("checkin_date", recentWindowStart)
+          .lte("checkin_date", today)
+          .eq("status", "active")
+          .order("checkin_date", { ascending: false })
+          .order("created_at", { ascending: false }),
+      ]);
 
       if (!mounted) return;
 
-      if (checkinResult.error) {
-        setErrorMessage(checkinResult.error.message);
+      if (todayResult.error || recentResult.error) {
+        setErrorMessage(todayResult.error?.message ?? recentResult.error?.message ?? "");
         setLoading(false);
         return;
       }
 
-    setTodayCheckins(
-  (checkinResult.data as WellnessCheckinRow[] | null) ?? [],
-);
-
-const recentCheckinsResult = await supabase
-  .from("participant_wellness_checkins")
-  .select(
-    "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
-  )
-  .eq("supported_person_id", person.id)
-  .eq("program_id", activeParticipation.program_id)
-  .eq("workspace_id", person.workspace_id)
-  .gte("checkin_date", recentWindowStart)
-  .lte("checkin_date", today)
-  .eq("status", "active")
-  .order("checkin_date", { ascending: false })
-  .order("created_at", { ascending: false });
-
-if (!mounted) return;
-
-if (recentCheckinsResult.error) {
-  setErrorMessage(recentCheckinsResult.error.message);
-  setLoading(false);
-  return;
-}
-
-setRecentCheckins(
-  (recentCheckinsResult.data as WellnessCheckinRow[] | null) ?? [],
-);
-
-setLoading(false);
+      setTodayCheckins((todayResult.data as WellnessCheckinRow[] | null) ?? []);
+      setRecentCheckins((recentResult.data as WellnessCheckinRow[] | null) ?? []);
+      setLoading(false);
     }
 
     void load();
@@ -286,9 +249,10 @@ setLoading(false);
     };
   }, [recentWindowStart, today]);
 
-  function buildInsertCandidate(
+  function buildCompletedCheckinInsert(
     draft: WellnessDraft,
-  ): WellnessInsertCandidate | null {
+    depth: WellnessCheckinDepth,
+  ): CompletedWellnessInsert | null {
     if (
       !authenticatedUserId ||
       !participant ||
@@ -304,6 +268,7 @@ setLoading(false);
       supported_person_id: participant.id,
       checkin_date: today,
       overall_day: draft.overallDay,
+      checkin_depth: depth,
       stress: draft.stress,
       sleep: draft.sleep,
       energy: draft.energy,
@@ -311,10 +276,7 @@ setLoading(false);
       routine: draft.routine,
       recovery_support: draft.recoverySupport,
       support_needed: draft.supportNeeded,
-      chosen_next_step:
-        draft.chosenNextStep === "nothing_right_now"
-          ? null
-          : draft.chosenNextStep,
+      chosen_next_step: null,
       participant_note: draft.participantNote.trim() || null,
       status: "active",
       created_by: authenticatedUserId,
@@ -322,17 +284,8 @@ setLoading(false);
   }
 
   function mapWriteError(error: {
-    code?: string | null;
     message?: string | null;
   }): WellnessWriteResult {
-    if (error.code === "23505") {
-      return {
-        ok: false,
-        code: "already_exists",
-        message: "A check-in is already saved for today.",
-      };
-    }
-
     const message = error.message ?? "";
 
     if (
@@ -363,40 +316,36 @@ setLoading(false);
   }
 
   async function refreshTodayCheckin() {
-  if (!participant || !participation) {
-    setTodayCheckins([]);
-    return [];
+    if (!participant || !participation) {
+      setTodayCheckins([]);
+      return [];
+    }
+
+    const result = await supabase
+      .from("participant_wellness_checkins")
+      .select(wellnessSelect)
+      .eq("supported_person_id", participant.id)
+      .eq("program_id", participation.program_id)
+      .eq("workspace_id", participant.workspace_id)
+      .eq("checkin_date", today)
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+
+    if (result.error) {
+      setErrorMessage(result.error.message);
+      return [];
+    }
+
+    const rows = (result.data as WellnessCheckinRow[] | null) ?? [];
+    setTodayCheckins(rows);
+    return rows;
   }
 
-  const result = await supabase
-    .from("participant_wellness_checkins")
-    .select(
-      "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
-    )
-    .eq("supported_person_id", participant.id)
-    .eq("program_id", participation.program_id)
-    .eq("workspace_id", participant.workspace_id)
-    .eq("checkin_date", today)
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
-
-  if (result.error) {
-    setErrorMessage(result.error.message);
-    return [];
-  }
-
-  const rows =
-    (result.data as WellnessCheckinRow[] | null) ?? [];
-
-  setTodayCheckins(rows);
-
-  return rows;
-}
-
-  async function executeInsertCandidate(
+  async function createCompletedCheckin(
     draft: WellnessDraft,
+    depth: WellnessCheckinDepth,
   ): Promise<WellnessWriteResult> {
-    const payload = buildInsertCandidate(draft);
+    const payload = buildCompletedCheckinInsert(draft, depth);
 
     if (!participant || !participation || !authenticatedUserId) {
       return {
@@ -410,93 +359,14 @@ setLoading(false);
       return {
         ok: false,
         code: "missing_overall_day",
-        message: "Choose how today is going before saving.",
+        message: "Choose how things are going before finishing your check-in.",
       };
     }
 
     const result = await supabase
       .from("participant_wellness_checkins")
       .insert(payload)
-      .select(
-        "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
-      )
-      .single();
-
-    if (result.error) {
-      if (result.error.code === "23505") {
-        await refreshTodayCheckin();
-      }
-
-      return mapWriteError(result.error);
-    }
-
-   const row = result.data as WellnessCheckinRow;
-
-setTodayCheckins((current) => [
-  row,
-  ...current.filter(
-    (checkin) => checkin.id !== row.id,
-  ),
-]);
-
-setRecentCheckins((current) => [
-  row,
-  ...current.filter(
-    (checkin) => checkin.id !== row.id,
-  ),
-]);
-
-    return {
-      ok: true,
-      mode: "insert",
-      row,
-    };
-  }
-
-  async function executeSameDayUpdate(
-    draft: WellnessDraft,
-  ): Promise<WellnessWriteResult> {
-    if (!participant || !participation || !authenticatedUserId || !todayCheckin) {
-      return {
-        ok: false,
-        code: "missing_identity",
-        message: "The saved check-in is not available to finish right now.",
-      };
-    }
-
-    if (
-      todayCheckin.status !== "active" ||
-      todayCheckin.checkin_date !== today ||
-      todayCheckin.chosen_next_step
-    ) {
-      return {
-        ok: false,
-        code: "not_allowed",
-        message: "Only an unfinished check-in from today can be finished here.",
-      };
-    }
-
-    const chosenNextStep =
-      draft.chosenNextStep === "nothing_right_now"
-        ? null
-        : draft.chosenNextStep;
-
-    const result = await supabase
-      .from("participant_wellness_checkins")
-      .update({
-        chosen_next_step: chosenNextStep,
-        participant_note: draft.participantNote.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", todayCheckin.id)
-      .eq("supported_person_id", participant.id)
-      .eq("program_id", participation.program_id)
-      .eq("workspace_id", participant.workspace_id)
-      .eq("checkin_date", today)
-      .eq("status", "active")
-      .select(
-        "id, workspace_id, program_id, supported_person_id, checkin_date, overall_day, stress, sleep, energy, confidence, routine, recovery_support, support_needed, chosen_next_step, participant_note, status, created_at, updated_at, archived_at",
-      )
+      .select(wellnessSelect)
       .single();
 
     if (result.error) {
@@ -515,11 +385,66 @@ setRecentCheckins((current) => [
       ...current.filter((checkin) => checkin.id !== row.id),
     ]);
 
-    return {
-      ok: true,
-      mode: "update",
-      row,
+    return { ok: true, mode: "insert", row };
+  }
+
+  async function updateCompletedCheckinAction({
+    checkinId,
+    chosenNextStep,
+    participantNote,
+  }: {
+    checkinId: string;
+    chosenNextStep: string | null;
+    participantNote?: string;
+  }): Promise<WellnessWriteResult> {
+    if (!participant || !participation || !authenticatedUserId) {
+      return {
+        ok: false,
+        code: "missing_identity",
+        message: "The completed check-in is not available right now.",
+      };
+    }
+
+    const updatePayload: {
+      chosen_next_step: string | null;
+      participant_note?: string | null;
+      updated_at: string;
+    } = {
+      chosen_next_step: chosenNextStep,
+      updated_at: new Date().toISOString(),
     };
+
+    if (participantNote !== undefined) {
+      updatePayload.participant_note = participantNote.trim() || null;
+    }
+
+    const result = await supabase
+      .from("participant_wellness_checkins")
+      .update(updatePayload)
+      .eq("id", checkinId)
+      .eq("supported_person_id", participant.id)
+      .eq("program_id", participation.program_id)
+      .eq("workspace_id", participant.workspace_id)
+      .eq("checkin_date", today)
+      .eq("status", "active")
+      .select(wellnessSelect)
+      .single();
+
+    if (result.error) {
+      return mapWriteError(result.error);
+    }
+
+    const row = result.data as WellnessCheckinRow;
+
+    setTodayCheckins((current) =>
+      current.map((checkin) => (checkin.id === row.id ? row : checkin)),
+    );
+
+    setRecentCheckins((current) =>
+      current.map((checkin) => (checkin.id === row.id ? row : checkin)),
+    );
+
+    return { ok: true, mode: "update", row };
   }
 
   return {
@@ -531,15 +456,14 @@ setRecentCheckins((current) => [
     today,
     loading,
     errorMessage,
-    buildInsertCandidate,
+    buildCompletedCheckinInsert,
     refreshTodayCheckin,
-    executeInsertCandidate,
-    executeSameDayUpdate,
+    createCompletedCheckin,
+    updateCompletedCheckinAction,
     writeEnabled: Boolean(
       authenticatedUserId &&
         participant &&
         participation,
     ),
-    clientPathTestEnabled: false,
   };
 }
