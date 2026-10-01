@@ -13,6 +13,7 @@ export type WellnessReflectionKey =
   | "support_needed";
 
 export type WellnessFlowState =
+  | { phase: "current" }
   | { phase: "signal" }
   | { phase: "depth_choice" }
   | { phase: "expanded"; selectedSignals: WellnessReflectionKey[] }
@@ -20,6 +21,8 @@ export type WellnessFlowState =
   | { phase: "return"; checkinId: string };
 
 export type WellnessFlowEvent =
+  | { type: "START_NEW_CHECKIN" }
+  | { type: "VIEW_CURRENT" }
   | { type: "SELECT_OVERALL"; value: WellnessOverallDay }
   | { type: "DONE_FOR_NOW" }
   | { type: "LOOK_CLOSER" }
@@ -27,11 +30,10 @@ export type WellnessFlowEvent =
   | { type: "FINISH_EXPANDED" }
   | { type: "SAVE_SUCCEEDED"; checkinId: string }
   | { type: "SAVE_FAILED"; depth: WellnessCheckinDepth; selectedSignals?: WellnessReflectionKey[] }
-  | { type: "BACK_TO_QUICK" }
-  | { type: "START_NEW_CHECKIN" };
+  | { type: "BACK_TO_QUICK" };
 
 export const INITIAL_WELLNESS_FLOW_STATE: WellnessFlowState = {
-  phase: "signal",
+  phase: "current",
 };
 
 export function wellnessFlowReducer(
@@ -39,6 +41,12 @@ export function wellnessFlowReducer(
   event: WellnessFlowEvent,
 ): WellnessFlowState {
   switch (event.type) {
+    case "START_NEW_CHECKIN":
+      return { phase: "signal" };
+
+    case "VIEW_CURRENT":
+      return { phase: "current" };
+
     case "SELECT_OVERALL":
       return { phase: "depth_choice" };
 
@@ -81,9 +89,6 @@ export function wellnessFlowReducer(
 
     case "BACK_TO_QUICK":
       return { phase: "depth_choice" };
-
-    case "START_NEW_CHECKIN":
-      return INITIAL_WELLNESS_FLOW_STATE;
 
     default:
       return state;
