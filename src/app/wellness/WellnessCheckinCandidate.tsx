@@ -186,6 +186,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
   const selectedSignals: WellnessReflectionKey[] =
     flow.phase === "depth_select" ||
     flow.phase === "depth_reflect" ||
+    flow.phase === "depth_return" ||
     flow.phase === "depth_note" ||
     flow.phase === "saving"
       ? flow.selectedSignals
@@ -199,6 +200,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
   const expandedFlowVisible =
     flow.phase === "depth_select" ||
     flow.phase === "depth_reflect" ||
+    flow.phase === "depth_return" ||
     flow.phase === "depth_note" ||
     (flow.phase === "saving" && flow.depth === "expanded");
 
@@ -394,10 +396,11 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
         <WellnessExpandedExperience
           flow={flow as Extract<
             typeof flow,
-            { phase: "depth_select" | "depth_reflect" | "depth_note" | "saving" }
+            { phase: "depth_select" | "depth_reflect" | "depth_return" | "depth_note" | "saving" }
           >}
           draft={draft}
           referenceCheckin={referenceCheckin}
+          recentCheckins={recentCheckins}
           experienceMode={experienceMode}
           writeEnabled={writeEnabled}
           actionMessage={actionMessage}
@@ -419,6 +422,9 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
           }
           onBackToQuick={() =>
             dispatch({ type: "BACK_TO_QUICK" })
+          }
+          onContinueToNote={() =>
+            dispatch({ type: "GO_TO_NOTE" })
           }
           onFinishExpanded={() => void complete("expanded")}
         />
