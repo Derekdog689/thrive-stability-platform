@@ -7,6 +7,7 @@ import { buildCrossLaneSynthesis } from "./crossLaneSynthesis";
 import { useParticipantGoals } from "./goals/useParticipantGoals";
 import { useParticipantSupport } from "./support/useParticipantSupport";
 import { useWellnessCheckinCandidate } from "./wellness/useWellnessCheckinCandidate";
+import { wellnessOverallLabel } from "./wellness/wellnessVocabulary";
 import { toNumber, useParticipantFinancial } from "./useParticipantFinancial";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -59,13 +60,15 @@ function formatMoneyShort(value: number) {
 }
 
 function daySignal(value: string | null | undefined) {
-  switch (value) {
-    case "good": return { label: "Feeling good", level: 4 };
-    case "okay": return { label: "Doing alright", level: 3 };
-    case "hard": return { label: "Hard day", level: 1 };
-    case "not_sure": return { label: "Not sure today", level: 2 };
-    default: return { label: "Check in", level: 0 };
-  }
+  if (!value) return { label: "Check in", level: 0 };
+  const level =
+    value === "good" ? 4 :
+    value === "better" ? 3 :
+    value === "okay" ? 2 :
+    value === "not_sure" ? 1 :
+    value === "hard" ? 1 :
+    0;
+  return { label: wellnessOverallLabel(value), level };
 }
 
 function supportState(status: string | null | undefined) {

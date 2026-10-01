@@ -420,3 +420,678 @@ main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-amber-200.bg-amber-50
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* Wellness Living Signal precision pass v0.5 */
+.wellness-living-signal {
+  position: relative;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 10% 4%, rgba(49, 177, 190, 0.26), transparent 25rem),
+    radial-gradient(circle at 88% 7%, rgba(242, 184, 92, 0.24), transparent 23rem),
+    radial-gradient(circle at 50% 52%, rgba(121, 212, 207, 0.10), transparent 34rem),
+    linear-gradient(180deg, #f8f2e8 0%, #eef4f1 42%, #e7eff1 100%);
+}
+
+.wellness-living-signal::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.34;
+  background:
+    linear-gradient(115deg, transparent 0 46%, rgba(255,255,255,.26) 49%, transparent 53%),
+    radial-gradient(circle at 18% 72%, rgba(14,111,120,.07), transparent 24rem);
+  animation: wellnessSkyDrift 16s ease-in-out infinite alternate;
+}
+
+.wellness-living-hero {
+  isolation: isolate;
+  background-position: 50% 50%;
+  box-shadow:
+    0 34px 90px rgba(5, 37, 49, 0.24),
+    0 0 0 1px rgba(255,255,255,.18) inset;
+}
+
+.wellness-living-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(240,245,242,.02) 0%, rgba(10,78,88,.03) 40%, rgba(3,34,46,.28) 100%),
+    radial-gradient(circle at 72% 25%, rgba(247,194,101,.16), transparent 30%);
+}
+
+.wellness-living-hero > .relative {
+  position: relative;
+  z-index: 2;
+}
+
+.wellness-living-hero > .thrive-orb,
+.wellness-living-hero > .wellness-atmosphere {
+  position: absolute;
+  z-index: 1;
+}
+
+.wellness-atmosphere {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wellness-atmosphere--light {
+  width: 17rem;
+  height: 17rem;
+  right: -4rem;
+  top: -2rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255,211,125,.34) 0%, rgba(255,211,125,.10) 38%, transparent 70%);
+  filter: blur(4px);
+  animation: wellnessLightFloat 11s ease-in-out infinite alternate;
+}
+
+.wellness-atmosphere--mist {
+  left: -12%;
+  right: -12%;
+  bottom: 9%;
+  height: 7rem;
+  border-radius: 50%;
+  background: linear-gradient(90deg, transparent, rgba(220,247,244,.16), rgba(255,246,221,.15), transparent);
+  filter: blur(16px);
+  animation: wellnessMistMove 14s ease-in-out infinite alternate;
+}
+
+.wellness-brandmark {
+  position: relative;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: .85rem;
+  overflow: hidden;
+  background: linear-gradient(145deg,#74ddd1,#f4d184);
+  box-shadow: 0 8px 20px rgba(8,55,65,.16);
+}
+
+.wellness-leaf {
+  position: absolute;
+  display: block;
+  width: 1.7rem;
+  height: 1.05rem;
+  border-radius: 100% 0 100% 0;
+  transform-origin: center;
+}
+
+.wellness-leaf--one {
+  left: -.18rem;
+  top: .25rem;
+  background: #84dfd3;
+  transform: rotate(38deg);
+}
+
+.wellness-leaf--two {
+  right: -.22rem;
+  top: .1rem;
+  background: #f3d38a;
+  transform: rotate(132deg);
+}
+
+.wellness-leaf--three {
+  left: .72rem;
+  bottom: -.22rem;
+  background: #145969;
+  transform: rotate(-44deg);
+}
+
+.wellness-hero-glass {
+  background:
+    linear-gradient(145deg, rgba(6,50,62,.88), rgba(8,63,73,.72)) !important;
+  border-color: rgba(183,236,232,.30) !important;
+  box-shadow:
+    0 24px 58px rgba(3,25,34,.24),
+    inset 0 1px 0 rgba(255,255,255,.12) !important;
+}
+
+.wellness-living-body {
+  background:
+    linear-gradient(160deg, rgba(252,248,238,.62), rgba(239,248,247,.44)) !important;
+  box-shadow:
+    0 26px 72px rgba(8,35,46,.11),
+    inset 0 1px 0 rgba(255,255,255,.52) !important;
+}
+
+.wellness-current-state {
+  position: relative;
+  background:
+    radial-gradient(circle at 91% 8%, rgba(82,214,210,.18), transparent 13rem),
+    radial-gradient(circle at 8% 94%, rgba(246,193,99,.19), transparent 13rem),
+    linear-gradient(145deg, rgba(255,250,240,.91), rgba(239,249,247,.88)) !important;
+  border-color: rgba(255,255,255,.92) !important;
+  box-shadow:
+    0 24px 68px rgba(8,47,58,.13),
+    inset 0 1px 0 rgba(255,255,255,.88) !important;
+}
+
+.wellness-current-state::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 16%, rgba(255,255,255,.34) 42%, transparent 62%);
+  transform: translateX(-46%);
+  animation: wellnessGlassSweep 10s ease-in-out infinite;
+}
+
+.wellness-current-state > div {
+  position: relative;
+  z-index: 1;
+}
+
+.wellness-week-history {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 85% 12%, rgba(43,172,184,.12), transparent 16rem),
+    linear-gradient(180deg, rgba(255,251,243,.94), rgba(246,243,235,.90)) !important;
+  box-shadow:
+    0 22px 62px rgba(8,35,46,.11),
+    inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+
+.wellness-week-history::after {
+  content: "";
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  top: 7.95rem;
+  height: 2px;
+  z-index: 0;
+  opacity: .42;
+  background: linear-gradient(90deg, rgba(32,166,176,.14), rgba(32,166,176,.72), rgba(240,179,94,.58));
+}
+
+.wellness-week-history .grid.grid-cols-7 {
+  position: relative;
+  z-index: 1;
+}
+
+.wellness-week-history .grid.grid-cols-7 button {
+  backdrop-filter: blur(16px);
+  box-shadow: 0 9px 24px rgba(9,44,53,.08);
+}
+
+.wellness-week-history .grid.grid-cols-7 button:not(:disabled):active {
+  transform: translateY(1px) scale(.975);
+}
+
+.wellness-saved-return {
+  box-shadow:
+    0 30px 86px rgba(3,25,34,.28),
+    inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+@keyframes wellnessSkyDrift {
+  from { transform: translate3d(-1.5%,0,0); }
+  to { transform: translate3d(1.5%,1%,0); }
+}
+
+@keyframes wellnessLightFloat {
+  from { transform: translate3d(0,0,0) scale(1); opacity: .72; }
+  to { transform: translate3d(-1rem,.75rem,0) scale(1.08); opacity: 1; }
+}
+
+@keyframes wellnessMistMove {
+  from { transform: translate3d(-2%,0,0); opacity: .52; }
+  to { transform: translate3d(3%,-.25rem,0); opacity: .86; }
+}
+
+@keyframes wellnessGlassSweep {
+  0%, 72%, 100% { transform: translateX(-48%); opacity: 0; }
+  80% { opacity: .32; }
+  92% { transform: translateX(50%); opacity: .08; }
+}
+
+@media (max-width: 639px) {
+  .wellness-living-hero {
+    min-height: 320px;
+    background-position: 50% 54%;
+  }
+
+  .wellness-week-history::after {
+    top: 7.45rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wellness-living-signal::before,
+  .wellness-atmosphere--light,
+  .wellness-atmosphere--mist,
+  .wellness-current-state::before {
+    animation: none !important;
+  }
+}
+
+
+/* Wellness layered scenic scroll contract v0.6 */
+.wellness-layered-scene {
+  position: sticky;
+  top: 10px;
+  z-index: 0;
+  transform: translateZ(0);
+}
+
+.wellness-layered-content {
+  position: relative;
+  z-index: 4;
+  margin-top: 18px !important;
+  background:
+    linear-gradient(180deg, rgba(249,246,238,.54) 0%, rgba(245,248,246,.78) 18%, rgba(240,246,245,.94) 64%, rgba(237,244,244,.98) 100%) !important;
+  border-color: rgba(255,255,255,.68) !important;
+  backdrop-filter: blur(22px) saturate(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(1.08);
+  box-shadow:
+    0 -18px 42px rgba(8,35,46,.06),
+    0 28px 72px rgba(8,35,46,.10),
+    inset 0 1px 0 rgba(255,255,255,.62) !important;
+}
+
+.wellness-layered-content .wellness-current-state {
+  background-color: rgba(249,247,240,.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+@media (max-width: 639px) {
+  .wellness-layered-scene {
+    top: 6px;
+  }
+
+  .wellness-layered-content {
+    margin-top: -26px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wellness-layered-scene {
+    position: relative;
+    top: auto;
+  }
+}
+
+
+/* Wellness expanded viewport ownership */
+html.wellness-expanded-open,
+body.wellness-expanded-open {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html.wellness-expanded-open .wellness-bottom-nav,
+body.wellness-expanded-open .wellness-bottom-nav {
+  display: none !important;
+}
+
+
+/* THRIVE participant readability + Wellness closeout presentation contract v0.7 */
+.wellness-living-signal {
+  --thrive-readable-copy: clamp(1rem, 3.9vw, 1.08rem);
+}
+
+.wellness-layered-scene {
+  top: 6px;
+}
+
+.wellness-layered-content {
+  margin-top: -52px !important;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(248,245,236,.34) 0%,
+      rgba(244,248,245,.58) 13%,
+      rgba(241,247,245,.82) 34%,
+      rgba(238,245,244,.96) 68%,
+      rgba(237,244,244,.99) 100%
+    ) !important;
+  border-color: rgba(255,255,255,.62) !important;
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  box-shadow:
+    0 -28px 54px rgba(7,35,46,.07),
+    0 30px 78px rgba(8,35,46,.11),
+    inset 0 1px 0 rgba(255,255,255,.66) !important;
+}
+
+.wellness-layered-content::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: -34px;
+  height: 70px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(225,244,241,.08), rgba(243,247,243,.52));
+  filter: blur(14px);
+}
+
+.wellness-layered-content > .space-y-6 {
+  position: relative;
+  z-index: 1;
+}
+
+.wellness-layered-content > .space-y-6 > section:first-child {
+  background:
+    linear-gradient(160deg, rgba(255,250,241,.72), rgba(235,248,246,.64)) !important;
+  border-color: rgba(255,255,255,.86) !important;
+  backdrop-filter: blur(20px) saturate(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+}
+
+.wellness-current-state,
+.wellness-week-history {
+  backdrop-filter: blur(20px) saturate(1.05);
+  -webkit-backdrop-filter: blur(20px) saturate(1.05);
+}
+
+.wellness-return-stage p:not([class*="uppercase"]),
+.wellness-final-reflection p:not([class*="uppercase"]),
+.wellness-saved-return p:not([class*="uppercase"]),
+.wellness-current-state p:not([class*="uppercase"]),
+.wellness-current-state details p {
+  font-size: var(--thrive-readable-copy) !important;
+  line-height: 1.62 !important;
+}
+
+.wellness-return-stage details p,
+.wellness-return-stage p.text-xs,
+.wellness-final-reflection p.text-xs,
+.wellness-saved-return p.text-sm {
+  font-size: .98rem !important;
+  line-height: 1.58 !important;
+}
+
+.wellness-return-stage > div,
+.wellness-final-reflection > div {
+  scroll-margin-block: 1rem;
+}
+
+.wellness-return-stage h4,
+.wellness-final-reflection h4 {
+  text-wrap: balance;
+}
+
+.wellness-return-stage details {
+  background: rgba(255,255,255,.70) !important;
+}
+
+.wellness-final-reflection textarea {
+  font-size: 1rem;
+  line-height: 1.55;
+  min-height: 8rem;
+}
+
+@media (max-width: 639px) {
+  .wellness-living-signal {
+    --thrive-readable-copy: 1.02rem;
+  }
+
+  .wellness-living-hero {
+    min-height: 304px;
+  }
+
+  .wellness-layered-content {
+    margin-top: -44px !important;
+    border-radius: 1.8rem !important;
+  }
+
+  .wellness-hero-glass {
+    max-width: 95%;
+    padding: 1.05rem 1.1rem !important;
+  }
+
+  .wellness-return-stage p:not([class*="uppercase"]),
+  .wellness-final-reflection p:not([class*="uppercase"]),
+  .wellness-saved-return p:not([class*="uppercase"]) {
+    letter-spacing: .002em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wellness-layered-content {
+    margin-top: 12px !important;
+  }
+
+  .wellness-layered-content::before {
+    display: none;
+  }
+}
+
+
+/* Dynamic scenic overlap contract v0.8
+   Overlap is created by scroll, not by a fixed negative margin. */
+.wellness-scenic-stage {
+  position: sticky !important;
+  top: 8px !important;
+  z-index: 1 !important;
+  will-change: transform;
+}
+
+.wellness-scenic-foreground {
+  position: relative;
+  z-index: 5;
+  margin-top: 20px !important;
+}
+
+.wellness-scenic-foreground::before {
+  content: "";
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: -26px;
+  height: 54px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(238,248,245,0), rgba(242,248,245,.72));
+  filter: blur(12px);
+}
+
+.wellness-scenic-foreground > .space-y-6 {
+  position: relative;
+  z-index: 1;
+}
+
+/* Preserve the dark saved return. The generic first-surface glass must never wash it out. */
+.wellness-saved-return {
+  background:
+    radial-gradient(circle at 84% 10%, rgba(240,179,94,.20), transparent 28%),
+    linear-gradient(160deg,#0a4050,#092f3b 66%,#102b35) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: #fff !important;
+}
+
+.wellness-saved-return p:not([class*="uppercase"]) {
+  color: rgb(203 213 225) !important;
+}
+
+.wellness-saved-return h2,
+.wellness-saved-return h3 {
+  color: #fff !important;
+}
+
+@media (max-width: 639px) {
+  .wellness-scenic-stage {
+    top: 6px !important;
+  }
+
+  .wellness-scenic-foreground {
+    margin-top: 18px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wellness-scenic-stage {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  .wellness-scenic-foreground {
+    margin-top: 14px !important;
+  }
+}
+
+
+/* Wellness fixed environment prototype v0.9
+   The scenery is environmental, not owned by the hero.
+   Foreground scrolls over a fixed image while a fixed veil increases depth. */
+.wellness-living-signal {
+  isolation: isolate;
+  background: #eaf1ef;
+}
+
+.wellness-fixed-environment {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 82% 12%, rgba(244,188,101,.30), transparent 26%),
+    linear-gradient(180deg, rgba(248,241,231,.02) 0%, rgba(21,117,127,.05) 36%, rgba(5,35,47,.28) 100%),
+    url('https://images.unsplash.com/photo-1660692791363-670f606977b9?auto=format&fit=crop&fm=jpg&q=88&w=2200');
+  background-size: cover;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  transform: translateZ(0);
+}
+
+.wellness-fixed-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(239,247,244,.03) 0%,
+      rgba(239,247,244,.08) 23%,
+      rgba(239,247,244,.28) 44%,
+      rgba(239,247,244,.62) 68%,
+      rgba(239,247,244,.88) 100%
+    );
+}
+
+.wellness-scroll-content {
+  position: relative;
+  z-index: 2;
+}
+
+.wellness-scenic-stage {
+  position: relative !important;
+  top: auto !important;
+  z-index: 2 !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(4,38,49,.10)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.wellness-scenic-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(3,31,41,.10) 58%, rgba(3,31,41,.18) 100%);
+}
+
+.wellness-scenic-stage > * {
+  position: relative;
+  z-index: 2;
+}
+
+.wellness-scenic-foreground {
+  position: relative;
+  z-index: 5;
+  margin-top: 18px !important;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(250,248,241,.46) 0%,
+      rgba(247,249,246,.60) 18%,
+      rgba(243,248,246,.74) 46%,
+      rgba(240,246,245,.88) 100%
+    ) !important;
+  backdrop-filter: blur(16px) saturate(1.04);
+  -webkit-backdrop-filter: blur(16px) saturate(1.04);
+}
+
+.wellness-scenic-foreground::before {
+  background: linear-gradient(
+    180deg,
+    rgba(236,247,244,.02),
+    rgba(242,248,245,.54)
+  );
+}
+
+.wellness-current-state,
+.wellness-week-history,
+.wellness-final-reflection,
+.wellness-return-stage {
+  backdrop-filter: blur(18px) saturate(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(1.04);
+}
+
+@media (max-width: 639px) {
+  .wellness-fixed-environment {
+    background-position: 50% 45%;
+  }
+
+  .wellness-fixed-veil {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(239,247,244,.02) 0%,
+        rgba(239,247,244,.06) 20%,
+        rgba(239,247,244,.24) 42%,
+        rgba(239,247,244,.58) 66%,
+        rgba(239,247,244,.90) 100%
+      );
+  }
+
+  .wellness-scenic-foreground {
+    margin-top: 16px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wellness-fixed-environment {
+    transform: none;
+  }
+}
+
+
+/* Wellness saved-return contrast lock v1.0
+   This must outrank the generic first-surface glass rule above. */
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return {
+  background:
+    radial-gradient(circle at 84% 10%, rgba(240,179,94,.20), transparent 28%),
+    linear-gradient(160deg,#0a4050,#092f3b 66%,#102b35) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: #fff !important;
+  backdrop-filter: blur(18px) saturate(1.02);
+  -webkit-backdrop-filter: blur(18px) saturate(1.02);
+}
+
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return h2,
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return h3 {
+  color: #fff !important;
+}
+
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return p:not([class*="uppercase"]) {
+  color: rgb(203 213 225) !important;
+}
+
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return [class*="text-[#8ce8df]"] {
+  color: #8ce8df !important;
+}

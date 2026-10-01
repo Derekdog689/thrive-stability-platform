@@ -66,34 +66,30 @@ function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: str
 }
 
 function WellnessBottomNav() {
-  const items: { href: string; label: string; icon: IconName }[] = [
-    { href: "/", label: "Today", icon: "today" },
-    { href: "/wellness", label: "Wellness", icon: "wellness" },
+  const items: { href: string; label: string; icon: IconName; active?: boolean }[] = [
+    { href: "/living-signal/today", label: "Today", icon: "today" },
+    { href: "/wellness", label: "Wellness", icon: "wellness", active: true },
     { href: "/goals", label: "Goals", icon: "goal" },
     { href: "/budget", label: "Money", icon: "money" },
     { href: "/support", label: "Support", icon: "support" },
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-2xl rounded-[1.75rem] border border-white/75 bg-white/78 px-1.5 py-1.5 shadow-[0_18px_55px_rgba(15,23,42,0.18)] backdrop-blur-2xl sm:bottom-5">
-      <div className="grid grid-cols-5 gap-1">
-        {items.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex min-w-0 flex-col items-center justify-center rounded-[1.2rem] px-1 py-2 text-center transition active:scale-95 ${
-              item.href === "/wellness"
-                ? "bg-emerald-700 text-white shadow-[0_8px_22px_rgba(4,120,87,0.24)]"
-                : "text-slate-600 hover:bg-white/80 hover:text-emerald-900"
-            }`}
-          >
-            <Icon name={item.icon} className="h-5 w-5" />
-            <span className="mt-1 truncate text-[9px] font-black uppercase tracking-wide sm:text-xs">
-              {item.label}
-            </span>
-          </Link>
-        ))}
-      </div>
+    <nav className="wellness-bottom-nav fixed left-1/2 z-50 grid w-[calc(100%-20px)] max-w-[660px] -translate-x-1/2 grid-cols-5 gap-[3px] rounded-[24px] border border-white/75 bg-[#fbf9f3]/90 p-[6px] shadow-[0_20px_62px_rgba(10,31,39,0.18)] backdrop-blur-[26px] [bottom:calc(6px+env(safe-area-inset-bottom,0px))]">
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 text-center text-[10px] font-black uppercase text-[#536174] no-underline transition active:scale-95 ${
+            item.active
+              ? "bg-[linear-gradient(180deg,#159784,#0a7d6f)] text-white shadow-[0_9px_24px_rgba(9,126,111,0.20)]"
+              : "hover:bg-white/70 hover:text-[#173644]"
+          }`}
+        >
+          <Icon name={item.icon} className="h-5 w-5" />
+          <span className="truncate">{item.label}</span>
+        </Link>
+      ))}
     </nav>
   );
 }
@@ -103,41 +99,59 @@ export default function WellnessPage() {
 
   return (
     <AuthGate>
-      <main className="thrive-today-bg min-h-screen pb-36 text-slate-950">
-        <section className="mx-auto max-w-4xl px-3 pb-32 pt-3 sm:px-6 sm:pt-6">
-          <header className="thrive-ambient relative overflow-hidden rounded-[2rem] border border-white/65 bg-white/30 px-5 py-5 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl sm:px-7 sm:py-6">
+      <main className="wellness-living-signal relative min-h-screen overflow-x-hidden pb-40 text-[#0b2630]">
+        <div className="wellness-fixed-environment" aria-hidden="true" />
+        <div className="wellness-fixed-veil" aria-hidden="true" />
+        <section className="wellness-scroll-content relative z-10 mx-auto max-w-4xl px-3 pb-32 pt-3 sm:px-6 sm:pt-6">
+          <header
+            className="wellness-living-hero wellness-scenic-stage thrive-ambient relative min-h-[300px] overflow-hidden rounded-[2.15rem] border border-white/45 px-5 py-5 shadow-[0_30px_80px_rgba(6,34,46,0.18)] sm:min-h-[340px] sm:px-7 sm:py-7"
+          >
             <div className="thrive-orb thrive-orb-one" />
             <div className="thrive-orb thrive-orb-two" />
+            <span className="wellness-atmosphere wellness-atmosphere--light" aria-hidden="true" />
+            <span className="wellness-atmosphere wellness-atmosphere--mist" aria-hidden="true" />
 
             <div className="relative z-10 flex items-center justify-between gap-3">
-              <Link href="/" className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/72 text-base font-black text-emerald-900 shadow-sm">T</div>
+              <Link href="/living-signal/today" className="flex items-center gap-2.5">
+                <div className="wellness-brandmark" aria-hidden="true">
+                  <span className="wellness-leaf wellness-leaf--one" />
+                  <span className="wellness-leaf wellness-leaf--two" />
+                  <span className="wellness-leaf wellness-leaf--three" />
+                </div>
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-800">DSS Enterprises</p>
-                  <p className="text-xs font-black text-emerald-950">THRIVE</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#146f78]">DSS Enterprises</p>
+                  <p className="text-sm font-black tracking-[0.04em] text-[#0b3138]">THRIVE</p>
                 </div>
               </Link>
 
-              <div className="flex items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-2 text-xs font-black text-emerald-900 backdrop-blur-xl">
+              <div className="flex items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-2 text-xs font-black text-[#0b4b55] backdrop-blur-xl">
                 <Icon name="wellness" className="h-5 w-5" />
                 Wellness
               </div>
             </div>
 
-            <div className="relative z-10 mt-7 max-w-2xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Check in</p>
-              <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">
-                {heroText}
-              </h1>
+            <div className="relative z-10 mt-10 max-w-[92%] sm:mt-12 sm:max-w-[82%]">
+              <div className="wellness-hero-glass rounded-[1.8rem] border border-white/30 bg-[#082f3b]/52 px-5 py-5 text-white shadow-[0_18px_45px_rgba(3,25,34,0.20)] backdrop-blur-[18px] sm:px-6 sm:py-6">
+                <div className="flex items-center gap-2">
+                  <span className="h-[3px] w-8 rounded-full bg-[#f0b35e]" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#8fdad8]">Wellness</p>
+                </div>
+                <h1 className="mt-3 font-serif text-[2.65rem] font-black leading-[0.96] tracking-[-0.04em] text-white sm:text-6xl">
+                  {heroText}
+                </h1>
+                <p className="mt-3 max-w-md text-sm font-bold leading-6 text-white/76">
+                  A quick check-in to see where you are, with room to go deeper only when it helps.
+                </p>
+              </div>
             </div>
           </header>
 
-          <section className="mt-3 rounded-[1.9rem] border border-white/70 bg-white/48 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl sm:p-5">
+          <section className="wellness-living-body wellness-layered-content wellness-scenic-foreground mt-4 rounded-[2rem] border border-white/55 bg-[#f7f2e8]/36 p-2.5 shadow-[0_24px_64px_rgba(10,36,46,0.10)] backdrop-blur-2xl sm:p-4">
             <WellnessCheckinCandidate onHeroChange={setHeroText} />
           </section>
 
-          <details className="mt-3 rounded-[1.5rem] border border-white/70 bg-white/36 px-4 py-3 text-sm text-slate-600 backdrop-blur-xl">
-            <summary className="cursor-pointer list-none font-black text-emerald-900">About your check-in</summary>
+          <details className="mt-5 rounded-[1.7rem] border border-white/65 bg-[#fbf7ef]/70 px-5 py-4 text-sm text-[#59697a] shadow-sm backdrop-blur-2xl">
+            <summary className="cursor-pointer list-none font-black text-[#0b4b55]">About your check-in</summary>
             <p className="mt-3 leading-6">
               Your check-ins help THRIVE remember what has been happening, notice what changes or repeats, and offer ideas you can use or ignore. THRIVE offers supportive guidance, not clinical diagnosis or treatment decisions.
             </p>
