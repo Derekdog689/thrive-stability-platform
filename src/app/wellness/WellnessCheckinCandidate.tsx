@@ -394,10 +394,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
         <WellnessExpandedExperience
           flow={flow as Extract<
             typeof flow,
-            | { phase: "depth_select" }
-            | { phase: "depth_reflect" }
-            | { phase: "depth_note" }
-            | { phase: "saving"; depth: "expanded" }
+            { phase: "depth_select" | "depth_reflect" | "depth_note" | "saving" }
           >}
           draft={draft}
           referenceCheckin={referenceCheckin}
