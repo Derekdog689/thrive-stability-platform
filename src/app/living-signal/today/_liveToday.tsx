@@ -428,7 +428,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
   return (
     <AuthGate>
       <main
-        className="ls-root"
+        className="ls-root ls-today-live"
         style={isEvening ? { background: "#102733" } : undefined}
       >
         <section className="ls-phone">
