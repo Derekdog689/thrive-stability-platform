@@ -8,6 +8,7 @@ import { useParticipantGoals } from "../../goals/useParticipantGoals";
 import { useParticipantSupport } from "../../support/useParticipantSupport";
 import { toNumber, useParticipantFinancial } from "../../useParticipantFinancial";
 import { useWellnessCheckinCandidate } from "../../wellness/useWellnessCheckinCandidate";
+import { wellnessOverallLabel } from "../../wellness/wellnessVocabulary";
 import { LaneCard, SceneHero } from "../_components";
 
 type Mode = "auto" | "morning" | "evening";
@@ -80,18 +81,8 @@ function formatTime(value: string | null | undefined) {
 }
 
 function daySignal(value: string | null | undefined) {
-  switch (value) {
-    case "good":
-      return "Feeling good";
-    case "okay":
-      return "Doing alright";
-    case "hard":
-      return "Hard day";
-    case "not_sure":
-      return "Not sure today";
-    default:
-      return "Check in";
-  }
+  if (!value) return "Check in";
+  return wellnessOverallLabel(value);
 }
 
 function supportState(status: string | null | undefined) {
