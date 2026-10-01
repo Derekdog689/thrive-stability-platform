@@ -105,7 +105,13 @@ export default function WellnessPage() {
     <AuthGate>
       <main className="thrive-today-bg min-h-screen pb-36 text-slate-950">
         <section className="mx-auto max-w-4xl px-3 pb-32 pt-3 sm:px-6 sm:pt-6">
-          <header className="thrive-ambient relative overflow-hidden rounded-[2rem] border border-white/65 bg-white/30 px-5 py-5 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl sm:px-7 sm:py-6">
+          <header
+            className="thrive-ambient relative overflow-hidden rounded-[2rem] border border-white/65 bg-white/30 bg-cover bg-center px-5 py-5 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl sm:px-7 sm:py-6"
+            style={{
+              backgroundImage:
+                "linear-gradient(180deg, rgba(247,250,244,0.60) 0%, rgba(236,244,236,0.52) 46%, rgba(5,41,51,0.30) 100%), url('https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&fm=jpg&q=88&w=1800')",
+            }}
+          >
             <div className="thrive-orb thrive-orb-one" />
             <div className="thrive-orb thrive-orb-two" />
 
