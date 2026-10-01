@@ -454,18 +454,40 @@ export default function WellnessCheckinPreview({
               <p className="font-black">{acknowledgement}</p>
             </div>
           ) : null}
-          <button
-            type="button"
-            disabled={!overallDay}
-            onClick={() => moveToStep(2)}
-            className={`mt-6 rounded-2xl px-5 py-3 font-black ${
-              overallDay
-                ? "bg-emerald-700 text-white hover:bg-emerald-800"
-                : "cursor-not-allowed bg-slate-200 text-slate-500"
-            }`}
-          >
-            Continue
-          </button>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled={!overallDay}
+              onClick={() => moveToStep(2)}
+              className={`rounded-2xl px-5 py-3 font-black ${
+                overallDay
+                  ? "bg-emerald-700 text-white hover:bg-emerald-800"
+                  : "cursor-not-allowed bg-slate-200 text-slate-500"
+              }`}
+            >
+              Look a little closer
+            </button>
+            <button
+              type="button"
+              disabled={!overallDay}
+              onClick={() => {
+                selectNextStep("none");
+                moveToStep(4);
+              }}
+              className={`rounded-2xl border px-5 py-3 font-black ${
+                overallDay
+                  ? "border-emerald-200 bg-white text-emerald-900 hover:bg-emerald-50"
+                  : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+              }`}
+            >
+              Keep it quick
+            </button>
+          </div>
+          {overallDay ? (
+            <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
+              Keep it quick saves the moment without asking you to choose another action.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -776,18 +798,30 @@ export default function WellnessCheckinPreview({
             </details>
           ) : null}
 
-          <button
-            type="button"
-            disabled={!nextStepChoice}
-            onClick={() => moveToStep(4)}
-            className={`mt-5 w-full rounded-2xl px-5 py-3 font-black ${
-              nextStepChoice
-                ? "bg-emerald-700 text-white"
-                : "cursor-not-allowed bg-slate-200 text-slate-500"
-            }`}
-          >
-            Continue
-          </button>
+          <div className="mt-5 grid gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                selectNextStep("none");
+                moveToStep(4);
+              }}
+              className="w-full rounded-2xl border border-emerald-200 bg-white px-5 py-3 font-black text-emerald-900 transition hover:bg-emerald-50"
+            >
+              I’m good for now
+            </button>
+            <button
+              type="button"
+              disabled={!nextStepChoice}
+              onClick={() => moveToStep(4)}
+              className={`w-full rounded-2xl px-5 py-3 font-black ${
+                nextStepChoice
+                  ? "bg-emerald-700 text-white"
+                  : "cursor-not-allowed bg-slate-200 text-slate-500"
+              }`}
+            >
+              Continue with this idea
+            </button>
+          </div>
         </div>
       ) : null}
 
