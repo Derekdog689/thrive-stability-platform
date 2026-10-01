@@ -464,9 +464,15 @@ main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-amber-200.bg-amber-50
     radial-gradient(circle at 72% 25%, rgba(247,194,101,.16), transparent 30%);
 }
 
-.wellness-living-hero > * {
+.wellness-living-hero > .relative {
   position: relative;
   z-index: 2;
+}
+
+.wellness-living-hero > .thrive-orb,
+.wellness-living-hero > .wellness-atmosphere {
+  position: absolute;
+  z-index: 1;
 }
 
 .wellness-atmosphere {
@@ -648,7 +654,8 @@ main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-amber-200.bg-amber-50
 
 @media (max-width: 639px) {
   .wellness-living-hero {
-    min-height: 410px;
+    min-height: 320px;
+    background-position: 50% 54%;
   }
 
   .wellness-week-history::after {
