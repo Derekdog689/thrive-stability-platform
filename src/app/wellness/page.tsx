@@ -99,10 +99,10 @@ export default function WellnessPage() {
 
   return (
     <AuthGate>
-      <main className="min-h-screen bg-[radial-gradient(circle_at_8%_3%,rgba(58,177,189,.18),transparent_26rem),radial-gradient(circle_at_92%_8%,rgba(244,188,101,.20),transparent_24rem),linear-gradient(180deg,#f8f1e7_0%,#edf3f1_42%,#e5edf0_100%)] pb-40 text-[#0b2630]">
+      <main className="wellness-living-signal min-h-screen pb-40 text-[#0b2630]">
         <section className="mx-auto max-w-4xl px-3 pb-32 pt-3 sm:px-6 sm:pt-6">
           <header
-            className="thrive-ambient relative min-h-[360px] overflow-hidden rounded-[2.15rem] border border-white/55 bg-cover bg-center px-5 py-5 shadow-[0_30px_80px_rgba(6,34,46,0.24)] sm:min-h-[410px] sm:px-7 sm:py-7"
+            className="wellness-living-hero thrive-ambient relative min-h-[390px] overflow-hidden rounded-[2.15rem] border border-white/55 bg-cover bg-center px-5 py-5 shadow-[0_30px_80px_rgba(6,34,46,0.24)] sm:min-h-[430px] sm:px-7 sm:py-7"
             style={{
               backgroundImage:
                 "radial-gradient(circle at 82% 12%, rgba(244,188,101,.32), transparent 26%), linear-gradient(180deg, rgba(248,241,231,.06) 0%, rgba(21,117,127,.08) 38%, rgba(5,35,47,.66) 100%), url('https://images.unsplash.com/photo-1770341989953-f3efb336f7eb?auto=format&fit=crop&fm=jpg&q=88&w=2200')",
@@ -110,13 +110,19 @@ export default function WellnessPage() {
           >
             <div className="thrive-orb thrive-orb-one" />
             <div className="thrive-orb thrive-orb-two" />
+            <span className="wellness-atmosphere wellness-atmosphere--light" aria-hidden="true" />
+            <span className="wellness-atmosphere wellness-atmosphere--mist" aria-hidden="true" />
 
             <div className="relative z-10 flex items-center justify-between gap-3">
-              <Link href="/" className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/72 text-base font-black text-[#0b4b55] shadow-sm">T</div>
+              <Link href="/living-signal/today" className="flex items-center gap-2.5">
+                <div className="wellness-brandmark" aria-hidden="true">
+                  <span className="wellness-leaf wellness-leaf--one" />
+                  <span className="wellness-leaf wellness-leaf--two" />
+                  <span className="wellness-leaf wellness-leaf--three" />
+                </div>
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#106f77]">DSS Enterprises</p>
-                  <p className="text-xs font-black text-[#0b3138]">THRIVE</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#146f78]">DSS Enterprises</p>
+                  <p className="text-sm font-black tracking-[0.04em] text-[#0b3138]">THRIVE</p>
                 </div>
               </Link>
 
@@ -127,7 +133,7 @@ export default function WellnessPage() {
             </div>
 
             <div className="relative z-10 mt-20 max-w-[92%] sm:mt-24 sm:max-w-[82%]">
-              <div className="rounded-[1.8rem] border border-white/30 bg-[#082f3b]/52 px-5 py-5 text-white shadow-[0_18px_45px_rgba(3,25,34,0.20)] backdrop-blur-[18px] sm:px-6 sm:py-6">
+              <div className="wellness-hero-glass rounded-[1.8rem] border border-white/30 bg-[#082f3b]/52 px-5 py-5 text-white shadow-[0_18px_45px_rgba(3,25,34,0.20)] backdrop-blur-[18px] sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2">
                   <span className="h-[3px] w-8 rounded-full bg-[#f0b35e]" />
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#8fdad8]">Wellness</p>
@@ -142,7 +148,7 @@ export default function WellnessPage() {
             </div>
           </header>
 
-          <section className="mt-4 rounded-[2rem] border border-white/55 bg-[#f7f2e8]/36 p-2.5 shadow-[0_24px_64px_rgba(10,36,46,0.10)] backdrop-blur-2xl sm:p-4">
+          <section className="wellness-living-body mt-4 rounded-[2rem] border border-white/55 bg-[#f7f2e8]/36 p-2.5 shadow-[0_24px_64px_rgba(10,36,46,0.10)] backdrop-blur-2xl sm:p-4">
             <WellnessCheckinCandidate onHeroChange={setHeroText} />
           </section>
 
