@@ -389,9 +389,9 @@ export default function WellnessCheckinPreview({
   return (
     <section
       ref={sectionRef}
-      className="scroll-mt-3 rounded-3xl bg-white p-4 shadow-sm sm:p-8"
+      className="scroll-mt-3 rounded-[2rem] border border-white/80 bg-white/72 p-4 shadow-[0_18px_55px_rgba(15,23,42,0.09)] backdrop-blur-2xl sm:p-8"
     >
-      <div className="sticky top-3 z-20 -mx-1 rounded-2xl border border-emerald-100 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:mx-0">
+      <div className="sticky top-3 z-20 -mx-1 rounded-[1.4rem] border border-white/85 bg-white/82 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-2xl sm:mx-0">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
