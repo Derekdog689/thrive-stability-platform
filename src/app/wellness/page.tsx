@@ -102,7 +102,7 @@ export default function WellnessPage() {
       <main className="wellness-living-signal min-h-screen pb-40 text-[#0b2630]">
         <section className="mx-auto max-w-4xl px-3 pb-32 pt-3 sm:px-6 sm:pt-6">
           <header
-            className="wellness-living-hero thrive-ambient relative min-h-[300px] overflow-hidden rounded-[2.15rem] border border-white/55 bg-cover bg-center px-5 py-5 shadow-[0_30px_80px_rgba(6,34,46,0.24)] sm:min-h-[340px] sm:px-7 sm:py-7"
+            className="wellness-living-hero wellness-layered-scene thrive-ambient relative min-h-[300px] overflow-hidden rounded-[2.15rem] border border-white/55 bg-cover bg-center px-5 py-5 shadow-[0_30px_80px_rgba(6,34,46,0.24)] sm:min-h-[340px] sm:px-7 sm:py-7"
             style={{
               backgroundImage:
                 "radial-gradient(circle at 82% 12%, rgba(244,188,101,.32), transparent 26%), linear-gradient(180deg, rgba(248,241,231,.06) 0%, rgba(21,117,127,.08) 38%, rgba(5,35,47,.66) 100%), url('https://images.unsplash.com/photo-1660692791363-670f606977b9?auto=format&fit=crop&fm=jpg&q=88&w=2200')",
@@ -148,7 +148,7 @@ export default function WellnessPage() {
             </div>
           </header>
 
-          <section className="wellness-living-body mt-4 rounded-[2rem] border border-white/55 bg-[#f7f2e8]/36 p-2.5 shadow-[0_24px_64px_rgba(10,36,46,0.10)] backdrop-blur-2xl sm:p-4">
+          <section className="wellness-living-body wellness-layered-content mt-4 rounded-[2rem] border border-white/55 bg-[#f7f2e8]/36 p-2.5 shadow-[0_24px_64px_rgba(10,36,46,0.10)] backdrop-blur-2xl sm:p-4">
             <WellnessCheckinCandidate onHeroChange={setHeroText} />
           </section>
 
