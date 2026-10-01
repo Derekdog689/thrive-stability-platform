@@ -684,7 +684,7 @@ main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-amber-200.bg-amber-50
 .wellness-layered-content {
   position: relative;
   z-index: 4;
-  margin-top: -34px !important;
+  margin-top: 18px !important;
   background:
     linear-gradient(180deg, rgba(249,246,238,.54) 0%, rgba(245,248,246,.78) 18%, rgba(240,246,245,.94) 64%, rgba(237,244,244,.98) 100%) !important;
   border-color: rgba(255,255,255,.68) !important;
@@ -696,7 +696,7 @@ main:has(nav.fixed.inset-x-0.bottom-3.z-50) section.border-amber-200.bg-amber-50
     inset 0 1px 0 rgba(255,255,255,.62) !important;
 }
 
-.wellness-layered-content > .space-y-6 > section:first-child {
+.wellness-layered-content .wellness-current-state {
   background-color: rgba(249,247,240,.78);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -864,5 +864,78 @@ body.wellness-expanded-open .wellness-bottom-nav {
 
   .wellness-layered-content::before {
     display: none;
+  }
+}
+
+
+/* Dynamic scenic overlap contract v0.8
+   Overlap is created by scroll, not by a fixed negative margin. */
+.wellness-scenic-stage {
+  position: sticky !important;
+  top: 8px !important;
+  z-index: 1 !important;
+  will-change: transform;
+}
+
+.wellness-scenic-foreground {
+  position: relative;
+  z-index: 5;
+  margin-top: 20px !important;
+}
+
+.wellness-scenic-foreground::before {
+  content: "";
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: -26px;
+  height: 54px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(238,248,245,0), rgba(242,248,245,.72));
+  filter: blur(12px);
+}
+
+.wellness-scenic-foreground > .space-y-6 {
+  position: relative;
+  z-index: 1;
+}
+
+/* Preserve the dark saved return. The generic first-surface glass must never wash it out. */
+.wellness-saved-return {
+  background:
+    radial-gradient(circle at 84% 10%, rgba(240,179,94,.20), transparent 28%),
+    linear-gradient(160deg,#0a4050,#092f3b 66%,#102b35) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: #fff !important;
+}
+
+.wellness-saved-return p:not([class*="uppercase"]) {
+  color: rgb(203 213 225) !important;
+}
+
+.wellness-saved-return h2,
+.wellness-saved-return h3 {
+  color: #fff !important;
+}
+
+@media (max-width: 639px) {
+  .wellness-scenic-stage {
+    top: 6px !important;
+  }
+
+  .wellness-scenic-foreground {
+    margin-top: 18px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wellness-scenic-stage {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  .wellness-scenic-foreground {
+    margin-top: 14px !important;
   }
 }
