@@ -1069,3 +1069,29 @@ body.wellness-expanded-open .wellness-bottom-nav {
     transform: none;
   }
 }
+
+
+/* Wellness saved-return contrast lock v1.0
+   This must outrank the generic first-surface glass rule above. */
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return {
+  background:
+    radial-gradient(circle at 84% 10%, rgba(240,179,94,.20), transparent 28%),
+    linear-gradient(160deg,#0a4050,#092f3b 66%,#102b35) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  color: #fff !important;
+  backdrop-filter: blur(18px) saturate(1.02);
+  -webkit-backdrop-filter: blur(18px) saturate(1.02);
+}
+
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return h2,
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return h3 {
+  color: #fff !important;
+}
+
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return p:not([class*="uppercase"]) {
+  color: rgb(203 213 225) !important;
+}
+
+.wellness-layered-content > .space-y-6 > section.wellness-saved-return [class*="text-[#8ce8df]"] {
+  color: #8ce8df !important;
+}
