@@ -341,7 +341,7 @@ export default function WellnessExpandedExperience({
           ) : null}
 
           {flow.phase === "depth_return" ? (
-            <div className="animate-[fadeIn_.2s_ease-out] motion-reduce:animate-none">
+            <div className="wellness-return-stage animate-[fadeIn_.2s_ease-out] motion-reduce:animate-none">
               <div className="rounded-[1.6rem] border border-[#9edbd8]/65 bg-[linear-gradient(145deg,rgba(255,255,255,.78),rgba(224,247,245,.72))] p-5 shadow-sm">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#167d86]">
                   THRIVE noticed
@@ -469,7 +469,7 @@ export default function WellnessExpandedExperience({
           ) : null}
 
           {(flow.phase === "depth_note" || isSaving) ? (
-            <div className="animate-[fadeIn_.2s_ease-out] motion-reduce:animate-none">
+            <div className="wellness-final-reflection animate-[fadeIn_.2s_ease-out] motion-reduce:animate-none">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#167d86]">
                 Reflection complete
               </p>
