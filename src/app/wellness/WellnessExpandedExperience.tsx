@@ -421,6 +421,15 @@ export default function WellnessExpandedExperience({
                 >
                   {isSaving ? "Saving..." : "Finish check-in"}
                 </button>
+                {!isSaving && !draft.participantNote.trim() ? (
+                  <button
+                    type="button"
+                    onClick={onFinishExpanded}
+                    className="w-full px-5 py-2 text-sm font-black text-[#0c6974]"
+                  >
+                    Skip note
+                  </button>
+                ) : null}
                 {!isSaving ? (
                   <button
                     type="button"
