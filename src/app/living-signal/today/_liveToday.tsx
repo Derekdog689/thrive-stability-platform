@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import AuthGate from "../../AuthGate";
 import { buildCrossLaneSynthesis } from "../../crossLaneSynthesis";
 import { useParticipantGoals } from "../../goals/useParticipantGoals";
@@ -10,6 +10,7 @@ import { toNumber, useParticipantFinancial } from "../../useParticipantFinancial
 import { useWellnessCheckinCandidate } from "../../wellness/useWellnessCheckinCandidate";
 import { wellnessOverallLabel } from "../../wellness/wellnessVocabulary";
 import { LaneCard, SceneHero } from "../_components";
+import { supabase } from "@/lib/supabaseClient";
 
 type Mode = "auto" | "morning" | "evening";
 
@@ -135,6 +136,7 @@ function LiveBottomNav() {
 }
 
 export default function LiveToday({ mode }: { mode: Mode }) {
+  const [signingOut, setSigningOut] = useState(false);
   const wellness = useWellnessCheckinCandidate();
   const goals = useParticipantGoals();
   const support = useParticipantSupport();
@@ -425,6 +427,18 @@ export default function LiveToday({ mode }: { mode: Mode }) {
   const displayMode = resolvedMode(mode);
   const isEvening = displayMode === "evening";
 
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("THRIVE sign out failed:", error.message);
+      setSigningOut(false);
+      return;
+    }
+    window.location.assign("/login");
+  }
+
   return (
     <AuthGate>
       <main
@@ -448,7 +462,24 @@ export default function LiveToday({ mode }: { mode: Mode }) {
                 ? "Same THRIVE. A quieter look at what matters now."
                 : "Built on today."
             }
-            rightLabel="Today"
+            rightAction={
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="ls-chip">Today</span>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="ls-chip"
+                  style={{
+                    cursor: signingOut ? "default" : "pointer",
+                    opacity: signingOut ? 0.65 : 1,
+                    font: "inherit",
+                  }}
+                >
+                  {signingOut ? "Signing out" : "Log out"}
+                </button>
+              </div>
+            }
           >
             <div className={`ls-progress ${isEvening ? "ls-progress--dark" : ""}`}>
               <div style={{ minWidth: 0 }}>
