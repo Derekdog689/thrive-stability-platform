@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { WellnessCheckinRow, WellnessDraft } from "./useWellnessCheckinCandidate";
+import { buildWellnessGuidance } from "./buildWellnessGuidance";
 import type { WellnessFlowState, WellnessReflectionKey } from "./wellnessFlowMachine";
 import {
   WELLNESS_REFLECTIONS,
@@ -14,13 +15,14 @@ import {
 
 type ExpandedFlow = Extract<
   WellnessFlowState,
-  { phase: "depth_select" | "depth_reflect" | "depth_note" | "saving" }
+  { phase: "depth_select" | "depth_reflect" | "depth_return" | "depth_note" | "saving" }
 >;
 
 type Props = {
   flow: ExpandedFlow;
   draft: WellnessDraft;
   referenceCheckin: WellnessCheckinRow | null;
+  recentCheckins: WellnessCheckinRow[];
   experienceMode: "first" | "later" | "same_day";
   writeEnabled: boolean;
   actionMessage: string;
@@ -31,6 +33,7 @@ type Props = {
   onPreviousSignal: () => void;
   onBackToSelection: () => void;
   onBackToQuick: () => void;
+  onContinueToNote: () => void;
   onFinishExpanded: () => void;
 };
 
@@ -47,6 +50,7 @@ export default function WellnessExpandedExperience({
   flow,
   draft,
   referenceCheckin,
+  recentCheckins,
   experienceMode,
   writeEnabled,
   actionMessage,
@@ -57,9 +61,13 @@ export default function WellnessExpandedExperience({
   onPreviousSignal,
   onBackToSelection,
   onBackToQuick,
+  onContinueToNote,
   onFinishExpanded,
 }: Props) {
   const [mounted, setMounted] = useState(false);
+  const [fitResponse, setFitResponse] = useState<
+    "yes" | "sort_of" | "not_really" | null
+  >(null);
 
   useEffect(() => {
     setMounted(true);
@@ -116,6 +124,11 @@ export default function WellnessExpandedExperience({
     ? priorValue(referenceCheckin, currentKey)
     : null;
 
+  const guidance = useMemo(
+    () => buildWellnessGuidance(draft, recentCheckins, experienceMode),
+    [draft, recentCheckins, experienceMode],
+  );
+
   function toggleSignal(key: WellnessReflectionKey) {
     const selected = selectedSignals.includes(key);
     if (selected) {
@@ -140,16 +153,20 @@ export default function WellnessExpandedExperience({
               <h3 className="mt-1 text-2xl font-black text-[#0a2933]">
                 {flow.phase === "depth_select"
                   ? "Look a little closer"
-                  : flow.phase === "depth_note" || isSaving
-                    ? "One last thing"
-                    : "Stay with what matters"}
+                  : flow.phase === "depth_return"
+                    ? "Here’s what THRIVE noticed"
+                    : flow.phase === "depth_note" || isSaving
+                      ? "One last thing"
+                      : "Stay with what matters"}
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
                 {flow.phase === "depth_select"
                   ? "Choose only what feels useful right now."
-                  : flow.phase === "depth_note" || isSaving
-                    ? "Add anything worth remembering, or finish here."
-                    : "One thing at a time."}
+                  : flow.phase === "depth_return"
+                    ? "A useful return before you decide what comes next."
+                    : flow.phase === "depth_note" || isSaving
+                      ? "Review the moment, then add a note only if it helps."
+                      : "One thing at a time."}
               </p>
             </div>
 
@@ -323,6 +340,134 @@ export default function WellnessExpandedExperience({
             </div>
           ) : null}
 
+          {flow.phase === "depth_return" ? (
+            <div className="animate-[fadeIn_.2s_ease-out] motion-reduce:animate-none">
+              <div className="rounded-[1.6rem] border border-[#9edbd8]/65 bg-[linear-gradient(145deg,rgba(255,255,255,.78),rgba(224,247,245,.72))] p-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#167d86]">
+                  THRIVE noticed
+                </p>
+                <h4 className="mt-2 text-2xl font-black leading-tight text-[#0a2933]">
+                  {guidance.headline}
+                </h4>
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
+                  {guidance.summary}
+                </p>
+              </div>
+
+              {guidance.historySummary ? (
+                <div className="mt-4 rounded-[1.45rem] border border-sky-100/80 bg-sky-50/72 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-700">
+                    From your history
+                  </p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">
+                    {guidance.historySummary}
+                  </p>
+                </div>
+              ) : null}
+
+              {guidance.possibleConnection && fitResponse !== "not_really" ? (
+                <div className="mt-4 rounded-[1.45rem] border border-white/12 bg-[#0b3946] p-4 text-white">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#8ce8df]">
+                    A possible connection
+                  </p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-slate-100">
+                    {guidance.possibleConnection}
+                  </p>
+                  <p className="mt-4 text-xs font-bold text-slate-300">
+                    Does that fit for you?
+                  </p>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {[
+                      ["yes", "Yes"],
+                      ["sort_of", "Sort of"],
+                      ["not_really", "Not really"],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={fitResponse === value}
+                        onClick={() =>
+                          setFitResponse(
+                            value as "yes" | "sort_of" | "not_really",
+                          )
+                        }
+                        className={`rounded-xl border px-2 py-2 text-xs font-black transition ${
+                          fitResponse === value
+                            ? "border-[#8ce8df] bg-[#8ce8df] text-[#082c35]"
+                            : "border-white/18 bg-white/6 text-white"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[11px] font-semibold leading-5 text-slate-400">
+                    This answer only shapes this moment. It is not a diagnosis or conclusion.
+                  </p>
+                </div>
+              ) : null}
+
+              {fitResponse === "not_really" ? (
+                <div className="mt-4 rounded-[1.35rem] border border-white/80 bg-white/66 p-4">
+                  <p className="text-sm font-bold leading-6 text-slate-700">
+                    Got it. Leave that connection aside. Your own read of the moment comes first.
+                  </p>
+                </div>
+              ) : null}
+
+              {guidance.followUpQuestion ? (
+                <div className="mt-4 rounded-[1.45rem] border border-violet-100/80 bg-violet-50/72 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-700">
+                    Something to think about
+                  </p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-slate-800">
+                    {guidance.followUpQuestion}
+                  </p>
+                  <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                    You can use the final note for this, or leave it alone.
+                  </p>
+                </div>
+              ) : null}
+
+              <details className="mt-4 rounded-[1.35rem] border border-white/80 bg-white/60">
+                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-[#173b46]">
+                  Why THRIVE is showing this
+                </summary>
+                <p className="border-t border-white/80 px-4 py-3 text-xs font-semibold leading-5 text-slate-600">
+                  {guidance.whyShown}
+                </p>
+              </details>
+
+              <div className="mt-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#167d86]">
+                  What might help
+                </p>
+                <div className="mt-3 grid gap-3">
+                  {[guidance.primarySuggestion, ...guidance.otherSuggestions]
+                    .slice(0, 3)
+                    .map((action, index) => (
+                      <div
+                        key={action.value}
+                        className={`rounded-[1.4rem] border p-4 ${
+                          index === 0
+                            ? "border-[#8fd9d4]/80 bg-[#e6f7f3]"
+                            : "border-white/80 bg-white/68"
+                        }`}
+                      >
+                        <p className="font-black text-[#102d37]">{action.label}</p>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                          {action.reason}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+                <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
+                  These are options, not assignments. After you save, you can choose one or simply be done.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           {(flow.phase === "depth_note" || isSaving) ? (
             <div className="animate-[fadeIn_.2s_ease-out] motion-reduce:animate-none">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#167d86]">
@@ -334,23 +479,6 @@ export default function WellnessExpandedExperience({
               <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
                 Optional. Your check-in can stand on its own.
               </p>
-
-              <div className="mt-5 rounded-[1.5rem] border border-white/80 bg-white/72 p-4">
-                <textarea
-                  value={draft.participantNote}
-                  maxLength={2000}
-                  disabled={isSaving}
-                  onChange={(event) =>
-                    onDraftChange({
-                      ...draft,
-                      participantNote: event.target.value,
-                    })
-                  }
-                  rows={4}
-                  className="w-full resize-none rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-slate-800 outline-none focus:border-[#29a8ad] focus:ring-2 focus:ring-cyan-100"
-                  placeholder="What feels worth keeping with this check-in?"
-                />
-              </div>
 
               <div className="mt-5 rounded-[1.5rem] border border-white/80 bg-white/62 p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
@@ -374,6 +502,26 @@ export default function WellnessExpandedExperience({
                     );
                   })}
                 </div>
+              </div>
+
+              <div className="mt-5 rounded-[1.5rem] border border-white/80 bg-white/72 p-4">
+                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#167d86]">
+                  Your reflection · optional
+                </p>
+                <textarea
+                  value={draft.participantNote}
+                  maxLength={2000}
+                  disabled={isSaving}
+                  onChange={(event) =>
+                    onDraftChange({
+                      ...draft,
+                      participantNote: event.target.value,
+                    })
+                  }
+                  rows={4}
+                  className="w-full resize-none rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-slate-800 outline-none focus:border-[#29a8ad] focus:ring-2 focus:ring-cyan-100"
+                  placeholder="What feels worth keeping with this check-in?"
+                />
               </div>
 
               {actionMessage ? (
@@ -407,6 +555,25 @@ export default function WellnessExpandedExperience({
                   className="w-full rounded-2xl border border-white/80 bg-white/74 px-5 py-3 text-sm font-black text-slate-600"
                 >
                   Back to quick check-in
+                </button>
+              </div>
+            ) : null}
+
+            {flow.phase === "depth_return" ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={onPreviousSignal}
+                  className="rounded-2xl border border-white/80 bg-white/74 px-5 py-4 text-sm font-black text-slate-600"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={onContinueToNote}
+                  className="rounded-2xl bg-[linear-gradient(135deg,#167f90,#22aaa7)] px-5 py-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(25,139,148,.20)]"
+                >
+                  Continue
                 </button>
               </div>
             ) : null}
