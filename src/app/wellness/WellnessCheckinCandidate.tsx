@@ -8,6 +8,7 @@ import { type WellnessDraft, useWellnessCheckinCandidate } from "./useWellnessCh
 
 function formatValue(value: string | null | undefined) {
   if (!value) return "Not selected";
+  if (value === "hard") return "Struggling";
   return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
@@ -388,46 +389,67 @@ export default function WellnessCheckinCandidate({
       ) : null}
 
       {justSaved ? (
-        <section className="wellness-saved-return overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_82%_12%,rgba(240,179,94,.18),transparent_28%),linear-gradient(160deg,#0a3442,#082632_68%,#0b2730)] p-6 text-white shadow-[0_26px_70px_rgba(4,25,34,0.22)] sm:p-8">
-          <p className="text-xs font-black uppercase tracking-wide text-[#89d7d5]">Saved</p>
-          <h2 className="mt-2 text-2xl font-black sm:text-3xl">{contextualReturn?.headline ?? "Your check-in is saved."}</h2>
-          {contextualReturn?.detail ? (
-            <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-300">{contextualReturn.detail}</p>
-          ) : null}
-          {contextualReturn?.choiceLabel ? (
-            <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900 px-5 py-4">
-              <p className="text-xs font-black uppercase tracking-wide text-[#89d7d5]">Something you chose</p>
-              <p className="mt-2 font-black text-white">{contextualReturn.choiceLabel}</p>
+        <section className="wellness-saved-return overflow-hidden rounded-[2rem] border border-white/12 bg-[radial-gradient(circle_at_84%_10%,rgba(240,179,94,.20),transparent_28%),linear-gradient(160deg,#0a4050,#092f3b_66%,#102b35)] p-6 text-white shadow-[0_28px_74px_rgba(4,25,34,0.24)] sm:p-8">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#67d7ce]/18 text-2xl text-[#8ce8df] shadow-[0_0_0_1px_rgba(140,232,223,.22)]">
+              ✓
+            </span>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#8ce8df]">Saved</p>
+              <h2 className="mt-1 text-2xl font-black sm:text-3xl">This moment is part of your Story.</h2>
             </div>
-          ) : null}
+          </div>
+
+          <div className="mt-6 rounded-[1.6rem] border border-white/10 bg-white/6 p-5 backdrop-blur-xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8ce8df]">THRIVE noticed</p>
+            <h3 className="mt-2 text-xl font-black text-white">{contextualReturn?.headline ?? "Your check-in is saved."}</h3>
+            {contextualReturn?.detail ? (
+              <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">{contextualReturn.detail}</p>
+            ) : null}
+            {contextualReturn?.choiceLabel ? (
+              <p className="mt-3 text-sm font-bold text-[#f3d3a1]">{contextualReturn.choiceLabel}</p>
+            ) : null}
+          </div>
+
           {contextualReturn?.noteQuestion ? (
-            <div className="mt-5 rounded-2xl border border-violet-800/70 bg-violet-950/30 px-5 py-4">
-              <p className="text-xs font-black uppercase tracking-wide text-violet-300">You asked</p>
+            <div className="mt-4 rounded-[1.5rem] border border-violet-300/15 bg-violet-300/8 p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-200">You asked</p>
               <p className="mt-2 font-black leading-7 text-white">“{contextualReturn.noteQuestion}”</p>
               {contextualReturn.noteResponse ? (
-                <>
-                  <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#89d7d5]">A place to start</p>
-                  <p className="mt-2 font-semibold leading-7 text-slate-200">{contextualReturn.noteResponse}</p>
-                </>
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">{contextualReturn.noteResponse}</p>
               ) : null}
             </div>
-          ) : null}
-          {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
-            <Link href={contextualReturn.actionHref} className="mt-5 inline-flex rounded-full bg-[#44c6bd] px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-[#61d5cd]">
-              {contextualReturn.actionLabel}
-            </Link>
           ) : null}
 
-          <div className="mt-7 border-t border-slate-800 pt-6">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-400">If you want to keep going</p>
+          <div className="mt-7">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Here are a few options</p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">Choose what fits, or leave it here for now.</p>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Link href="/goals" className="rounded-2xl bg-[#44c6bd] px-5 py-4 font-black text-slate-950 hover:bg-[#61d5cd]">Continue a goal</Link>
-              <Link href="/budget" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Review money</Link>
-              {!contextualReturn?.actionHref?.startsWith("/support") ? (
-                <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
+              {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
+                <Link href={contextualReturn.actionHref} className="rounded-[1.35rem] border border-[#6f5bd3]/25 bg-[#6f5bd3]/18 px-5 py-4 font-black text-white transition hover:bg-[#6f5bd3]/28">
+                  <span className="mr-2 text-violet-200">♡</span>{contextualReturn.actionLabel}
+                </Link>
               ) : null}
-              <Link href="/living-signal/today" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Done for now</Link>
+              <Link href="/living-signal/recovery" className="rounded-[1.35rem] border border-[#48a9d8]/25 bg-[#48a9d8]/16 px-5 py-4 font-black text-white transition hover:bg-[#48a9d8]/24">
+                <span className="mr-2 text-sky-200">◎</span>Find support options
+              </Link>
+              <Link href="/goals" className="rounded-[1.35rem] border border-[#b37bd8]/25 bg-[#b37bd8]/16 px-5 py-4 font-black text-white transition hover:bg-[#b37bd8]/24">
+                <span className="mr-2 text-fuchsia-200">◉</span>Continue a goal
+              </Link>
+              <Link href="/budget" className="rounded-[1.35rem] border border-[#4fc39c]/25 bg-[#4fc39c]/14 px-5 py-4 font-black text-white transition hover:bg-[#4fc39c]/22">
+                <span className="mr-2 text-emerald-200">$</span>Review money
+              </Link>
             </div>
+          </div>
+
+          <div className="mt-7 border-t border-white/10 pt-5">
+            <Link href="/living-signal/today" className="flex w-full items-center justify-center rounded-[1.4rem] bg-[linear-gradient(135deg,#56d2c9,#36a9b5)] px-5 py-4 font-black text-[#082c35] shadow-[0_14px_34px_rgba(54,169,181,.18)]">
+              Done for now
+            </Link>
+            <Link href="/living-signal/story" className="mt-3 flex w-full items-center justify-center rounded-[1.4rem] border border-white/16 bg-white/5 px-5 py-4 font-black text-white">
+              View your Story
+            </Link>
           </div>
         </section>
       ) : null}
