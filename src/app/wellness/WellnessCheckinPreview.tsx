@@ -175,6 +175,7 @@ export default function WellnessCheckinPreview({
   const sectionRef = useRef<HTMLElement>(null);
   const [mode, setMode] = useState<"quick" | "deeper">("quick");
   const [selectedReflectionKeys, setSelectedReflectionKeys] = useState<ReflectionKey[]>([]);
+  const [showNote, setShowNote] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -333,23 +334,30 @@ export default function WellnessCheckinPreview({
           Not sure yet
         </button>
 
-        <div className="mt-6 rounded-[1.55rem] border border-white/80 bg-white/62 p-4 shadow-[0_10px_28px_rgba(8,38,48,.05)] backdrop-blur-xl">
-          <label htmlFor="wellness-note" className="text-sm font-black text-[#173b46]">
-            Add a note <span className="font-bold text-slate-400">optional</span>
-          </label>
-          <textarea
-            id="wellness-note"
-            value={draft.participantNote}
-            maxLength={2000}
-            onChange={(event) => setDraftField("participantNote", event.target.value)}
-            rows={3}
-            className="mt-3 w-full resize-none rounded-2xl border border-slate-200/80 bg-white/76 px-4 py-3 text-slate-800 outline-none focus:border-[#29a8ad] focus:ring-2 focus:ring-cyan-100"
-            placeholder="What is worth remembering about this moment?"
-          />
-        </div>
-
         {mode === "quick" ? (
           <div className="mt-6 grid gap-3">
+            <button
+              type="button"
+              onClick={() => setShowNote((current) => !current)}
+              className="w-full rounded-2xl border border-white/80 bg-white/58 px-5 py-3.5 text-left text-sm font-black text-[#0c6974] shadow-sm backdrop-blur-xl"
+            >
+              {showNote ? "Hide note" : "Add a note"} <span className="font-bold text-slate-400">optional</span>
+            </button>
+
+            {showNote ? (
+              <div className="rounded-[1.45rem] border border-white/80 bg-white/62 p-4 shadow-[0_10px_28px_rgba(8,38,48,.05)] backdrop-blur-xl">
+                <textarea
+                  id="wellness-note"
+                  value={draft.participantNote}
+                  maxLength={2000}
+                  onChange={(event) => setDraftField("participantNote", event.target.value)}
+                  rows={3}
+                  className="w-full resize-none rounded-2xl border border-slate-200/80 bg-white/76 px-4 py-3 text-slate-800 outline-none focus:border-[#29a8ad] focus:ring-2 focus:ring-cyan-100"
+                  placeholder="What is worth remembering about this moment?"
+                />
+              </div>
+            ) : null}
+
             <button
               type="button"
               disabled={!draft.overallDay || !writeEnabled || saving}
@@ -488,6 +496,29 @@ export default function WellnessCheckinPreview({
                 })}
               </div>
             ) : null}
+
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={() => setShowNote((current) => !current)}
+                className="w-full rounded-2xl border border-white/80 bg-white/58 px-5 py-3.5 text-left text-sm font-black text-[#0c6974] shadow-sm backdrop-blur-xl"
+              >
+                {showNote ? "Hide note" : "Add a note"} <span className="font-bold text-slate-400">optional</span>
+              </button>
+              {showNote ? (
+                <div className="mt-3 rounded-[1.45rem] border border-white/80 bg-white/62 p-4 shadow-[0_10px_28px_rgba(8,38,48,.05)] backdrop-blur-xl">
+                  <textarea
+                    id="wellness-note-deeper"
+                    value={draft.participantNote}
+                    maxLength={2000}
+                    onChange={(event) => setDraftField("participantNote", event.target.value)}
+                    rows={3}
+                    className="w-full resize-none rounded-2xl border border-slate-200/80 bg-white/76 px-4 py-3 text-slate-800 outline-none focus:border-[#29a8ad] focus:ring-2 focus:ring-cyan-100"
+                    placeholder="What is worth remembering about this moment?"
+                  />
+                </div>
+              ) : null}
+            </div>
 
             <button
               type="button"
