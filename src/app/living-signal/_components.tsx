@@ -26,6 +26,7 @@ export function SceneHero({
   title,
   copy,
   rightLabel,
+  rightAction,
   children,
 }: {
   scene: Scene;
@@ -33,6 +34,7 @@ export function SceneHero({
   title: ReactNode;
   copy?: string;
   rightLabel?: string;
+  rightAction?: ReactNode;
   children?: ReactNode;
 }) {
   const dark = scene === "evening" || scene === "lake" || scene === "goal" || scene === "meeting";
@@ -49,7 +51,7 @@ export function SceneHero({
       <div className="ls-scene-content">
         <div className="ls-brand">
           <div className="ls-brandmark"><span className="ls-leaf" /><span>THRIVE</span></div>
-          {rightLabel ? <span className="ls-chip">{rightLabel}</span> : null}
+          {rightAction ?? (rightLabel ? <span className="ls-chip">{rightLabel}</span> : null)}
         </div>
         <div className="ls-hero-copy-block">
           <p className="ls-kicker">{eyebrow}</p>
