@@ -1398,3 +1398,30 @@
     min-height: 310px;
   }
 }
+
+
+/* Preview usability: short landscape phones should keep navigation in flow
+   instead of covering the hero. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .ls-phone {
+    padding-bottom: 28px;
+  }
+
+  .ls-bottom-nav {
+    position: sticky;
+    left: auto;
+    bottom: 8px;
+    transform: none;
+    margin: 12px auto 8px;
+    width: min(calc(100% - 24px), 660px);
+  }
+
+  .ls-scene,
+  .ls-scene-content {
+    min-height: 360px;
+  }
+
+  .ls-hero-title {
+    font-size: clamp(34px, 7vw, 54px);
+  }
+}
