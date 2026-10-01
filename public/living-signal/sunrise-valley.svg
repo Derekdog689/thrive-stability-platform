@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#b9d7ef"/>
+    <stop offset=".34" stop-color="#f7c8a3"/>
+    <stop offset=".66" stop-color="#f7e7c7"/>
+    <stop offset="1" stop-color="#d9efe6"/>
+  </linearGradient>
+  <linearGradient id="far" x1="0" y1="0" x2="1" y2="1">
+    <stop stop-color="#6e8795"/><stop offset="1" stop-color="#46656f"/>
+  </linearGradient>
+  <linearGradient id="near" x1="0" y1="0" x2="1" y2="1">
+    <stop stop-color="#315a54"/><stop offset="1" stop-color="#173c43"/>
+  </linearGradient>
+  <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+    <stop stop-color="#8ecdd1"/><stop offset=".65" stop-color="#d9e8d9"/><stop offset="1" stop-color="#f2e8d7"/>
+  </linearGradient>
+  <radialGradient id="sun"><stop offset="0" stop-color="#fff8d8"/><stop offset=".45" stop-color="#ffd287" stop-opacity=".9"/><stop offset="1" stop-color="#ffc774" stop-opacity="0"/></radialGradient>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="4"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 .06 0"/></filter>
+</defs>
+<rect width="1600" height="1000" fill="url(#sky)"/>
+<circle cx="1280" cy="180" r="250" fill="url(#sun)"/>
+<path d="M0 520 170 390 330 475 520 280 700 475 880 350 1040 455 1240 260 1410 420 1600 340V1000H0Z" fill="url(#far)" opacity=".94"/>
+<path d="M0 620 210 500 390 585 580 420 760 590 980 450 1170 565 1390 410 1600 540V1000H0Z" fill="url(#near)"/>
+<path d="M0 665 C270 610 520 690 820 635 S1280 610 1600 665V1000H0Z" fill="url(#water)"/>
+<path d="M0 735 C330 685 610 760 900 705 S1320 695 1600 730" fill="none" stroke="#fff" stroke-width="7" stroke-opacity=".32"/>
+<path d="M905 1000 C980 825 1090 690 1260 600 C1150 730 1085 850 1040 1000Z" fill="#e8c58e" opacity=".72"/>
+<g fill="#153b36" opacity=".82"><path d="M85 635 120 505 155 635Z"/><path d="M135 650 180 480 225 650Z"/><path d="M1430 625 1480 460 1530 625Z"/></g>
+<rect width="1600" height="1000" filter="url(#grain)" opacity=".45"/>
+</svg>
