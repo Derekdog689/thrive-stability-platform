@@ -102,10 +102,10 @@ export default function WellnessPage() {
       <main className="wellness-living-signal min-h-screen pb-40 text-[#0b2630]">
         <section className="mx-auto max-w-4xl px-3 pb-32 pt-3 sm:px-6 sm:pt-6">
           <header
-            className="wellness-living-hero thrive-ambient relative min-h-[390px] overflow-hidden rounded-[2.15rem] border border-white/55 bg-cover bg-center px-5 py-5 shadow-[0_30px_80px_rgba(6,34,46,0.24)] sm:min-h-[430px] sm:px-7 sm:py-7"
+            className="wellness-living-hero thrive-ambient relative min-h-[300px] overflow-hidden rounded-[2.15rem] border border-white/55 bg-cover bg-center px-5 py-5 shadow-[0_30px_80px_rgba(6,34,46,0.24)] sm:min-h-[340px] sm:px-7 sm:py-7"
             style={{
               backgroundImage:
-                "radial-gradient(circle at 82% 12%, rgba(244,188,101,.32), transparent 26%), linear-gradient(180deg, rgba(248,241,231,.06) 0%, rgba(21,117,127,.08) 38%, rgba(5,35,47,.66) 100%), url('https://images.unsplash.com/photo-1770341989953-f3efb336f7eb?auto=format&fit=crop&fm=jpg&q=88&w=2200')",
+                "radial-gradient(circle at 82% 12%, rgba(244,188,101,.32), transparent 26%), linear-gradient(180deg, rgba(248,241,231,.06) 0%, rgba(21,117,127,.08) 38%, rgba(5,35,47,.66) 100%), url('https://images.unsplash.com/photo-1660692791363-670f606977b9?auto=format&fit=crop&fm=jpg&q=88&w=2200')",
             }}
           >
             <div className="thrive-orb thrive-orb-one" />
@@ -132,7 +132,7 @@ export default function WellnessPage() {
               </div>
             </div>
 
-            <div className="relative z-10 mt-20 max-w-[92%] sm:mt-24 sm:max-w-[82%]">
+            <div className="relative z-10 mt-10 max-w-[92%] sm:mt-12 sm:max-w-[82%]">
               <div className="wellness-hero-glass rounded-[1.8rem] border border-white/30 bg-[#082f3b]/52 px-5 py-5 text-white shadow-[0_18px_45px_rgba(3,25,34,0.20)] backdrop-blur-[18px] sm:px-6 sm:py-6">
                 <div className="flex items-center gap-2">
                   <span className="h-[3px] w-8 rounded-full bg-[#f0b35e]" />
@@ -142,7 +142,7 @@ export default function WellnessPage() {
                   {heroText}
                 </h1>
                 <p className="mt-3 max-w-md text-sm font-bold leading-6 text-white/76">
-                  A quick read on where you are, with room to go deeper only when it helps.
+                  A quick check-in to see where you are, with room to go deeper only when it helps.
                 </p>
               </div>
             </div>
