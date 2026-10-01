@@ -126,6 +126,19 @@ function detailSentence(label: string, value: string) {
   return `${label}: ${formatValue(value)}`;
 }
 
+function signalMeta(label: string) {
+  const values: Record<string, { icon: string; accent: string; soft: string }> = {
+    Stress: { icon: "≈", accent: "#ef8f56", soft: "rgba(239,143,86,.14)" },
+    Sleep: { icon: "☾", accent: "#d79a42", soft: "rgba(215,154,66,.14)" },
+    Energy: { icon: "✦", accent: "#2e91b5", soft: "rgba(46,145,181,.14)" },
+    Confidence: { icon: "◎", accent: "#8b66c8", soft: "rgba(139,102,200,.15)" },
+    Routine: { icon: "↻", accent: "#d96f72", soft: "rgba(217,111,114,.14)" },
+    Recovery: { icon: "♡", accent: "#7454c7", soft: "rgba(116,84,199,.15)" },
+    Support: { icon: "◌", accent: "#5b6fcb", soft: "rgba(91,111,203,.15)" },
+  };
+  return values[label] ?? { icon: "•", accent: "#21a8b0", soft: "rgba(33,168,176,.14)" };
+}
+
 function dateLabel(dateKey: string, today: string) {
   if (dateKey === today) return "Today";
   const [year, month, day] = dateKey.split("-").map(Number);
@@ -409,6 +422,28 @@ export default function WellnessCheckinCandidate({
             {contextualReturn?.choiceLabel ? (
               <p className="mt-3 text-sm font-bold text-[#f3d3a1]">{contextualReturn.choiceLabel}</p>
             ) : null}
+
+            {todayDetails.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {todayDetails.map(([label, value]) => {
+                  const meta = signalMeta(label);
+                  return (
+                    <span
+                      key={label}
+                      className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-black"
+                      style={{
+                        color: meta.accent,
+                        background: meta.soft,
+                        borderColor: `${meta.accent}55`,
+                      }}
+                    >
+                      <span aria-hidden="true">{meta.icon}</span>
+                      {label}: {formatValue(value)}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
 
           {contextualReturn?.noteQuestion ? (
@@ -422,8 +457,8 @@ export default function WellnessCheckinCandidate({
           ) : null}
 
           <div className="mt-7">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Here are a few options</p>
-            <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">Choose what fits, or leave it here for now.</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">What fits right now?</p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">Your check-in is already saved. These are options, not requirements.</p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {contextualReturn?.actionHref && contextualReturn.actionLabel ? (
