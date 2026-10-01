@@ -428,10 +428,11 @@ export default function LiveToday({ mode }: { mode: Mode }) {
   return (
     <AuthGate>
       <main
-        className="ls-root ls-today-live"
-        style={isEvening ? { background: "#102733" } : undefined}
+        className={`ls-root ls-today-live ${isEvening ? "ls-today-live--evening" : "ls-today-live--morning"}`}
       >
-        <section className="ls-phone">
+        <div className="ls-today-fixed-environment" aria-hidden="true" />
+        <div className="ls-today-fixed-veil" aria-hidden="true" />
+        <section className="ls-phone ls-today-scroll-content">
           <div className="ls-layered-scene">
             <SceneHero
             scene={isEvening ? "evening" : "morning"}
