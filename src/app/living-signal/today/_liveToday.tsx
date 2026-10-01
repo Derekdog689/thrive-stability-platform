@@ -441,7 +441,8 @@ export default function LiveToday({ mode }: { mode: Mode }) {
         style={isEvening ? { background: "#102733" } : undefined}
       >
         <section className="ls-phone">
-          <SceneHero
+          <div className="ls-layered-scene">
+            <SceneHero
             scene={isEvening ? "evening" : "morning"}
             eyebrow={isEvening ? "Same THRIVE" : "A brighter tomorrow"}
             title={
@@ -484,8 +485,10 @@ export default function LiveToday({ mode }: { mode: Mode }) {
                 </Link>
               ) : null}
             </div>
-          </SceneHero>
+            </SceneHero>
+          </div>
 
+          <div className="ls-layered-content">
           <section className={`ls-section ${isEvening ? "ls-section--dark" : ""}`}>
             <p className="ls-section-title">Your THRIVE right now</p>
 
@@ -606,6 +609,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
               View your Story
             </Link>
           </section>
+          </div>
         </section>
 
         <LiveBottomNav />
