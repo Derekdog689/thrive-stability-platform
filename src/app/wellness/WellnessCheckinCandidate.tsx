@@ -231,38 +231,25 @@ export default function WellnessCheckinCandidate({
         : recentCheckins,
     [recentCheckins, todayCheckin],
   );
-  const focusMode = !todayCheckin || isCheckingInAgain || isFinishingSavedCheckin;
+  const focusMode = !todayCheckin || isCheckingInAgain;
   const experienceMode =
-    isFinishingSavedCheckin
-      ? resumeHistory.some((checkin) => checkin.checkin_date === today)
-        ? "same_day"
-        : resumeHistory.length > 0
-          ? "later"
-          : "first"
-      : isCheckingInAgain && todayCheckin
-        ? "same_day"
-        : recentCheckins.length > 0
-          ? "later"
-          : "first";
+    isCheckingInAgain && todayCheckin
+      ? "same_day"
+      : recentCheckins.length > 0
+        ? "later"
+        : "first";
   const referenceCheckin =
-    isFinishingSavedCheckin
-      ? resumeHistory[0] ?? null
-      : experienceMode === "same_day"
-        ? todayCheckin
-        : experienceMode === "later"
-          ? recentCheckins[0] ?? null
-          : null;
+    experienceMode === "same_day"
+      ? todayCheckin
+      : experienceMode === "later"
+        ? recentCheckins[0] ?? null
+        : null;
 
   useEffect(() => {
     if (!onHeroChange) return;
 
     if (!todayCheckin) {
       onHeroChange("How are things right now?");
-      return;
-    }
-
-    if (isFinishingSavedCheckin) {
-      onHeroChange("Pick up where you left off.");
       return;
     }
 
@@ -365,38 +352,19 @@ export default function WellnessCheckinCandidate({
                 </details>
               ) : null}
 
-              {todayCheckin.chosen_next_step ? (
-                <button type="button" onClick={() => { setDraft(emptyDraft); setActionMessage(""); setJustSaved(false); setIsFinishingSavedCheckin(false); setIsCheckingInAgain(true); }} className="mt-5 rounded-full border border-emerald-200 bg-white/72 px-4 py-2.5 text-sm font-black text-emerald-900 shadow-sm transition hover:bg-white">Check in again</button>
-              ) : (
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDraft(savedDraft);
-                      setActionMessage("");
-                      setJustSaved(false);
-                      setIsCheckingInAgain(false);
-                      setIsFinishingSavedCheckin(true);
-                    }}
-                    className="rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-800"
-                  >
-                    Finish this check-in
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDraft(emptyDraft);
-                      setActionMessage("");
-                      setJustSaved(false);
-                      setIsFinishingSavedCheckin(false);
-                      setIsCheckingInAgain(true);
-                    }}
-                    className="rounded-full border border-emerald-200 bg-white/72 px-4 py-2.5 text-sm font-black text-emerald-900 shadow-sm transition hover:bg-white"
-                  >
-                    Start a new check-in
-                  </button>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(emptyDraft);
+                  setActionMessage("");
+                  setJustSaved(false);
+                  setIsFinishingSavedCheckin(false);
+                  setIsCheckingInAgain(true);
+                }}
+                className="mt-5 rounded-full border border-emerald-200 bg-white/72 px-4 py-2.5 text-sm font-black text-emerald-900 shadow-sm transition hover:bg-white"
+              >
+                Check in again
+              </button>
             </div>
           </div>
         </section>
@@ -404,18 +372,18 @@ export default function WellnessCheckinCandidate({
 
       {focusMode ? (
         <WellnessCheckinPreview
-          recentCheckins={isFinishingSavedCheckin ? resumeHistory : recentCheckins}
+          recentCheckins={recentCheckins}
           experienceMode={experienceMode}
           referenceCheckin={referenceCheckin}
           draft={draft}
           onDraftChange={setDraft}
           onSaveCandidate={handleSaveCandidate}
           onUpdateCandidate={handleUpdateCandidate}
-          hasSavedCheckin={isFinishingSavedCheckin}
+          hasSavedCheckin={false}
           actionMessage={actionMessage}
           writeEnabled={writeEnabled}
-          focusOnMount={isCheckingInAgain || isFinishingSavedCheckin}
-          resumeMode={isFinishingSavedCheckin}
+          focusOnMount={isCheckingInAgain}
+          resumeMode={false}
         />
       ) : null}
 
@@ -458,7 +426,7 @@ export default function WellnessCheckinCandidate({
               {!contextualReturn?.actionHref?.startsWith("/support") ? (
                 <Link href="/support" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Open support</Link>
               ) : null}
-              <Link href="/" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Done for now</Link>
+              <Link href="/living-signal/today" className="rounded-2xl border border-slate-700 px-5 py-4 font-black text-white hover:bg-slate-900">Done for now</Link>
             </div>
           </div>
         </section>
