@@ -103,13 +103,13 @@ export default function WellnessPage() {
 
   return (
     <AuthGate>
-      <main className="thrive-today-bg min-h-screen pb-36 text-slate-950">
+      <main className="min-h-screen bg-[radial-gradient(circle_at_12%_4%,rgba(173,235,220,.34),transparent_24rem),radial-gradient(circle_at_88%_18%,rgba(246,218,150,.30),transparent_22rem),linear-gradient(180deg,#edf5f0_0%,#e8f0ef_55%,#eaf1f2_100%)] pb-36 text-slate-950">
         <section className="mx-auto max-w-4xl px-3 pb-32 pt-3 sm:px-6 sm:pt-6">
           <header
-            className="thrive-ambient relative overflow-hidden rounded-[2rem] border border-white/65 bg-white/30 bg-cover bg-center px-5 py-5 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl sm:px-7 sm:py-6"
+            className="thrive-ambient relative min-h-[430px] overflow-hidden rounded-[2.4rem] border border-white/60 bg-cover bg-center px-5 py-6 shadow-[0_24px_70px_rgba(10,34,43,0.18)] sm:min-h-[500px] sm:px-8 sm:py-8"
             style={{
               backgroundImage:
-                "linear-gradient(180deg, rgba(247,250,244,0.60) 0%, rgba(236,244,236,0.52) 46%, rgba(5,41,51,0.30) 100%), url('https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&fm=jpg&q=88&w=1800')",
+                "linear-gradient(180deg, rgba(244,249,244,0.22) 0%, rgba(224,239,232,0.28) 42%, rgba(7,42,52,0.52) 100%), url('https://images.unsplash.com/photo-1770341989953-f3efb336f7eb?auto=format&fit=crop&fm=jpg&q=88&w=2200')",
             }}
           >
             <div className="thrive-orb thrive-orb-one" />
@@ -130,19 +130,19 @@ export default function WellnessPage() {
               </div>
             </div>
 
-            <div className="relative z-10 mt-7 max-w-2xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Check in</p>
-              <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">
+            <div className="relative z-10 mt-24 max-w-2xl sm:mt-32">
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#0f6f66]">Wellness</p>
+              <h1 className="mt-3 font-serif text-5xl font-black leading-[0.98] tracking-[-0.035em] text-[#0b3135] sm:text-7xl">
                 {heroText}
               </h1>
             </div>
           </header>
 
-          <section className="mt-3 rounded-[1.9rem] border border-white/70 bg-white/48 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl sm:p-5">
+          <section className="mt-5 rounded-[2.2rem] border border-white/70 bg-white/24 p-3 shadow-[0_22px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl sm:p-5">
             <WellnessCheckinCandidate onHeroChange={setHeroText} />
           </section>
 
-          <details className="mt-3 rounded-[1.5rem] border border-white/70 bg-white/36 px-4 py-3 text-sm text-slate-600 backdrop-blur-xl">
+          <details className="mt-5 rounded-[1.7rem] border border-white/70 bg-white/54 px-5 py-4 text-sm text-slate-600 shadow-sm backdrop-blur-2xl">
             <summary className="cursor-pointer list-none font-black text-emerald-900">About your check-in</summary>
             <p className="mt-3 leading-6">
               Your check-ins help THRIVE remember what has been happening, notice what changes or repeats, and offer ideas you can use or ignore. THRIVE offers supportive guidance, not clinical diagnosis or treatment decisions.
