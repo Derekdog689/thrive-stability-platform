@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { WellnessCheckinRow, WellnessDraft } from "./useWellnessCheckinCandidate";
 import type { WellnessFlowState, WellnessReflectionKey } from "./wellnessFlowMachine";
 import {
@@ -57,6 +59,35 @@ export default function WellnessExpandedExperience({
   onBackToQuick,
   onFinishExpanded,
 }: Props) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousHtmlOverscroll = html.style.overscrollBehavior;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+
+    html.classList.add("wellness-expanded-open");
+    body.classList.add("wellness-expanded-open");
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    body.style.overscrollBehavior = "none";
+
+    return () => {
+      html.classList.remove("wellness-expanded-open");
+      body.classList.remove("wellness-expanded-open");
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscroll;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+    };
+  }, []);
+
   const selectedSignals = flow.selectedSignals;
   const isSaving = flow.phase === "saving";
 
@@ -97,10 +128,10 @@ export default function WellnessExpandedExperience({
     onDraftChange(setReflectionValue(draft, key, value));
   }
 
-  return (
-    <div className="fixed inset-0 z-[90] overflow-y-auto bg-[#092f3b]/42 px-3 py-3 backdrop-blur-md motion-reduce:backdrop-blur-sm sm:px-6 sm:py-6">
-      <div className="mx-auto min-h-[calc(100vh-24px)] max-w-2xl overflow-hidden rounded-[2rem] border border-white/65 bg-[linear-gradient(180deg,rgba(247,244,235,.985),rgba(231,247,246,.985))] shadow-[0_30px_90px_rgba(4,25,34,.34)] transition-all duration-300 ease-out motion-reduce:transition-none sm:min-h-[calc(100vh-48px)]">
-        <div className="sticky top-0 z-10 border-b border-white/70 bg-[#f7f4eb]/92 px-5 py-4 backdrop-blur-2xl">
+  const overlay = (
+    <div className="fixed inset-0 z-[120] h-[100dvh] overflow-hidden bg-[#092f3b]/52 p-3 backdrop-blur-md motion-reduce:backdrop-blur-sm sm:p-6">
+      <div className="mx-auto grid h-full max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[2rem] border border-white/65 bg-[linear-gradient(180deg,rgba(247,244,235,.985),rgba(231,247,246,.985))] shadow-[0_30px_90px_rgba(4,25,34,.34)] transition-all duration-300 ease-out motion-reduce:transition-none">
+        <div className="z-10 border-b border-white/70 bg-[#f7f4eb]/94 px-5 py-4 backdrop-blur-2xl">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#167d86]">
@@ -133,7 +164,7 @@ export default function WellnessExpandedExperience({
           </div>
         </div>
 
-        <div className="px-5 pb-32 pt-5">
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-6 pt-5">
           {flow.phase === "depth_select" ? (
             <div className="animate-[fadeIn_.2s_ease-out] motion-reduce:animate-none">
               <div className="grid grid-cols-2 gap-3">
@@ -354,8 +385,8 @@ export default function WellnessExpandedExperience({
           ) : null}
         </div>
 
-        <div className="fixed inset-x-3 bottom-3 z-[95] mx-auto max-w-2xl sm:inset-x-6 sm:bottom-6">
-          <div className="rounded-[1.6rem] border border-white/80 bg-[#f7f4eb]/94 p-3 shadow-[0_18px_50px_rgba(4,25,34,.18)] backdrop-blur-2xl">
+        <div className="border-t border-white/75 bg-[#f7f4eb]/96 p-3 shadow-[0_-12px_34px_rgba(4,25,34,.08)] backdrop-blur-2xl">
+          <div>
             {flow.phase === "depth_select" ? (
               <div className="grid gap-2">
                 <button
@@ -443,4 +474,8 @@ export default function WellnessExpandedExperience({
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+
+  return createPortal(overlay, document.body);
 }
