@@ -10,7 +10,24 @@ import { toNumber, useParticipantFinancial } from "../../useParticipantFinancial
 import { useWellnessCheckinCandidate } from "../../wellness/useWellnessCheckinCandidate";
 import { LaneCard, SceneHero } from "../_components";
 
-type Mode = "morning" | "evening";
+type Mode = "auto" | "morning" | "evening";
+
+function easternHour() {
+  const hour = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    hour12: false,
+  }).format(new Date());
+
+  const parsed = Number(hour);
+  return Number.isFinite(parsed) ? parsed : 12;
+}
+
+function resolvedMode(mode: Mode): "morning" | "evening" {
+  if (mode !== "auto") return mode;
+  const hour = easternHour();
+  return hour >= 17 || hour < 5 ? "evening" : "morning";
+}
 
 function businessDateKey() {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -191,7 +208,8 @@ export default function LiveToday({ mode }: { mode: Mode }) {
     support.errorMessage ||
     financial.errorMessage;
 
-  const isEvening = mode === "evening";
+  const displayMode = resolvedMode(mode);
+  const isEvening = displayMode === "evening";
 
   return (
     <AuthGate>
