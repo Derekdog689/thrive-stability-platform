@@ -87,8 +87,8 @@ export default function RecoverySupportPage() {
                 icon="↗"
                 iconClass="ls-icon--money"
                 title="Build a routine"
-                copy="Keep this participant-owned for now. No completion is assumed."
-                href="/wellness"
+                copy="Build a simple recovery-support rhythm that fits your life"
+                href="/recovery-support/routine"
               />
             </div>
           </section>
