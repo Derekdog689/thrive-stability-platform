@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthGate from "../../AuthGate";
 import {
@@ -146,7 +146,7 @@ export default function ResourceDetailPage() {
         if (aType !== bType) return (aType === -1 ? 999 : aType) - (bType === -1 ? 999 : bType);
         return a.sort_order - b.sort_order;
       });
-  }, [detail, primaryPath, recoveryContext, recoveryIntent]);
+  }, [detail, primaryPath]);
 
   const otherPaths = useMemo(() => {
     if (!detail) return [];
