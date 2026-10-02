@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuthGate from "../../AuthGate";
 import {
@@ -146,7 +146,7 @@ export default function ResourceDetailPage() {
         if (aType !== bType) return (aType === -1 ? 999 : aType) - (bType === -1 ? 999 : bType);
         return a.sort_order - b.sort_order;
       });
-  }, [detail, primaryPath]);
+  }, [detail, primaryPath, recoveryContext, recoveryIntent]);
 
   const otherPaths = useMemo(() => {
     if (!detail) return [];
@@ -169,7 +169,7 @@ export default function ResourceDetailPage() {
             <div className="thrive-orb thrive-orb-two" />
 
             <div className="relative z-10 flex items-center justify-between gap-3">
-              <Link href="/resources" className="flex items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-2 text-xs font-black text-emerald-900 backdrop-blur-xl">
+              <Link href={backHref} className="flex items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-2 text-xs font-black text-emerald-900 backdrop-blur-xl">
                 <Icon name="back" className="h-4 w-4" />
                 Resources
               </Link>
@@ -213,7 +213,7 @@ export default function ResourceDetailPage() {
             <section className="mt-3 rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-sm backdrop-blur-2xl sm:p-6">
               <h1 className="text-2xl font-black text-emerald-950">This Resource is not available right now.</h1>
               <p className="mt-3 leading-6 text-slate-600">It may be paused or the link may be out of date.</p>
-              <Link href="/resources" className="mt-5 inline-flex rounded-full bg-emerald-700 px-5 py-3 font-black text-white shadow-[0_10px_24px_rgba(4,120,87,0.2)]">Browse Resources</Link>
+              <Link href={backHref} className="mt-5 inline-flex rounded-full bg-emerald-700 px-5 py-3 font-black text-white shadow-[0_10px_24px_rgba(4,120,87,0.2)]">{recoveryContext ? "Back to Recovery Resources" : "Browse Resources"}</Link>
             </section>
           ) : null}
 
