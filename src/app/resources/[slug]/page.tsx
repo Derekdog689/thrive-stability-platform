@@ -100,9 +100,21 @@ function actionLabel(path: ResourceAccessPath) {
 export default function ResourceDetailPage() {
   const params = useParams<{ slug: string }>();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+  const [recoveryContext, setRecoveryContext] = useState(false);
+  const [recoveryIntent, setRecoveryIntent] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailState | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    setRecoveryContext(query.get("context") === "recovery");
+    setRecoveryIntent(query.get("intent"));
+  }, []);
+
+  const backHref = recoveryContext
+    ? `/resources?context=recovery${recoveryIntent ? `&intent=${encodeURIComponent(recoveryIntent)}` : ""}`
+    : "/resources";
 
   useEffect(() => {
     let mounted = true;
@@ -157,8 +169,13 @@ export default function ResourceDetailPage() {
     if (!detail) return "/support";
     const supportParams = new URLSearchParams({ resource: detail.resource.resource_slug });
     if (primaryPath?.id) supportParams.set("path", primaryPath.id);
+    if (recoveryContext) {
+      supportParams.set("from", "recovery");
+      supportParams.set("context", "recovery");
+      if (recoveryIntent) supportParams.set("intent", recoveryIntent);
+    }
     return `/support?${supportParams.toString()}`;
-  }, [detail, primaryPath]);
+  }, [detail, primaryPath, recoveryContext, recoveryIntent]);
 
   return (
     <AuthGate>
