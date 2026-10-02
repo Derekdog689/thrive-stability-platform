@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";\nimport AuthGate from "../AuthGate";
+import { useEffect, useState } from "react";
+import AuthGate from "../AuthGate";
 import { LaneCard, SceneHero } from "../living-signal/_components";
 
 function carryWellnessContext(params: URLSearchParams) {
@@ -24,16 +24,22 @@ function carryWellnessContext(params: URLSearchParams) {
 }
 
 export default function RecoverySupportPage() {
-  const searchParams = useSearchParams();
-  const carried = carryWellnessContext(new URLSearchParams(searchParams.toString()));
+  const [supportHref, setSupportHref] = useState(
+    "/support?from=recovery&recoverySupport=could_use_support",
+  );
+
+  useEffect(() => {
+    const carried = carryWellnessContext(new URLSearchParams(window.location.search));
+    carried.set("from", "recovery");
+    carried.set(
+      "recoverySupport",
+      carried.get("recoverySupport") || "could_use_support",
+    );
+    setSupportHref(`/support?${carried.toString()}`);
+  }, []);
 
   const meetingHref = "/resources?context=recovery&intent=meeting";
   const readingHref = "/resources?context=recovery&intent=reading";
-
-  const supportParams = new URLSearchParams(carried);
-  supportParams.set("from", "recovery");
-  supportParams.set("recoverySupport", supportParams.get("recoverySupport") || "could_use_support");
-  const supportHref = `/support?${supportParams.toString()}`;
 
   return (
     <AuthGate>
@@ -42,7 +48,13 @@ export default function RecoverySupportPage() {
           <SceneHero
             scene="support"
             eyebrow="Recovery Support"
-            title={<>Real options.<br />Real people.</>}
+            title={
+              <>
+                Real options.
+                <br />
+                Real people.
+              </>
+            }
             copy="Choose what fits you. THRIVE can help you find a starting point without choosing a recovery path for you."
             rightLabel="Support"
           />
@@ -85,10 +97,15 @@ export default function RecoverySupportPage() {
             <p className="ls-section-title">Your choice stays yours</p>
             <h2 className="ls-h2">Different paths can fit different people.</h2>
             <p className="ls-body">
-              THRIVE can show verified starting points without ranking one recovery approach above another.
-              Opening a Resource does not mean you attended, read, contacted, or completed anything.
+              THRIVE can show verified starting points without ranking one recovery
+              approach above another. Opening a Resource does not mean you attended,
+              read, contacted, or completed anything.
             </p>
-            <Link href="/wellness" className="ls-button ls-button--light" style={{ marginTop: 14 }}>
+            <Link
+              href="/wellness"
+              className="ls-button ls-button--light"
+              style={{ marginTop: 14 }}
+            >
               Back to Wellness
             </Link>
           </section>
