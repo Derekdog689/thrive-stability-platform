@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import AuthGate from "../AuthGate";
 import {
   categoryLabel,
@@ -11,7 +10,14 @@ import {
   resourceCategories,
 } from "./resourceData";
 
-type IconName = "today" | "wellness" | "goal" | "money" | "support" | "resource" | "arrow";
+type IconName =
+  | "today"
+  | "wellness"
+  | "goal"
+  | "money"
+  | "support"
+  | "resource"
+  | "arrow";
 
 const meetingSubcategories = new Set([
   "mutual_support_meeting_finder",
@@ -23,7 +29,13 @@ const readingSubcategories = new Set([
   "recovery_literature",
 ]);
 
-function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: string }) {
+function Icon({
+  name,
+  className = "h-6 w-6",
+}: {
+  name: IconName;
+  className?: string;
+}) {
   const common = {
     className,
     viewBox: "0 0 24 24",
@@ -35,13 +47,55 @@ function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: str
     "aria-hidden": true,
   };
 
-  if (name === "today") return <svg {...common}><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10.5V20h13v-9.5" /><path d="M9.5 20v-5.5h5V20" /></svg>;
-  if (name === "wellness") return <svg {...common}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>;
-  if (name === "goal") return <svg {...common}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /><path d="m15 9 5-5M16.5 4H20v3.5" /></svg>;
-  if (name === "money") return <svg {...common}><rect x="3" y="6" width="18" height="12" rx="3" /><path d="M7 10h.01M17 14h.01" /><circle cx="12" cy="12" r="2.5" /></svg>;
-  if (name === "support") return <svg {...common}><path d="M20.8 5.8c-2-2-5.2-1.8-7 .3L12 8.2l-1.8-2.1c-1.8-2.1-5-2.3-7-.3-2.1 2.1-2 5.6.2 7.6L12 21l8.6-7.6c2.2-2 2.3-5.5.2-7.6Z" /></svg>;
-  if (name === "resource") return <svg {...common}><path d="M5 4.5h10.5A3.5 3.5 0 0 1 19 8v11.5H8.5A3.5 3.5 0 0 1 5 16V4.5Z" /><path d="M8.5 16H19M9 8h6M9 11h4" /></svg>;
-  return <svg {...common}><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
+  if (name === "today")
+    return (
+      <svg {...common}>
+        <path d="M3 11.5 12 4l9 7.5" />
+        <path d="M5.5 10.5V20h13v-9.5" />
+        <path d="M9.5 20v-5.5h5V20" />
+      </svg>
+    );
+  if (name === "wellness")
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      </svg>
+    );
+  if (name === "goal")
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="m15 9 5-5M16.5 4H20v3.5" />
+      </svg>
+    );
+  if (name === "money")
+    return (
+      <svg {...common}>
+        <rect x="3" y="6" width="18" height="12" rx="3" />
+        <path d="M7 10h.01M17 14h.01" />
+        <circle cx="12" cy="12" r="2.5" />
+      </svg>
+    );
+  if (name === "support")
+    return (
+      <svg {...common}>
+        <path d="M20.8 5.8c-2-2-5.2-1.8-7 .3L12 8.2l-1.8-2.1c-1.8-2.1-5-2.3-7-.3-2.1 2.1-2 5.6.2 7.6L12 21l8.6-7.6c2.2-2 2.3-5.5.2-7.6Z" />
+      </svg>
+    );
+  if (name === "resource")
+    return (
+      <svg {...common}>
+        <path d="M5 4.5h10.5A3.5 3.5 0 0 1 19 8v11.5H8.5A3.5 3.5 0 0 1 5 16V4.5Z" />
+        <path d="M8.5 16H19M9 8h6M9 11h4" />
+      </svg>
+    );
+  return (
+    <svg {...common}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
 }
 
 function ParticipantBottomNav() {
@@ -57,9 +111,15 @@ function ParticipantBottomNav() {
     <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-2xl rounded-[1.75rem] border border-white/75 bg-white/78 px-1.5 py-1.5 shadow-[0_18px_55px_rgba(15,23,42,0.18)] backdrop-blur-2xl sm:bottom-5">
       <div className="grid grid-cols-5 gap-1">
         {items.map((item) => (
-          <Link key={item.href} href={item.href} className="flex min-w-0 flex-col items-center justify-center rounded-[1.2rem] px-1 py-2 text-center text-slate-600 transition hover:bg-white/80 hover:text-emerald-900 active:scale-95">
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex min-w-0 flex-col items-center justify-center rounded-[1.2rem] px-1 py-2 text-center text-slate-600 transition hover:bg-white/80 hover:text-emerald-900 active:scale-95"
+          >
             <Icon name={item.icon} className="h-5 w-5" />
-            <span className="mt-1 truncate text-[9px] font-black uppercase tracking-wide sm:text-xs">{item.label}</span>
+            <span className="mt-1 truncate text-[9px] font-black uppercase tracking-wide sm:text-xs">
+              {item.label}
+            </span>
           </Link>
         ))}
       </div>
@@ -68,19 +128,22 @@ function ParticipantBottomNav() {
 }
 
 export default function ResourcesPage() {
-  const searchParams = useSearchParams();
-  const context = searchParams.get("context");
-  const intent = searchParams.get("intent");
+  const [context, setContext] = useState<string | null>(null);
+  const [intent, setIntent] = useState<string | null>(null);
+  const [resources, setResources] = useState<ParticipantResource[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
   const recoveryContext = context === "recovery";
   const recoveryMeetingIntent = recoveryContext && intent === "meeting";
   const recoveryReadingIntent = recoveryContext && intent === "reading";
 
-  const [resources, setResources] = useState<ParticipantResource[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    recoveryContext ? "recovery_community_support" : "",
-  );
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    setContext(query.get("context"));
+    setIntent(query.get("intent"));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -95,7 +158,9 @@ export default function ResourcesPage() {
         setResources(rows);
       } catch (error) {
         if (!mounted) return;
-        setErrorMessage(error instanceof Error ? error.message : "Resources could not be loaded.");
+        setErrorMessage(
+          error instanceof Error ? error.message : "Resources could not be loaded.",
+        );
       } finally {
         if (mounted) setLoading(false);
       }
@@ -109,11 +174,16 @@ export default function ResourcesPage() {
   }, []);
 
   useEffect(() => {
-    if (recoveryContext) setSelectedCategory("recovery_community_support");
+    if (recoveryContext) {
+      setSelectedCategory("recovery_community_support");
+    }
   }, [recoveryContext, intent]);
 
   const availableCategories = useMemo(
-    () => resourceCategories.filter((category) => resources.some((resource) => resource.category === category.id)),
+    () =>
+      resourceCategories.filter((category) =>
+        resources.some((resource) => resource.category === category.id),
+      ),
     [resources],
   );
 
@@ -123,15 +193,28 @@ export default function ResourcesPage() {
       : resources;
 
     if (recoveryMeetingIntent) {
-      rows = rows.filter((resource) => resource.subcategory && meetingSubcategories.has(resource.subcategory));
+      rows = rows.filter(
+        (resource) =>
+          resource.subcategory &&
+          meetingSubcategories.has(resource.subcategory),
+      );
     }
 
     if (recoveryReadingIntent) {
-      rows = rows.filter((resource) => resource.subcategory && readingSubcategories.has(resource.subcategory));
+      rows = rows.filter(
+        (resource) =>
+          resource.subcategory &&
+          readingSubcategories.has(resource.subcategory),
+      );
     }
 
     return rows;
-  }, [resources, selectedCategory, recoveryMeetingIntent, recoveryReadingIntent]);
+  }, [
+    resources,
+    selectedCategory,
+    recoveryMeetingIntent,
+    recoveryReadingIntent,
+  ]);
 
   const heroTitle = recoveryMeetingIntent
     ? "You asked for a meeting."
@@ -156,7 +239,10 @@ export default function ResourcesPage() {
     : "Choose another topic to see the Resources currently available to you.";
 
   function detailHref(resource: ParticipantResource) {
-    if (!recoveryContext) return `/resources/${resource.resource_slug}`;
+    if (!recoveryContext) {
+      return `/resources/${resource.resource_slug}`;
+    }
+
     const params = new URLSearchParams({ context: "recovery" });
     if (intent) params.set("intent", intent);
     return `/resources/${resource.resource_slug}?${params.toString()}`;
@@ -171,10 +257,17 @@ export default function ResourcesPage() {
             <div className="thrive-orb thrive-orb-two" />
 
             <div className="relative z-10 flex items-center justify-between gap-3">
-              <Link href={recoveryContext ? "/recovery-support" : "/"} className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/72 text-base font-black text-emerald-900 shadow-sm">T</div>
+              <Link
+                href={recoveryContext ? "/recovery-support" : "/"}
+                className="flex items-center gap-2.5"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/72 text-base font-black text-emerald-900 shadow-sm">
+                  T
+                </div>
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-800">DSS Enterprises</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-800">
+                    DSS Enterprises
+                  </p>
                   <p className="text-xs font-black text-emerald-950">THRIVE</p>
                 </div>
               </Link>
@@ -189,25 +282,73 @@ export default function ResourcesPage() {
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">
                 {recoveryContext ? "Recovery Support" : "Trusted starting points"}
               </p>
-              <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">{heroTitle}</h1>
-              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">{heroCopy}</p>
+              <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">
+                {heroTitle}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
+                {heroCopy}
+              </p>
             </div>
           </header>
 
           {recoveryContext ? (
             <section className="mt-3 rounded-[1.7rem] border border-white/70 bg-white/40 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl">
               <div className="flex flex-wrap gap-2">
-                <Link href="/resources?context=recovery&intent=meeting" className={`rounded-full border px-4 py-2 text-sm font-black ${recoveryMeetingIntent ? "border-emerald-700 bg-emerald-700 text-white" : "border-white/80 bg-white/62 text-slate-700"}`}>Find a meeting</Link>
-                <Link href="/resources?context=recovery&intent=reading" className={`rounded-full border px-4 py-2 text-sm font-black ${recoveryReadingIntent ? "border-emerald-700 bg-emerald-700 text-white" : "border-white/80 bg-white/62 text-slate-700"}`}>Read something</Link>
-                <Link href="/resources" className="rounded-full border border-white/80 bg-white/62 px-4 py-2 text-sm font-black text-slate-700">Browse all Resources</Link>
+                <Link
+                  href="/resources?context=recovery&intent=meeting"
+                  className={`rounded-full border px-4 py-2 text-sm font-black ${
+                    recoveryMeetingIntent
+                      ? "border-emerald-700 bg-emerald-700 text-white"
+                      : "border-white/80 bg-white/62 text-slate-700"
+                  }`}
+                >
+                  Find a meeting
+                </Link>
+                <Link
+                  href="/resources?context=recovery&intent=reading"
+                  className={`rounded-full border px-4 py-2 text-sm font-black ${
+                    recoveryReadingIntent
+                      ? "border-emerald-700 bg-emerald-700 text-white"
+                      : "border-white/80 bg-white/62 text-slate-700"
+                  }`}
+                >
+                  Read something
+                </Link>
+                <Link
+                  href="/resources"
+                  className="rounded-full border border-white/80 bg-white/62 px-4 py-2 text-sm font-black text-slate-700"
+                >
+                  Browse all Resources
+                </Link>
               </div>
             </section>
           ) : !loading && !errorMessage && resources.length > 0 ? (
             <section className="mt-3 rounded-[1.7rem] border border-white/70 bg-white/40 p-3 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl sm:p-4">
               <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <button type="button" onClick={() => setSelectedCategory("")} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition active:scale-95 ${selectedCategory === "" ? "border-emerald-700 bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.2)]" : "border-white/80 bg-white/62 text-slate-700 hover:bg-white/85"}`}>All</button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("")}
+                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition active:scale-95 ${
+                    selectedCategory === ""
+                      ? "border-emerald-700 bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.2)]"
+                      : "border-white/80 bg-white/62 text-slate-700 hover:bg-white/85"
+                  }`}
+                >
+                  All
+                </button>
                 {availableCategories.map((category) => (
-                  <button key={category.id} type="button" onClick={() => setSelectedCategory(category.id)} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition active:scale-95 ${selectedCategory === category.id ? "border-emerald-700 bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.2)]" : "border-white/80 bg-white/62 text-slate-700 hover:bg-white/85"}`}>{category.label}</button>
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition active:scale-95 ${
+                      selectedCategory === category.id
+                        ? "border-emerald-700 bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.2)]"
+                        : "border-white/80 bg-white/62 text-slate-700 hover:bg-white/85"
+                    }`}
+                  >
+                    {category.label}
+                  </button>
                 ))}
               </div>
             </section>
@@ -215,22 +356,40 @@ export default function ResourcesPage() {
 
           {loading ? (
             <section className="mt-3 rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-sm backdrop-blur-2xl">
-              <p className="font-black text-emerald-950">Getting Resources ready...</p>
+              <p className="font-black text-emerald-950">
+                Getting Resources ready...
+              </p>
             </section>
           ) : null}
 
           {errorMessage ? (
-            <section role="alert" className="mt-3 rounded-[1.8rem] border border-rose-200 bg-rose-50/90 p-5 shadow-sm">
+            <section
+              role="alert"
+              className="mt-3 rounded-[1.8rem] border border-rose-200 bg-rose-50/90 p-5 shadow-sm"
+            >
               <p className="font-black">Resources could not be loaded.</p>
-              <p className="mt-2 text-sm leading-6 text-rose-800">{errorMessage}</p>
+              <p className="mt-2 text-sm leading-6 text-rose-800">
+                {errorMessage}
+              </p>
             </section>
           ) : null}
 
           {!loading && !errorMessage && visibleResources.length === 0 ? (
             <section className="mt-3 rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-sm backdrop-blur-2xl sm:p-6">
-              <h2 className="text-xl font-black text-emerald-950">{emptyTitle}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{emptyCopy}</p>
-              {recoveryContext ? <Link href="/recovery-support" className="mt-4 inline-flex rounded-full bg-emerald-700 px-4 py-2 text-sm font-black text-white">Back to Recovery Support</Link> : null}
+              <h2 className="text-xl font-black text-emerald-950">
+                {emptyTitle}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {emptyCopy}
+              </p>
+              {recoveryContext ? (
+                <Link
+                  href="/recovery-support"
+                  className="mt-4 inline-flex rounded-full bg-emerald-700 px-4 py-2 text-sm font-black text-white"
+                >
+                  Back to Recovery Support
+                </Link>
+              ) : null}
             </section>
           ) : null}
 
@@ -238,32 +397,62 @@ export default function ResourcesPage() {
             <section className="mt-3">
               <div className="mb-3 flex items-end justify-between gap-3 px-1">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Available now</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                    Available now
+                  </p>
                   <h2 className="mt-1 text-2xl font-black text-emerald-950">
-                    {recoveryMeetingIntent ? "Meeting support" : recoveryReadingIntent ? "Recovery reading" : selectedCategory ? categoryLabel(selectedCategory) : "Resources"}
+                    {recoveryMeetingIntent
+                      ? "Meeting support"
+                      : recoveryReadingIntent
+                        ? "Recovery reading"
+                        : selectedCategory
+                          ? categoryLabel(selectedCategory)
+                          : "Resources"}
                   </h2>
                 </div>
-                <span className="rounded-full border border-white/75 bg-white/55 px-3 py-1.5 text-xs font-black text-slate-600 backdrop-blur-xl">{visibleResources.length}</span>
+                <span className="rounded-full border border-white/75 bg-white/55 px-3 py-1.5 text-xs font-black text-slate-600 backdrop-blur-xl">
+                  {visibleResources.length}
+                </span>
               </div>
 
               <div className="grid gap-3 lg:grid-cols-2">
                 {visibleResources.map((resource) => (
-                  <Link key={resource.id} href={detailHref(resource)} className="group relative overflow-hidden rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl transition hover:bg-white/62 active:scale-[0.99] sm:p-6">
+                  <Link
+                    key={resource.id}
+                    href={detailHref(resource)}
+                    className="group relative overflow-hidden rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl transition hover:bg-white/62 active:scale-[0.99] sm:p-6"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wide">
-                          <span className="rounded-full bg-emerald-100/90 px-2.5 py-1 text-emerald-900">Official source</span>
-                          {resource.state_code ? <span className="rounded-full bg-white/75 px-2.5 py-1 text-slate-600">{resource.state_code}</span> : null}
+                          <span className="rounded-full bg-emerald-100/90 px-2.5 py-1 text-emerald-900">
+                            Official source
+                          </span>
+                          {resource.state_code ? (
+                            <span className="rounded-full bg-white/75 px-2.5 py-1 text-slate-600">
+                              {resource.state_code}
+                            </span>
+                          ) : null}
                         </div>
-                        <h3 className="mt-4 text-2xl font-black leading-tight text-emerald-950">{resource.resource_name}</h3>
-                        {resource.primaryOrganization ? <p className="mt-2 text-sm font-bold text-slate-500">{resource.primaryOrganization.organization_name}</p> : null}
+                        <h3 className="mt-4 text-2xl font-black leading-tight text-emerald-950">
+                          {resource.resource_name}
+                        </h3>
+                        {resource.primaryOrganization ? (
+                          <p className="mt-2 text-sm font-bold text-slate-500">
+                            {resource.primaryOrganization.organization_name}
+                          </p>
+                        ) : null}
                       </div>
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/72 text-emerald-900 shadow-sm transition group-hover:translate-x-0.5">
                         <Icon name="arrow" className="h-5 w-5" />
                       </div>
                     </div>
-                    <p className="mt-4 line-clamp-3 leading-6 text-slate-700">{resource.plain_language_purpose}</p>
-                    <p className="mt-4 text-xs font-black uppercase tracking-wide text-emerald-800">{categoryLabel(resource.category)}</p>
+                    <p className="mt-4 line-clamp-3 leading-6 text-slate-700">
+                      {resource.plain_language_purpose}
+                    </p>
+                    <p className="mt-4 text-xs font-black uppercase tracking-wide text-emerald-800">
+                      {categoryLabel(resource.category)}
+                    </p>
                   </Link>
                 ))}
               </div>
