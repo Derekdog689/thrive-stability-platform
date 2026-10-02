@@ -488,7 +488,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
                     }
                     className="rounded-[1.35rem] border border-[#6f5bd3]/25 bg-[#6f5bd3]/18 px-5 py-4 text-left font-black text-white"
                   >
-                    Open Support
+                    {contextualReturn?.actionLabel ?? "Open Support"}
                   </button>
                 ) : null}
                 {pauseRelevant ? (
