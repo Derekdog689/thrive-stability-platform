@@ -60,11 +60,28 @@ The current application foundations are functioning across:
 
 The current challenge is no longer basic capability.
 
-The current challenge is **participant value, continuity, visual life, follow-up, and usefulness after input is collected**.
+The current challenge is **participant value, continuity, real-world movement, follow-up, and usefulness after input is collected**.
 
-The active experience-reset roadmap is:
+The Experience Reset / Living Signal direction is now the accepted product north star. The current build sequence is no longer visual exploration for its own sake; it is proving the functional loop represented by the accepted vision:
 
-`docs/THRIVE_EXPERIENCE_RESET_ROADMAP_v1_0.md`
+```text
+need
+→ option
+→ participant choice
+→ action
+→ follow-up
+→ adaptation
+→ visible progress
+→ Story
+```
+
+Current working checkpoints:
+
+- `docs/THRIVE_EXPERIENCE_RESET_ROADMAP_v1_0.md`
+- `docs/THRIVE_WELLNESS_TODAY_FREEZE_2026-10-01.md`
+- `docs/THRIVE_GOALS_PAUSE_CHECKPOINT_2026-10-01.md`
+- `docs/THRIVE_RESOURCES_SCOPE_AUDIENCE_v0_1.md`
+- `docs/THRIVE_ENGINE_TO_VISION_RECONCILIATION_CHECKPOINT_2026-10-01.md`
 
 Supporting design candidates remain preserved as historical design evidence:
 
@@ -571,29 +588,35 @@ After experience validation:
 
 ## Current Gate
 
-Approved:
+Approved and reconciled:
 
-- Experience Reset roadmap direction;
-- visual exploration direction;
-- Recovery Support proving-ground direction;
-- consolidation into a single roadmap;
-- README evolution.
+- Experience Reset / Living Signal product direction;
+- Wellness + Today frozen participant-facing baseline;
+- Goals presentation pause while the Resources / Support lane is active;
+- Resources scope, audience, verification standard, and first-wave cap;
+- Engine-to-Vision Fit Map working basis;
+- preservation of the August 25 database system checkpoint as historical truth.
+
+Current active lane:
+
+> **Resources / Recovery Support infrastructure and participant movement**
+
+The immediate gate is:
+
+> **Verified Candidate Catalog v0.1 + smallest Recovery Support proving slice against the existing engine**
+
+At this gate, prefer existing engine capability first. Do not add persistence or schema simply because the richer experience suggests it.
 
 Not yet approved:
 
-- production implementation;
-- schema changes;
-- Trust Engine changes;
-- new resource persistence;
+- new Resource interaction persistence;
 - location persistence;
-- deployment;
-- merge to `main`.
+- broad Story persistence;
+- Trust Engine changes;
+- Johnny activation;
+- a new system-level database checkpoint.
 
-The next gate is:
-
-> **review-only visual direction board / screen mockups + smallest Recovery Support implementation reconciliation**
-
-No production implementation should occur until that candidate is separately approved.
+Johnny activation follows only after the functional Living Signal loop is sufficiently real for meaningful participant use. After activation, the plan is a real-use pressure test, full reconciliation, SWOT/gap analysis, architectural promotion decisions, and only then consideration of the next database system checkpoint.
 
 ---
 
@@ -616,13 +639,19 @@ Current stack includes:
 
 ## Current Checkpoint
 
-Production `main` remains at:
+The database checkpoint **THRIVE_SYSTEM_BASELINE_V1 v1.0.0 (2026-08-25)** remains preserved as the historical known-good system state it certified. It is not retroactively expanded by later product work.
 
-`df36d74ae220680a21fced17d372528b6e91b656`
+The current repository working checkpoint is:
 
-The Experience Reset documentation work is being prepared on a review branch and is not production behavior.
+`docs/THRIVE_ENGINE_TO_VISION_RECONCILIATION_CHECKPOINT_2026-10-01.md`
 
-No production SQL, schema change, Trust Engine synchronization, service-role action, or deployment is implied by the experience-reset documentation.
+Current working branch:
+
+`feature/resources-scope-catalog-v0-1`
+
+This repository checkpoint records the evolved product direction and current sequence. It does not create or revise a database checkpoint.
+
+No production SQL, new schema, Trust Engine synchronization, Johnny activation, or system-baseline promotion is implied by this repository checkpoint.
 
 ---
 
