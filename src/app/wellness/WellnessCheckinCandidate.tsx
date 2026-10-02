@@ -27,7 +27,18 @@ function formatValue(value: string | null | undefined) {
   return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-function nextStepLabel(value: string | null | undefined) {
+function nextStepLabel(
+  value: string | null | undefined,
+  checkin?: Pick<WellnessCheckinRow, "recovery_support" | "support_needed"> | null,
+) {
+  if (
+    value === "ask_for_help" &&
+    checkin?.recovery_support === "could_use_support" &&
+    checkin.support_needed !== "yes"
+  ) {
+    return "Explore Recovery Support";
+  }
+
   const labels: Record<string, string> = {
     review_today_plan: "Keep one thing steady",
     choose_one_task: "Do one useful thing",
@@ -358,7 +369,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
                   You chose
                 </p>
                 <p className="mt-1 font-black text-[#173644]">
-                  {nextStepLabel(todayCheckin.chosen_next_step)}
+                  {nextStepLabel(todayCheckin.chosen_next_step, todayCheckin)}
                 </p>
               </div>
             ) : null}
@@ -616,7 +627,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
                     ) : null}
                     {checkin.chosen_next_step ? (
                       <p className="mt-3 text-sm font-bold text-slate-700">
-                        Chose: {nextStepLabel(checkin.chosen_next_step)}
+                        Chose: {nextStepLabel(checkin.chosen_next_step, checkin)}
                       </p>
                     ) : null}
                     {checkin.participant_note ? (
