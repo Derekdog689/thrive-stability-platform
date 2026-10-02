@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import AuthGate from "../AuthGate";
 import {
   categoryLabel,
@@ -11,6 +12,16 @@ import {
 } from "./resourceData";
 
 type IconName = "today" | "wellness" | "goal" | "money" | "support" | "resource" | "arrow";
+
+const meetingSubcategories = new Set([
+  "mutual_support_meeting_finder",
+  "christ_centered_mutual_support",
+]);
+
+const readingSubcategories = new Set([
+  "recovery_reading",
+  "recovery_literature",
+]);
 
 function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: string }) {
   const common = {
@@ -57,8 +68,17 @@ function ParticipantBottomNav() {
 }
 
 export default function ResourcesPage() {
+  const searchParams = useSearchParams();
+  const context = searchParams.get("context");
+  const intent = searchParams.get("intent");
+  const recoveryContext = context === "recovery";
+  const recoveryMeetingIntent = recoveryContext && intent === "meeting";
+  const recoveryReadingIntent = recoveryContext && intent === "reading";
+
   const [resources, setResources] = useState<ParticipantResource[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    recoveryContext ? "recovery_community_support" : "",
+  );
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -88,15 +108,59 @@ export default function ResourcesPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (recoveryContext) setSelectedCategory("recovery_community_support");
+  }, [recoveryContext, intent]);
+
   const availableCategories = useMemo(
     () => resourceCategories.filter((category) => resources.some((resource) => resource.category === category.id)),
     [resources],
   );
 
-  const visibleResources = useMemo(
-    () => selectedCategory ? resources.filter((resource) => resource.category === selectedCategory) : resources,
-    [resources, selectedCategory],
-  );
+  const visibleResources = useMemo(() => {
+    let rows = selectedCategory
+      ? resources.filter((resource) => resource.category === selectedCategory)
+      : resources;
+
+    if (recoveryMeetingIntent) {
+      rows = rows.filter((resource) => resource.subcategory && meetingSubcategories.has(resource.subcategory));
+    }
+
+    if (recoveryReadingIntent) {
+      rows = rows.filter((resource) => resource.subcategory && readingSubcategories.has(resource.subcategory));
+    }
+
+    return rows;
+  }, [resources, selectedCategory, recoveryMeetingIntent, recoveryReadingIntent]);
+
+  const heroTitle = recoveryMeetingIntent
+    ? "You asked for a meeting."
+    : recoveryReadingIntent
+      ? "Looking for something to read?"
+      : "What do you need today?";
+
+  const heroCopy = recoveryMeetingIntent
+    ? "Here are verified recovery-support starting points. Choose what fits you."
+    : recoveryReadingIntent
+      ? "Here are official recovery reading and literature sources you can open now."
+      : "Pick a topic to see available places to start.";
+
+  const emptyTitle = recoveryMeetingIntent
+    ? "No verified meeting starting points are active here yet."
+    : recoveryReadingIntent
+      ? "No verified recovery reading sources are active here yet."
+      : "Nothing available in this topic right now.";
+
+  const emptyCopy = recoveryContext
+    ? "You can go back to Recovery Support or browse the full Resource library."
+    : "Choose another topic to see the Resources currently available to you.";
+
+  function detailHref(resource: ParticipantResource) {
+    if (!recoveryContext) return `/resources/${resource.resource_slug}`;
+    const params = new URLSearchParams({ context: "recovery" });
+    if (intent) params.set("intent", intent);
+    return `/resources/${resource.resource_slug}?${params.toString()}`;
+  }
 
   return (
     <AuthGate>
@@ -107,7 +171,7 @@ export default function ResourcesPage() {
             <div className="thrive-orb thrive-orb-two" />
 
             <div className="relative z-10 flex items-center justify-between gap-3">
-              <Link href="/" className="flex items-center gap-2.5">
+              <Link href={recoveryContext ? "/recovery-support" : "/"} className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/72 text-base font-black text-emerald-900 shadow-sm">T</div>
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-800">DSS Enterprises</p>
@@ -117,38 +181,33 @@ export default function ResourcesPage() {
 
               <div className="flex items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-2 text-xs font-black text-emerald-900 backdrop-blur-xl">
                 <Icon name="resource" className="h-5 w-5" />
-                Resources
+                {recoveryContext ? "Recovery Resources" : "Resources"}
               </div>
             </div>
 
             <div className="relative z-10 mt-7 max-w-3xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Trusted starting points</p>
-              <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">What do you need today?</h1>
-              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
-                Pick a topic to see available places to start.
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">
+                {recoveryContext ? "Recovery Support" : "Trusted starting points"}
               </p>
+              <h1 className="mt-2 font-serif text-4xl font-black tracking-tight text-emerald-950 sm:text-6xl">{heroTitle}</h1>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">{heroCopy}</p>
             </div>
           </header>
 
-          {!loading && !errorMessage && resources.length > 0 ? (
+          {recoveryContext ? (
+            <section className="mt-3 rounded-[1.7rem] border border-white/70 bg-white/40 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl">
+              <div className="flex flex-wrap gap-2">
+                <Link href="/resources?context=recovery&intent=meeting" className={`rounded-full border px-4 py-2 text-sm font-black ${recoveryMeetingIntent ? "border-emerald-700 bg-emerald-700 text-white" : "border-white/80 bg-white/62 text-slate-700"}`}>Find a meeting</Link>
+                <Link href="/resources?context=recovery&intent=reading" className={`rounded-full border px-4 py-2 text-sm font-black ${recoveryReadingIntent ? "border-emerald-700 bg-emerald-700 text-white" : "border-white/80 bg-white/62 text-slate-700"}`}>Read something</Link>
+                <Link href="/resources" className="rounded-full border border-white/80 bg-white/62 px-4 py-2 text-sm font-black text-slate-700">Browse all Resources</Link>
+              </div>
+            </section>
+          ) : !loading && !errorMessage && resources.length > 0 ? (
             <section className="mt-3 rounded-[1.7rem] border border-white/70 bg-white/40 p-3 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl sm:p-4">
               <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategory("")}
-                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition active:scale-95 ${selectedCategory === "" ? "border-emerald-700 bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.2)]" : "border-white/80 bg-white/62 text-slate-700 hover:bg-white/85"}`}
-                >
-                  All
-                </button>
+                <button type="button" onClick={() => setSelectedCategory("")} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition active:scale-95 ${selectedCategory === "" ? "border-emerald-700 bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.2)]" : "border-white/80 bg-white/62 text-slate-700 hover:bg-white/85"}`}>All</button>
                 {availableCategories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition active:scale-95 ${selectedCategory === category.id ? "border-emerald-700 bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.2)]" : "border-white/80 bg-white/62 text-slate-700 hover:bg-white/85"}`}
-                  >
-                    {category.label}
-                  </button>
+                  <button key={category.id} type="button" onClick={() => setSelectedCategory(category.id)} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition active:scale-95 ${selectedCategory === category.id ? "border-emerald-700 bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.2)]" : "border-white/80 bg-white/62 text-slate-700 hover:bg-white/85"}`}>{category.label}</button>
                 ))}
               </div>
             </section>
@@ -169,8 +228,9 @@ export default function ResourcesPage() {
 
           {!loading && !errorMessage && visibleResources.length === 0 ? (
             <section className="mt-3 rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-sm backdrop-blur-2xl sm:p-6">
-              <h2 className="text-xl font-black text-emerald-950">Nothing available in this topic right now.</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Choose another topic to see the Resources currently available to you.</p>
+              <h2 className="text-xl font-black text-emerald-950">{emptyTitle}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{emptyCopy}</p>
+              {recoveryContext ? <Link href="/recovery-support" className="mt-4 inline-flex rounded-full bg-emerald-700 px-4 py-2 text-sm font-black text-white">Back to Recovery Support</Link> : null}
             </section>
           ) : null}
 
@@ -179,18 +239,16 @@ export default function ResourcesPage() {
               <div className="mb-3 flex items-end justify-between gap-3 px-1">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Available now</p>
-                  <h2 className="mt-1 text-2xl font-black text-emerald-950">{selectedCategory ? categoryLabel(selectedCategory) : "Resources"}</h2>
+                  <h2 className="mt-1 text-2xl font-black text-emerald-950">
+                    {recoveryMeetingIntent ? "Meeting support" : recoveryReadingIntent ? "Recovery reading" : selectedCategory ? categoryLabel(selectedCategory) : "Resources"}
+                  </h2>
                 </div>
                 <span className="rounded-full border border-white/75 bg-white/55 px-3 py-1.5 text-xs font-black text-slate-600 backdrop-blur-xl">{visibleResources.length}</span>
               </div>
 
               <div className="grid gap-3 lg:grid-cols-2">
                 {visibleResources.map((resource) => (
-                  <Link
-                    key={resource.id}
-                    href={`/resources/${resource.resource_slug}`}
-                    className="group relative overflow-hidden rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl transition hover:bg-white/62 active:scale-[0.99] sm:p-6"
-                  >
+                  <Link key={resource.id} href={detailHref(resource)} className="group relative overflow-hidden rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-2xl transition hover:bg-white/62 active:scale-[0.99] sm:p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wide">
