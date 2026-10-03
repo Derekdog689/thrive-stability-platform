@@ -221,7 +221,7 @@ export function buildStoryReadModel({
       dateKey,
       title: supportStatusLabel(event.to_status),
       detail: "A Support request changed status.",
-      href: "/support",
+      href: `/support?request=${encodeURIComponent(event.support_request_id)}`,
     });
   }
 
@@ -266,7 +266,7 @@ export function buildStoryReadModel({
       lane: "Support",
       title: "Support request",
       detail: currentSupportLabel(unresolvedSupport.status),
-      href: "/support",
+      href: `/support?request=${encodeURIComponent(unresolvedSupport.id)}`,
     });
   }
 
