@@ -18,7 +18,7 @@ type PrimaryAction = {
   label: string;
   title: string;
   detail: string;
-  href: "/wellness" | "/goals" | "/budget" | "/support" | "/living-signal/today";
+  href: string;
   action: string;
 };
 
@@ -278,7 +278,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
         title: "Your starter Money plan is ready",
         detail:
           "Review what Support prepared. Change anything you want before you use it.",
-        href: "/budget",
+        href: `/budget?review=${encodeURIComponent(assistedBudgetReviewLink.budget_period_id)}`,
         action: "Review plan",
       };
     }
@@ -299,7 +299,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
         title: "Your Money plan ended",
         detail:
           "Review the finished plan when you are ready to set up the next one.",
-        href: "/budget",
+        href: `/budget?review=${encodeURIComponent(activeBudgetPeriod.id)}`,
         action: "Review Money",
       };
     }

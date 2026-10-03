@@ -206,7 +206,7 @@ export function buildStoryReadModel({
       dateKey,
       title: "Money plan completed",
       detail: `${period.period_start} through ${period.period_end}`,
-      href: "/budget",
+      href: `/budget?review=${encodeURIComponent(period.id)}`,
     });
   }
 
