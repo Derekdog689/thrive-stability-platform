@@ -233,11 +233,15 @@ export default function MoneyCandidatePage() {
   const reviewPeriod = reviewBudgetPeriodId
     ? budgetPeriods.find((period) => period.id === reviewBudgetPeriodId) ?? null
     : null;
-  const activePeriod = reviewPeriod?.status === "active"
-    ? reviewPeriod
+  const activePeriod = reviewPeriod
+    ? reviewPeriod.status === "active"
+      ? reviewPeriod
+      : null
     : budgetPeriods.find((period) => period.status === "active") ?? null;
-  const draftPeriod = reviewPeriod?.status === "draft"
-    ? reviewPeriod
+  const draftPeriod = reviewPeriod
+    ? reviewPeriod.status === "draft"
+      ? reviewPeriod
+      : null
     : budgetPeriods.find((period) => period.status === "draft") ?? null;
   const completedPeriods = budgetPeriods
     .filter((period) => period.status === "completed")
@@ -246,8 +250,16 @@ export default function MoneyCandidatePage() {
       const bKey = b.completed_at ?? b.period_end;
       return bKey.localeCompare(aKey);
     });
-  const latestCompletedPeriod = completedPeriods[0] ?? null;
-  const previousCompletedPeriod = completedPeriods[1] ?? null;
+  const selectedCompletedPeriod =
+    reviewPeriod?.status === "completed" ? reviewPeriod : null;
+  const selectedCompletedIndex = selectedCompletedPeriod
+    ? completedPeriods.findIndex((period) => period.id === selectedCompletedPeriod.id)
+    : -1;
+  const latestCompletedPeriod = selectedCompletedPeriod ?? completedPeriods[0] ?? null;
+  const previousCompletedPeriod =
+    selectedCompletedIndex >= 0
+      ? completedPeriods[selectedCompletedIndex + 1] ?? null
+      : completedPeriods[1] ?? null;
   const activeLines = activePeriod ? budgetLines.filter((line) => line.budget_period_id === activePeriod.id && line.is_active) : [];
   const draftLines = draftPeriod ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id && line.is_active) : [];
   const latestCompletedLines = latestCompletedPeriod
@@ -354,9 +366,36 @@ export default function MoneyCandidatePage() {
     const reviewId = new URLSearchParams(window.location.search).get("review")?.trim() ?? "";
     if (!reviewId) return;
     setReviewBudgetPeriodId(reviewId);
-    setShowPlanSetup(true);
-    setFocusDraftPlan(true);
   }, []);
+
+  useEffect(() => {
+    if (loading || !reviewPeriod) return;
+
+    if (reviewPeriod.status === "draft") {
+      setShowPlanSetup(true);
+      setFocusDraftPlan(true);
+      return;
+    }
+
+    if (reviewPeriod.status !== "completed") return;
+
+    setShowPlanSetup(false);
+
+    const moveToCompletedPlan = () => {
+      const target = document.getElementById("completed-money-plan");
+      if (!target) return;
+      const top = window.scrollY + target.getBoundingClientRect().top - 76;
+      window.scrollTo({ top: Math.max(top, 0), behavior: "auto" });
+    };
+
+    const firstPass = window.setTimeout(moveToCompletedPlan, 80);
+    const settlePass = window.setTimeout(moveToCompletedPlan, 420);
+
+    return () => {
+      window.clearTimeout(firstPass);
+      window.clearTimeout(settlePass);
+    };
+  }, [loading, reviewPeriod]);
 
   useEffect(() => {
     if (!focusDraftPlan || !draftPeriod || !showPlanSetup || loading) return;
@@ -646,10 +685,10 @@ export default function MoneyCandidatePage() {
       </div> : null}
     </section> : null}
 
-    {!loading && !errorMessage && !activePeriod && !draftPeriod && latestCompletedPeriod ? <section className="rounded-[2rem] border border-violet-100 bg-violet-50/70 p-5 shadow-sm backdrop-blur-xl sm:p-7">
+    {!loading && !errorMessage && !activePeriod && !draftPeriod && latestCompletedPeriod ? <section id="completed-money-plan" className="scroll-mt-24 rounded-[2rem] border border-violet-100 bg-violet-50/70 p-5 shadow-sm backdrop-blur-xl sm:p-7">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-violet-700">Last completed Money plan</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-violet-700">{selectedCompletedPeriod ? "Completed Money plan" : "Last completed Money plan"}</p>
           <h2 className="mt-2 text-3xl font-black text-violet-950">Here is what happened.</h2>
           <p className="mt-2 text-sm font-semibold leading-6 text-violet-900">{formatDate(latestCompletedPeriod.period_start)} to {formatDate(latestCompletedPeriod.period_end)}</p>
         </div>
