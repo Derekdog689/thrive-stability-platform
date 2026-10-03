@@ -29,6 +29,18 @@ const readingSubcategories = new Set([
   "recovery_literature",
 ]);
 
+const recoveryMeetingResourceNames = new Set([
+  "Alcoholics Anonymous Meeting Support",
+  "Narcotics Anonymous Meeting Support",
+  "SMART Recovery Meeting Finder",
+  "Celebrate Recovery Group Support",
+]);
+
+const recoveryReadingResourceNames = new Set([
+  "A.A. Daily Reflections",
+  "NA Recovery Literature",
+]);
+
 function Icon({
   name,
   className = "h-6 w-6",
@@ -195,16 +207,18 @@ export default function ResourcesPage() {
     if (recoveryMeetingIntent) {
       rows = rows.filter(
         (resource) =>
-          resource.subcategory &&
-          meetingSubcategories.has(resource.subcategory),
+          (resource.subcategory &&
+            meetingSubcategories.has(resource.subcategory)) ||
+          recoveryMeetingResourceNames.has(resource.resource_name),
       );
     }
 
     if (recoveryReadingIntent) {
       rows = rows.filter(
         (resource) =>
-          resource.subcategory &&
-          readingSubcategories.has(resource.subcategory),
+          (resource.subcategory &&
+            readingSubcategories.has(resource.subcategory)) ||
+          recoveryReadingResourceNames.has(resource.resource_name),
       );
     }
 
