@@ -10,8 +10,15 @@ type ResourceRow = {
   id: string;
   resource_name: string;
   category: string;
+  subcategory: string | null;
   plain_language_purpose: string;
   participant_boundary_note: string | null;
+  country_code: string | null;
+  state_code: string | null;
+  county_name: string | null;
+  service_area_text: string | null;
+  audience_text: string | null;
+  verification_cadence: string;
   status: string;
 };
 
@@ -30,6 +37,7 @@ type OrganizationRow = {
   organization_type: string;
   official_website_url: string | null;
   country_code: string | null;
+  status: string;
 };
 
 type OrganizationRoleRow = {
@@ -152,10 +160,21 @@ export default function ResourceMaintenancePage() {
   const [working, setWorking] = useState<string | null>(null);
   const [pageError, setPageError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showResourceEdit, setShowResourceEdit] = useState(false);
   const [showAuthorityForm, setShowAuthorityForm] = useState(false);
   const [showAccessForm, setShowAccessForm] = useState(false);
   const [showGuidanceForm, setShowGuidanceForm] = useState(false);
   const [showVerificationForm, setShowVerificationForm] = useState(false);
+  const [existingOrganizationId, setExistingOrganizationId] = useState("");
+  const [editingPathId, setEditingPathId] = useState<string | null>(null);
+  const [editingGuidanceId, setEditingGuidanceId] = useState<string | null>(null);
+
+  const [editResourceName, setEditResourceName] = useState("");
+  const [editResourcePurpose, setEditResourcePurpose] = useState("");
+  const [editResourceBoundary, setEditResourceBoundary] = useState("");
+  const [editResourceState, setEditResourceState] = useState("");
+  const [editResourceServiceArea, setEditResourceServiceArea] = useState("");
+  const [editResourceCadence, setEditResourceCadence] = useState("moderate");
 
   const [orgName, setOrgName] = useState("");
   const [orgType, setOrgType] = useState("government");
@@ -198,7 +217,7 @@ export default function ResourceMaintenancePage() {
       await Promise.all([
         supabase
           .from("resources")
-          .select("id, resource_name, category, plain_language_purpose, participant_boundary_note, status")
+          .select("id, resource_name, category, subcategory, plain_language_purpose, participant_boundary_note, country_code, state_code, county_name, service_area_text, audience_text, verification_cadence, status")
           .eq("id", resourceId)
           .maybeSingle(),
         supabase
@@ -251,21 +270,19 @@ export default function ResourceMaintenancePage() {
     }
 
     const roleRows = (roleResult.data as OrganizationRoleRow[] | null) ?? [];
-    const organizationIds = [...new Set(roleRows.map((row) => row.organization_id))];
-    let organizationRows: OrganizationRow[] = [];
+    const organizationResult = await supabase
+      .from("resource_organizations")
+      .select("id, organization_name, organization_type, official_website_url, country_code, status")
+      .eq("status", "active")
+      .order("organization_name");
 
-    if (organizationIds.length > 0) {
-      const organizationResult = await supabase
-        .from("resource_organizations")
-        .select("id, organization_name, organization_type, official_website_url, country_code")
-        .in("id", organizationIds);
-      if (organizationResult.error) {
-        setPageError(organizationResult.error.message);
-        setLoading(false);
-        return;
-      }
-      organizationRows = (organizationResult.data as OrganizationRow[] | null) ?? [];
+    if (organizationResult.error) {
+      setPageError(organizationResult.error.message);
+      setLoading(false);
+      return;
     }
+
+    const organizationRows = (organizationResult.data as OrganizationRow[] | null) ?? [];
 
     setResource(resourceRow);
     setVisibility((visibilityResult.data as VisibilityRow | null) ?? null);
@@ -294,6 +311,204 @@ export default function ResourceMaintenancePage() {
   );
   const activationReady =
     activeRoles.length > 0 && activePaths.length > 0 && currentAdminVerifications.length > 0;
+
+  function beginResourceEdit() {
+    if (!resource) return;
+    setEditResourceName(resource.resource_name);
+    setEditResourcePurpose(resource.plain_language_purpose);
+    setEditResourceBoundary(resource.participant_boundary_note ?? "");
+    setEditResourceState(resource.state_code ?? "");
+    setEditResourceServiceArea(resource.service_area_text ?? "");
+    setEditResourceCadence(resource.verification_cadence);
+    setShowResourceEdit(true);
+  }
+
+  async function saveResourceDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!resource || !editResourceName.trim() || !editResourcePurpose.trim()) return;
+
+    setWorking("resource");
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase.rpc("admin_update_resource_details", {
+      p_resource_id: resource.id,
+      p_resource_name: editResourceName.trim(),
+      p_category: resource.category,
+      p_subcategory: resource.subcategory,
+      p_plain_language_purpose: editResourcePurpose.trim(),
+      p_participant_boundary_note: editResourceBoundary.trim() || null,
+      p_country_code: resource.country_code ?? "US",
+      p_state_code: editResourceState.trim().toUpperCase() || null,
+      p_county_name: resource.county_name,
+      p_service_area_text: editResourceServiceArea.trim() || null,
+      p_audience_text: resource.audience_text,
+      p_verification_cadence: editResourceCadence,
+    });
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setNotice("Resource details updated. Nothing was deleted and visibility did not change.");
+    setShowResourceEdit(false);
+    await loadData();
+  }
+
+  async function linkExistingOrganization(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!resource || !currentUserId || !existingOrganizationId) return;
+
+    setWorking("existing-organization");
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase.from("resource_organization_roles").insert({
+      resource_id: resource.id,
+      organization_id: existingOrganizationId,
+      role_type: "primary_authority",
+      is_primary: activeRoles.length === 0,
+      status: "active",
+      created_by: currentUserId,
+    });
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setExistingOrganizationId("");
+    setNotice("Existing authority linked to this Resource.");
+    await loadData();
+  }
+
+  async function archiveOrganizationRole(role: OrganizationRoleRow) {
+    if (!resource) return;
+    const organization = organizationById.get(role.organization_id);
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Archive the authority link to ${organization?.organization_name ?? "this organization"}? The history stays in THRIVE.`,
+      )
+    ) {
+      return;
+    }
+
+    setWorking(`role-${role.id}`);
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase
+      .from("resource_organization_roles")
+      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .eq("id", role.id);
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setNotice("Authority link archived. Nothing was deleted.");
+    await loadData();
+  }
+
+  function beginAccessEdit(path: AccessPathRow) {
+    setEditingPathId(path.id);
+    setPathType(path.path_type);
+    setPathLabel(path.label);
+    setPathInstruction(path.plain_language_instruction ?? "");
+    setPathUrl(path.url ?? "");
+    setPathPhone(path.phone ?? "");
+    setPathEmail(path.email ?? "");
+    setPathOrganizationId(path.organization_id ?? "");
+    setShowAccessForm(true);
+  }
+
+  function resetAccessForm() {
+    setEditingPathId(null);
+    setPathType("landing_page");
+    setPathLabel("");
+    setPathInstruction("");
+    setPathUrl("");
+    setPathPhone("");
+    setPathEmail("");
+    setPathOrganizationId("");
+  }
+
+  async function archiveAccessPath(path: AccessPathRow) {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Archive ${path.label}? The record stays in THRIVE history.`)
+    ) {
+      return;
+    }
+
+    setWorking(`path-${path.id}`);
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase
+      .from("resource_access_paths")
+      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .eq("id", path.id);
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setNotice("Access path archived. Nothing was deleted.");
+    await loadData();
+  }
+
+  function beginGuidanceEdit(section: GuidanceRow) {
+    setEditingGuidanceId(section.id);
+    setGuidanceType(section.section_type);
+    setGuidanceHeading(section.heading);
+    setGuidanceContent(section.content);
+    setGuidanceSourcePathId(section.source_access_path_id ?? "");
+    setShowGuidanceForm(true);
+  }
+
+  function resetGuidanceForm() {
+    setEditingGuidanceId(null);
+    setGuidanceType("start_here");
+    setGuidanceHeading("");
+    setGuidanceContent("");
+    setGuidanceSourcePathId("");
+  }
+
+  async function archiveGuidance(section: GuidanceRow) {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Archive "${section.heading}"? The guidance stays in THRIVE history.`)
+    ) {
+      return;
+    }
+
+    setWorking(`guidance-${section.id}`);
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase
+      .from("resource_guidance_sections")
+      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .eq("id", section.id);
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setNotice("Guidance archived. Nothing was deleted.");
+    await loadData();
+  }
 
   async function addOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -337,8 +552,7 @@ export default function ResourceMaintenancePage() {
     setPageError("");
     setNotice("");
 
-    const { error } = await supabase.from("resource_access_paths").insert({
-      resource_id: resource.id,
+    const payload = {
       organization_id: pathOrganizationId || null,
       path_type: pathType,
       label: pathLabel.trim(),
@@ -346,14 +560,21 @@ export default function ResourceMaintenancePage() {
       url: pathUrl.trim() || null,
       phone: pathPhone.trim() || null,
       email: pathEmail.trim() || null,
-      country_code: "US",
-      state_code: null,
-      locality_text: null,
-      sort_order: activePaths.length,
-      is_primary: activePaths.length === 0,
-      status: "active",
-      created_by: currentUserId,
-    });
+    };
+
+    const { error } = editingPathId
+      ? await supabase.from("resource_access_paths").update(payload).eq("id", editingPathId)
+      : await supabase.from("resource_access_paths").insert({
+          resource_id: resource.id,
+          ...payload,
+          country_code: "US",
+          state_code: null,
+          locality_text: null,
+          sort_order: activePaths.length,
+          is_primary: activePaths.length === 0,
+          status: "active",
+          created_by: currentUserId,
+        });
 
     setWorking(null);
     if (error) {
@@ -361,12 +582,8 @@ export default function ResourceMaintenancePage() {
       return;
     }
 
-    setPathLabel("");
-    setPathInstruction("");
-    setPathUrl("");
-    setPathPhone("");
-    setPathEmail("");
-    setNotice("Official access path added. The Resource is still unpublished until activation.");
+    resetAccessForm();
+    setNotice(editingPathId ? "Access path updated." : "Official access path added. The Resource is still unpublished until activation.");
     setShowAccessForm(false);
     await loadData();
   }
@@ -379,16 +596,22 @@ export default function ResourceMaintenancePage() {
     setPageError("");
     setNotice("");
 
-    const { error } = await supabase.from("resource_guidance_sections").insert({
-      resource_id: resource.id,
+    const payload = {
       section_type: guidanceType,
       heading: guidanceHeading.trim(),
       content: guidanceContent.trim(),
       source_access_path_id: guidanceSourcePathId || null,
-      sort_order: activeGuidance.length,
-      status: "active",
-      created_by: currentUserId,
-    });
+    };
+
+    const { error } = editingGuidanceId
+      ? await supabase.from("resource_guidance_sections").update(payload).eq("id", editingGuidanceId)
+      : await supabase.from("resource_guidance_sections").insert({
+          resource_id: resource.id,
+          ...payload,
+          sort_order: activeGuidance.length,
+          status: "active",
+          created_by: currentUserId,
+        });
 
     setWorking(null);
     if (error) {
@@ -396,9 +619,8 @@ export default function ResourceMaintenancePage() {
       return;
     }
 
-    setGuidanceHeading("");
-    setGuidanceContent("");
-    setNotice("THRIVE guidance added. It does not publish the Resource by itself.");
+    resetGuidanceForm();
+    setNotice(editingGuidanceId ? "THRIVE guidance updated." : "THRIVE guidance added. It does not publish the Resource by itself.");
     setShowGuidanceForm(false);
     await loadData();
   }
