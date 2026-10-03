@@ -383,7 +383,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
                 ? "Wellness check-in"
                 : `${todayCheckins.length} Wellness check-ins`,
             copy: `Latest: ${daySignal(todayCheckins[0]?.overall_day)}${formatTime(todayCheckins[0]?.created_at) ? ` · ${formatTime(todayCheckins[0]?.created_at)}` : ""}`,
-            href: "/wellness",
+            href: `/wellness?day=${encodeURIComponent(today)}`,
           },
         ]
       : []),
