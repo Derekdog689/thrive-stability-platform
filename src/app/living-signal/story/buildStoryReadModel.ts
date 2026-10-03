@@ -136,7 +136,7 @@ export function buildStoryReadModel({
           ? "Wellness check-in"
           : `${items.length} Wellness check-ins`,
       detail: `Latest: ${wellnessOverallLabel(latest.overall_day)}.`,
-      href: "/wellness",
+      href: `/wellness?day=${encodeURIComponent(dateKey)}`,
     });
   }
 
