@@ -747,9 +747,59 @@ export default function ResourceMaintenancePage() {
               Visibility · {visibility?.status ?? "not mapped"}
             </span>
           </div>
-          <Link href="/admin/resources" className="mt-6 inline-flex rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-            Back to Resource Library
-          </Link>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link href="/admin/resources" className="inline-flex rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+              Back to Resource Library
+            </Link>
+            {resource.status !== "active" ? (
+              <button
+                type="button"
+                onClick={showResourceEdit ? () => setShowResourceEdit(false) : beginResourceEdit}
+                className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800"
+              >
+                {showResourceEdit ? "Close edit" : "Edit Resource details"}
+              </button>
+            ) : null}
+          </div>
+
+          {showResourceEdit ? (
+            <form onSubmit={saveResourceDetails} className="mt-5 grid gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                Resource name
+                <input className={fieldClass} value={editResourceName} onChange={(e) => setEditResourceName(e.target.value)} required />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                Plain-language purpose
+                <textarea className={fieldClass} rows={3} value={editResourcePurpose} onChange={(e) => setEditResourcePurpose(e.target.value)} required />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                Participant note
+                <textarea className={fieldClass} rows={2} value={editResourceBoundary} onChange={(e) => setEditResourceBoundary(e.target.value)} />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                State
+                <input className={fieldClass} maxLength={2} value={editResourceState} onChange={(e) => setEditResourceState(e.target.value)} />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                Service area
+                <input className={fieldClass} value={editResourceServiceArea} onChange={(e) => setEditResourceServiceArea(e.target.value)} />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                Review cadence
+                <select className={fieldClass} value={editResourceCadence} onChange={(e) => setEditResourceCadence(e.target.value)}>
+                  <option value="fast_changing">Fast changing · about every 90 days</option>
+                  <option value="moderate">Moderate · about every 6 months</option>
+                  <option value="stable">Stable · about every 12 months</option>
+                </select>
+              </label>
+              <button
+                disabled={working === "resource" || !editResourceName.trim() || !editResourcePurpose.trim()}
+                className="w-fit self-end rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              >
+                {working === "resource" ? "Saving..." : "Save Resource details"}
+              </button>
+            </form>
+          ) : null}
         </header>
 
         {pageError ? (
@@ -788,13 +838,44 @@ export default function ResourceMaintenancePage() {
                 const organization = organizationById.get(role.organization_id);
                 return (
                   <div key={role.id} className="rounded-2xl bg-slate-50 p-4">
-                    <p className="font-black">{organization?.organization_name ?? "Linked organization"}</p>
-                    <p className="mt-1 text-sm text-slate-600">{labelFor(organizationRoles, role.role_type)}{role.is_primary ? " · primary" : ""}</p>
-                    {organization?.official_website_url ? <p className="mt-1 break-all text-sm text-slate-500">{organization.official_website_url}</p> : null}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-black">{organization?.organization_name ?? "Linked organization"}</p>
+                        <p className="mt-1 text-sm text-slate-600">{labelFor(organizationRoles, role.role_type)}{role.is_primary ? " · primary" : ""}</p>
+                        {organization?.official_website_url ? <p className="mt-1 break-all text-sm text-slate-500">{organization.official_website_url}</p> : null}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={working === `role-${role.id}`}
+                        onClick={() => void archiveOrganizationRole(role)}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-40"
+                      >
+                        {working === `role-${role.id}` ? "Archiving..." : "Archive link"}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
+          ) : null}
+          {organizations.filter((org) => !activeRoles.some((role) => role.organization_id === org.id)).length > 0 ? (
+            <form onSubmit={linkExistingOrganization} className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-end">
+              <label className="grid min-w-0 flex-1 gap-2 text-sm font-bold text-slate-700">
+                Link an existing authority
+                <select className={fieldClass} value={existingOrganizationId} onChange={(e) => setExistingOrganizationId(e.target.value)}>
+                  <option value="">Choose an existing organization</option>
+                  {organizations
+                    .filter((org) => !activeRoles.some((role) => role.organization_id === org.id))
+                    .map((org) => <option key={org.id} value={org.id}>{org.organization_name}</option>)}
+                </select>
+              </label>
+              <button
+                disabled={working === "existing-organization" || !existingOrganizationId}
+                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
+              >
+                {working === "existing-organization" ? "Linking..." : "Link existing"}
+              </button>
+            </form>
           ) : null}
           <button type="button" onClick={() => setShowAuthorityForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
             {showAuthorityForm ? "Close" : activeRoles.length > 0 ? "+ Add authority" : "+ Add authority organization"}
@@ -813,7 +894,37 @@ export default function ResourceMaintenancePage() {
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
           <p className="text-sm font-bold uppercase text-emerald-700">2 · Access</p>
           <h2 className="mt-2 text-2xl font-black">How can someone reach the official source?</h2>
-          {activePaths.length > 0 ? <div className="mt-4 grid gap-3">{activePaths.map((path) => <div key={path.id} className="rounded-2xl bg-slate-50 p-4"><p className="font-black">{path.label}</p><p className="mt-1 text-sm text-slate-600">{labelFor(accessPathTypes,path.path_type)}{path.is_primary ? " · primary" : ""}</p><p className="mt-2 break-all text-sm text-slate-500">{path.url || path.phone || path.email}</p></div>)}</div> : null}
+          {activePaths.length > 0 ? (
+            <div className="mt-4 grid gap-3">
+              {activePaths.map((path) => (
+                <div key={path.id} className="rounded-2xl bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-black">{path.label}</p>
+                      <p className="mt-1 text-sm text-slate-600">{labelFor(accessPathTypes,path.path_type)}{path.is_primary ? " · primary" : ""}</p>
+                      <p className="mt-2 break-all text-sm text-slate-500">{path.url || path.phone || path.email}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {path.organization_id ? organizationById.get(path.organization_id)?.organization_name ?? "Linked authority" : "No authority linked"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => beginAccessEdit(path)} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800">
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        disabled={working === `path-${path.id}`}
+                        onClick={() => void archiveAccessPath(path)}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-40"
+                      >
+                        {working === `path-${path.id}` ? "Archiving..." : "Archive"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <button type="button" onClick={() => setShowAccessForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
             {showAccessForm ? "Close" : activePaths.length > 0 ? "+ Add access path" : "+ Add official access path"}
           </button>
@@ -826,7 +937,14 @@ export default function ResourceMaintenancePage() {
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">URL<input className={fieldClass} value={pathUrl} onChange={(e) => setPathUrl(e.target.value)} inputMode="url" placeholder="https://..." /></label>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Phone<input className={fieldClass} value={pathPhone} onChange={(e) => setPathPhone(e.target.value)} inputMode="tel" placeholder="Optional" /></label>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Email<input className={fieldClass} value={pathEmail} onChange={(e) => setPathEmail(e.target.value)} inputMode="email" placeholder="Optional" /></label>
-              <button disabled={working === "path" || !pathLabel.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "path" ? "Saving..." : "Add official access path"}</button>
+              <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <button disabled={working === "path" || !pathLabel.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">{working === "path" ? "Saving..." : editingPathId ? "Save access path" : "Add official access path"}</button>
+                {editingPathId ? (
+                  <button type="button" onClick={() => { resetAccessForm(); setShowAccessForm(false); }} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                    Cancel edit
+                  </button>
+                ) : null}
+              </div>
             </form>
           ) : null}
         </section>
@@ -834,7 +952,34 @@ export default function ResourceMaintenancePage() {
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
           <p className="text-sm font-bold uppercase text-emerald-700">3 · Guidance</p>
           <h2 className="mt-2 text-2xl font-black">What should THRIVE explain?</h2>
-          {activeGuidance.length > 0 ? <div className="mt-4 grid gap-3">{activeGuidance.map((section) => <div key={section.id} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase text-emerald-700">{labelFor(guidanceTypes,section.section_type)}</p><p className="mt-1 font-black">{section.heading}</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{section.content}</p></div>)}</div> : null}
+          {activeGuidance.length > 0 ? (
+            <div className="mt-4 grid gap-3">
+              {activeGuidance.map((section) => (
+                <div key={section.id} className="rounded-2xl bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase text-emerald-700">{labelFor(guidanceTypes,section.section_type)}</p>
+                      <p className="mt-1 font-black">{section.heading}</p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{section.content}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => beginGuidanceEdit(section)} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800">
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        disabled={working === `guidance-${section.id}`}
+                        onClick={() => void archiveGuidance(section)}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-40"
+                      >
+                        {working === `guidance-${section.id}` ? "Archiving..." : "Archive"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <button type="button" onClick={() => setShowGuidanceForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
             {showGuidanceForm ? "Close" : activeGuidance.length > 0 ? "+ Add guidance" : "+ Add THRIVE guidance"}
           </button>
@@ -844,7 +989,14 @@ export default function ResourceMaintenancePage() {
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Source access path<select className={fieldClass} value={guidanceSourcePathId} onChange={(e) => setGuidanceSourcePathId(e.target.value)}><option value="">Not linked</option>{activePaths.map((path) => <option key={path.id} value={path.id}>{path.label}</option>)}</select></label>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Heading<input className={fieldClass} value={guidanceHeading} onChange={(e) => setGuidanceHeading(e.target.value)} required placeholder="Start here" /></label>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Guidance<textarea className={fieldClass} value={guidanceContent} onChange={(e) => setGuidanceContent(e.target.value)} required rows={4} placeholder="Plain-language participant guidance based on verified facts" /></label>
-              <button disabled={working === "guidance" || !guidanceHeading.trim() || !guidanceContent.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "guidance" ? "Saving..." : "Add THRIVE guidance"}</button>
+              <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <button disabled={working === "guidance" || !guidanceHeading.trim() || !guidanceContent.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">{working === "guidance" ? "Saving..." : editingGuidanceId ? "Save guidance" : "Add THRIVE guidance"}</button>
+                {editingGuidanceId ? (
+                  <button type="button" onClick={() => { resetGuidanceForm(); setShowGuidanceForm(false); }} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                    Cancel edit
+                  </button>
+                ) : null}
+              </div>
             </form>
           ) : null}
         </section>
