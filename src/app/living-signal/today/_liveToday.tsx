@@ -319,7 +319,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
         label: "One thing you can continue",
         title: currentGoal.title,
         detail: currentGoal.next_step,
-        href: "/goals",
+        href: `/goals?goal=${encodeURIComponent(currentGoal.id)}`,
         action: "Continue goal",
       };
     }
@@ -395,7 +395,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
           ? "Goal completed"
           : "Goal moved today",
       copy: goal.title,
-      href: "/goals",
+      href: `/goals?goal=${encodeURIComponent(goal.id)}`,
     })),
     ...(moneyEvents.length > 0
       ? [
