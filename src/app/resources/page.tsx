@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import AuthGate from "../AuthGate";
 import {
   categoryLabel,
@@ -140,7 +140,7 @@ function ParticipantBottomNav() {
   );
 }
 
-export default function ResourcesPage() {
+function ResourcesContent() {
   const searchParams = useSearchParams();
   const context = searchParams.get("context");
   const intent = searchParams.get("intent");
@@ -473,5 +473,20 @@ export default function ResourcesPage() {
         <ParticipantBottomNav />
       </main>
     </AuthGate>
+  );
+}
+
+
+export default function ResourcesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#edf5f1] px-4 py-10 text-slate-700">
+          Loading Resources...
+        </div>
+      }
+    >
+      <ResourcesContent />
+    </Suspense>
   );
 }
