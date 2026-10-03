@@ -571,29 +571,66 @@ After experience validation:
 
 ## Current Gate
 
-Approved:
+### Approved working gate — October 3, 2026
 
-- Experience Reset roadmap direction;
-- visual exploration direction;
-- Recovery Support proving-ground direction;
-- consolidation into a single roadmap;
-- README evolution.
+> **THRIVE Current-Affordance Continuity Map v0.1**
 
-Not yet approved:
+The product has moved beyond proving that the participant lanes can exist independently. The current job is to reconcile how the capabilities THRIVE already exposes relate to one another.
 
-- production implementation;
-- schema changes;
-- Trust Engine changes;
-- new resource persistence;
-- location persistence;
-- deployment;
-- merge to `main`.
+This is **not** a new-feature expansion gate.
 
-The next gate is:
+For every participant affordance already present in THRIVE, the review will identify:
 
-> **review-only visual direction board / screen mockups + smallest Recovery Support implementation reconciliation**
+1. what the participant actually did;
+2. what factual record THRIVE currently saves or exposes;
+3. where the action currently leads;
+4. which existing THRIVE lane or object it legitimately relates to;
+5. where context is lost, duplicated, or stranded;
+6. where that fact should reappear through existing surfaces such as Today, Story, lane history, Resource detail, or Support handoff.
 
-No production implementation should occur until that candidate is separately approved.
+The working continuity model is:
+
+```text
+entry
+→ action
+→ useful destination
+→ saved fact
+→ return path
+```
+
+The immediate objective is to close existing internal circuits across:
+
+- Today
+- Wellness
+- Goals
+- Money
+- Support
+- Resources
+- Recovery Support
+- Story
+
+Examples include Goal-to-Money continuity, Goal-to-Resource continuity, Wellness-to-Recovery-Resource continuity, Money-to-Support context handoff, and Story returning to the meaningful underlying thread instead of only a generic lane landing page.
+
+### Explicitly deferred
+
+The following are not part of this gate:
+
+- new analytics dashboards;
+- scoring or participant ranking;
+- six-month visualization work;
+- speculative prediction machinery;
+- new participant affordances solely because they can be imagined;
+- Trust Engine synchronization;
+- clinical inference;
+- bank-data intent inference;
+- invented attendance, reading, contact, or completion;
+- schema or production writes not separately approved.
+
+Interpretation and richer longitudinal visualization may be revisited after real participant use has accumulated. The current priority is **connectivity and continuity using the THRIVE affordances that already exist**.
+
+The approved checkpoint is:
+
+`docs/THRIVE_CURRENT_AFFORDANCE_CONTINUITY_CHECKPOINT_2026-10-03.md`
 
 ---
 
@@ -616,13 +653,23 @@ Current stack includes:
 
 ## Current Checkpoint
 
-Production `main` remains at:
+As of October 3, 2026, production `main` has advanced through the approved participant-experience work and the live Story v0.1 inspection merge.
 
-`df36d74ae220680a21fced17d372528b6e91b656`
+Pre-documentation checkpoint:
 
-The Experience Reset documentation work is being prepared on a review branch and is not production behavior.
+`f2475db586087799ecd722555f2e41508e8b8d5a`
 
-No production SQL, schema change, Trust Engine synchronization, service-role action, or deployment is implied by the experience-reset documentation.
+That commit is the merge of PR #36:
+
+`feat: live Story v0.1 inspection merge`
+
+The current documentation checkpoint records the transition from isolated-lane proving work into **Current-Affordance Continuity Map v0.1**.
+
+The product state now includes a functioning participant chassis across Today, Wellness, Goals, Money, Support, Resources, Recovery Support, and Story. Recent phone testing confirmed that the individual paths are stable and truthful, while also exposing the next product problem: meaningful facts frequently arrive at a lane or Story card but do not yet preserve enough context or return the participant to the underlying thread.
+
+The next pass is therefore a reconciliation pass, not a broad implementation pass.
+
+No production SQL, schema change, Trust Engine synchronization, service-role action, destructive cleanup, or new participant affordance is authorized by this documentation checkpoint.
 
 ---
 
