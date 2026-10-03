@@ -100,9 +100,21 @@ function actionLabel(path: ResourceAccessPath) {
 export default function ResourceDetailPage() {
   const params = useParams<{ slug: string }>();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+  const [recoveryContext, setRecoveryContext] = useState(false);
+  const [recoveryIntent, setRecoveryIntent] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailState | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    setRecoveryContext(query.get("context") === "recovery");
+    setRecoveryIntent(query.get("intent"));
+  }, []);
+
+  const backHref = recoveryContext
+    ? `/resources?context=recovery${recoveryIntent ? `&intent=${encodeURIComponent(recoveryIntent)}` : ""}`
+    : "/resources";
 
   useEffect(() => {
     let mounted = true;
@@ -157,8 +169,13 @@ export default function ResourceDetailPage() {
     if (!detail) return "/support";
     const supportParams = new URLSearchParams({ resource: detail.resource.resource_slug });
     if (primaryPath?.id) supportParams.set("path", primaryPath.id);
+    if (recoveryContext) {
+      supportParams.set("from", "recovery");
+      supportParams.set("context", "recovery");
+      if (recoveryIntent) supportParams.set("intent", recoveryIntent);
+    }
     return `/support?${supportParams.toString()}`;
-  }, [detail, primaryPath]);
+  }, [detail, primaryPath, recoveryContext, recoveryIntent]);
 
   return (
     <AuthGate>
@@ -169,7 +186,7 @@ export default function ResourceDetailPage() {
             <div className="thrive-orb thrive-orb-two" />
 
             <div className="relative z-10 flex items-center justify-between gap-3">
-              <Link href="/resources" className="flex items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-2 text-xs font-black text-emerald-900 backdrop-blur-xl">
+              <Link href={backHref} className="flex items-center gap-2 rounded-full border border-white/75 bg-white/58 px-3 py-2 text-xs font-black text-emerald-900 backdrop-blur-xl">
                 <Icon name="back" className="h-4 w-4" />
                 Resources
               </Link>
@@ -213,7 +230,7 @@ export default function ResourceDetailPage() {
             <section className="mt-3 rounded-[1.8rem] border border-white/70 bg-white/48 p-5 shadow-sm backdrop-blur-2xl sm:p-6">
               <h1 className="text-2xl font-black text-emerald-950">This Resource is not available right now.</h1>
               <p className="mt-3 leading-6 text-slate-600">It may be paused or the link may be out of date.</p>
-              <Link href="/resources" className="mt-5 inline-flex rounded-full bg-emerald-700 px-5 py-3 font-black text-white shadow-[0_10px_24px_rgba(4,120,87,0.2)]">Browse Resources</Link>
+              <Link href={backHref} className="mt-5 inline-flex rounded-full bg-emerald-700 px-5 py-3 font-black text-white shadow-[0_10px_24px_rgba(4,120,87,0.2)]">{recoveryContext ? "Back to Recovery Resources" : "Browse Resources"}</Link>
             </section>
           ) : null}
 

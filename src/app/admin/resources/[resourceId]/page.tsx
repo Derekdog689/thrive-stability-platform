@@ -10,8 +10,15 @@ type ResourceRow = {
   id: string;
   resource_name: string;
   category: string;
+  subcategory: string | null;
   plain_language_purpose: string;
   participant_boundary_note: string | null;
+  country_code: string | null;
+  state_code: string | null;
+  county_name: string | null;
+  service_area_text: string | null;
+  audience_text: string | null;
+  verification_cadence: string;
   status: string;
 };
 
@@ -30,6 +37,7 @@ type OrganizationRow = {
   organization_type: string;
   official_website_url: string | null;
   country_code: string | null;
+  status: string;
 };
 
 type OrganizationRoleRow = {
@@ -152,10 +160,21 @@ export default function ResourceMaintenancePage() {
   const [working, setWorking] = useState<string | null>(null);
   const [pageError, setPageError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showResourceEdit, setShowResourceEdit] = useState(false);
   const [showAuthorityForm, setShowAuthorityForm] = useState(false);
   const [showAccessForm, setShowAccessForm] = useState(false);
   const [showGuidanceForm, setShowGuidanceForm] = useState(false);
   const [showVerificationForm, setShowVerificationForm] = useState(false);
+  const [existingOrganizationId, setExistingOrganizationId] = useState("");
+  const [editingPathId, setEditingPathId] = useState<string | null>(null);
+  const [editingGuidanceId, setEditingGuidanceId] = useState<string | null>(null);
+
+  const [editResourceName, setEditResourceName] = useState("");
+  const [editResourcePurpose, setEditResourcePurpose] = useState("");
+  const [editResourceBoundary, setEditResourceBoundary] = useState("");
+  const [editResourceState, setEditResourceState] = useState("");
+  const [editResourceServiceArea, setEditResourceServiceArea] = useState("");
+  const [editResourceCadence, setEditResourceCadence] = useState("moderate");
 
   const [orgName, setOrgName] = useState("");
   const [orgType, setOrgType] = useState("government");
@@ -198,7 +217,7 @@ export default function ResourceMaintenancePage() {
       await Promise.all([
         supabase
           .from("resources")
-          .select("id, resource_name, category, plain_language_purpose, participant_boundary_note, status")
+          .select("id, resource_name, category, subcategory, plain_language_purpose, participant_boundary_note, country_code, state_code, county_name, service_area_text, audience_text, verification_cadence, status")
           .eq("id", resourceId)
           .maybeSingle(),
         supabase
@@ -251,21 +270,19 @@ export default function ResourceMaintenancePage() {
     }
 
     const roleRows = (roleResult.data as OrganizationRoleRow[] | null) ?? [];
-    const organizationIds = [...new Set(roleRows.map((row) => row.organization_id))];
-    let organizationRows: OrganizationRow[] = [];
+    const organizationResult = await supabase
+      .from("resource_organizations")
+      .select("id, organization_name, organization_type, official_website_url, country_code, status")
+      .eq("status", "active")
+      .order("organization_name");
 
-    if (organizationIds.length > 0) {
-      const organizationResult = await supabase
-        .from("resource_organizations")
-        .select("id, organization_name, organization_type, official_website_url, country_code")
-        .in("id", organizationIds);
-      if (organizationResult.error) {
-        setPageError(organizationResult.error.message);
-        setLoading(false);
-        return;
-      }
-      organizationRows = (organizationResult.data as OrganizationRow[] | null) ?? [];
+    if (organizationResult.error) {
+      setPageError(organizationResult.error.message);
+      setLoading(false);
+      return;
     }
+
+    const organizationRows = (organizationResult.data as OrganizationRow[] | null) ?? [];
 
     setResource(resourceRow);
     setVisibility((visibilityResult.data as VisibilityRow | null) ?? null);
@@ -294,6 +311,204 @@ export default function ResourceMaintenancePage() {
   );
   const activationReady =
     activeRoles.length > 0 && activePaths.length > 0 && currentAdminVerifications.length > 0;
+
+  function beginResourceEdit() {
+    if (!resource) return;
+    setEditResourceName(resource.resource_name);
+    setEditResourcePurpose(resource.plain_language_purpose);
+    setEditResourceBoundary(resource.participant_boundary_note ?? "");
+    setEditResourceState(resource.state_code ?? "");
+    setEditResourceServiceArea(resource.service_area_text ?? "");
+    setEditResourceCadence(resource.verification_cadence);
+    setShowResourceEdit(true);
+  }
+
+  async function saveResourceDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!resource || !editResourceName.trim() || !editResourcePurpose.trim()) return;
+
+    setWorking("resource");
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase.rpc("admin_update_resource_details", {
+      p_resource_id: resource.id,
+      p_resource_name: editResourceName.trim(),
+      p_category: resource.category,
+      p_subcategory: resource.subcategory,
+      p_plain_language_purpose: editResourcePurpose.trim(),
+      p_participant_boundary_note: editResourceBoundary.trim() || null,
+      p_country_code: resource.country_code ?? "US",
+      p_state_code: editResourceState.trim().toUpperCase() || null,
+      p_county_name: resource.county_name,
+      p_service_area_text: editResourceServiceArea.trim() || null,
+      p_audience_text: resource.audience_text,
+      p_verification_cadence: editResourceCadence,
+    });
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setNotice("Resource details updated. Nothing was deleted and visibility did not change.");
+    setShowResourceEdit(false);
+    await loadData();
+  }
+
+  async function linkExistingOrganization(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!resource || !currentUserId || !existingOrganizationId) return;
+
+    setWorking("existing-organization");
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase.from("resource_organization_roles").insert({
+      resource_id: resource.id,
+      organization_id: existingOrganizationId,
+      role_type: "primary_authority",
+      is_primary: activeRoles.length === 0,
+      status: "active",
+      created_by: currentUserId,
+    });
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setExistingOrganizationId("");
+    setNotice("Existing authority linked to this Resource.");
+    await loadData();
+  }
+
+  async function archiveOrganizationRole(role: OrganizationRoleRow) {
+    if (!resource) return;
+    const organization = organizationById.get(role.organization_id);
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Archive the authority link to ${organization?.organization_name ?? "this organization"}? The history stays in THRIVE.`,
+      )
+    ) {
+      return;
+    }
+
+    setWorking(`role-${role.id}`);
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase
+      .from("resource_organization_roles")
+      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .eq("id", role.id);
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setNotice("Authority link archived. Nothing was deleted.");
+    await loadData();
+  }
+
+  function beginAccessEdit(path: AccessPathRow) {
+    setEditingPathId(path.id);
+    setPathType(path.path_type);
+    setPathLabel(path.label);
+    setPathInstruction(path.plain_language_instruction ?? "");
+    setPathUrl(path.url ?? "");
+    setPathPhone(path.phone ?? "");
+    setPathEmail(path.email ?? "");
+    setPathOrganizationId(path.organization_id ?? "");
+    setShowAccessForm(true);
+  }
+
+  function resetAccessForm() {
+    setEditingPathId(null);
+    setPathType("landing_page");
+    setPathLabel("");
+    setPathInstruction("");
+    setPathUrl("");
+    setPathPhone("");
+    setPathEmail("");
+    setPathOrganizationId("");
+  }
+
+  async function archiveAccessPath(path: AccessPathRow) {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Archive ${path.label}? The record stays in THRIVE history.`)
+    ) {
+      return;
+    }
+
+    setWorking(`path-${path.id}`);
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase
+      .from("resource_access_paths")
+      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .eq("id", path.id);
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setNotice("Access path archived. Nothing was deleted.");
+    await loadData();
+  }
+
+  function beginGuidanceEdit(section: GuidanceRow) {
+    setEditingGuidanceId(section.id);
+    setGuidanceType(section.section_type);
+    setGuidanceHeading(section.heading);
+    setGuidanceContent(section.content);
+    setGuidanceSourcePathId(section.source_access_path_id ?? "");
+    setShowGuidanceForm(true);
+  }
+
+  function resetGuidanceForm() {
+    setEditingGuidanceId(null);
+    setGuidanceType("start_here");
+    setGuidanceHeading("");
+    setGuidanceContent("");
+    setGuidanceSourcePathId("");
+  }
+
+  async function archiveGuidance(section: GuidanceRow) {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Archive "${section.heading}"? The guidance stays in THRIVE history.`)
+    ) {
+      return;
+    }
+
+    setWorking(`guidance-${section.id}`);
+    setPageError("");
+    setNotice("");
+
+    const { error } = await supabase
+      .from("resource_guidance_sections")
+      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .eq("id", section.id);
+
+    setWorking(null);
+    if (error) {
+      setPageError(error.message);
+      return;
+    }
+
+    setNotice("Guidance archived. Nothing was deleted.");
+    await loadData();
+  }
 
   async function addOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -337,8 +552,7 @@ export default function ResourceMaintenancePage() {
     setPageError("");
     setNotice("");
 
-    const { error } = await supabase.from("resource_access_paths").insert({
-      resource_id: resource.id,
+    const payload = {
       organization_id: pathOrganizationId || null,
       path_type: pathType,
       label: pathLabel.trim(),
@@ -346,14 +560,21 @@ export default function ResourceMaintenancePage() {
       url: pathUrl.trim() || null,
       phone: pathPhone.trim() || null,
       email: pathEmail.trim() || null,
-      country_code: "US",
-      state_code: null,
-      locality_text: null,
-      sort_order: activePaths.length,
-      is_primary: activePaths.length === 0,
-      status: "active",
-      created_by: currentUserId,
-    });
+    };
+
+    const { error } = editingPathId
+      ? await supabase.from("resource_access_paths").update(payload).eq("id", editingPathId)
+      : await supabase.from("resource_access_paths").insert({
+          resource_id: resource.id,
+          ...payload,
+          country_code: "US",
+          state_code: null,
+          locality_text: null,
+          sort_order: activePaths.length,
+          is_primary: activePaths.length === 0,
+          status: "active",
+          created_by: currentUserId,
+        });
 
     setWorking(null);
     if (error) {
@@ -361,12 +582,8 @@ export default function ResourceMaintenancePage() {
       return;
     }
 
-    setPathLabel("");
-    setPathInstruction("");
-    setPathUrl("");
-    setPathPhone("");
-    setPathEmail("");
-    setNotice("Official access path added. The Resource is still unpublished until activation.");
+    resetAccessForm();
+    setNotice(editingPathId ? "Access path updated." : "Official access path added. The Resource is still unpublished until activation.");
     setShowAccessForm(false);
     await loadData();
   }
@@ -379,16 +596,22 @@ export default function ResourceMaintenancePage() {
     setPageError("");
     setNotice("");
 
-    const { error } = await supabase.from("resource_guidance_sections").insert({
-      resource_id: resource.id,
+    const payload = {
       section_type: guidanceType,
       heading: guidanceHeading.trim(),
       content: guidanceContent.trim(),
       source_access_path_id: guidanceSourcePathId || null,
-      sort_order: activeGuidance.length,
-      status: "active",
-      created_by: currentUserId,
-    });
+    };
+
+    const { error } = editingGuidanceId
+      ? await supabase.from("resource_guidance_sections").update(payload).eq("id", editingGuidanceId)
+      : await supabase.from("resource_guidance_sections").insert({
+          resource_id: resource.id,
+          ...payload,
+          sort_order: activeGuidance.length,
+          status: "active",
+          created_by: currentUserId,
+        });
 
     setWorking(null);
     if (error) {
@@ -396,9 +619,8 @@ export default function ResourceMaintenancePage() {
       return;
     }
 
-    setGuidanceHeading("");
-    setGuidanceContent("");
-    setNotice("THRIVE guidance added. It does not publish the Resource by itself.");
+    resetGuidanceForm();
+    setNotice(editingGuidanceId ? "THRIVE guidance updated." : "THRIVE guidance added. It does not publish the Resource by itself.");
     setShowGuidanceForm(false);
     await loadData();
   }
@@ -525,9 +747,59 @@ export default function ResourceMaintenancePage() {
               Visibility · {visibility?.status ?? "not mapped"}
             </span>
           </div>
-          <Link href="/admin/resources" className="mt-6 inline-flex rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-            Back to Resource Library
-          </Link>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link href="/admin/resources" className="inline-flex rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+              Back to Resource Library
+            </Link>
+            {resource.status !== "active" ? (
+              <button
+                type="button"
+                onClick={showResourceEdit ? () => setShowResourceEdit(false) : beginResourceEdit}
+                className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800"
+              >
+                {showResourceEdit ? "Close edit" : "Edit Resource details"}
+              </button>
+            ) : null}
+          </div>
+
+          {showResourceEdit ? (
+            <form onSubmit={saveResourceDetails} className="mt-5 grid gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                Resource name
+                <input className={fieldClass} value={editResourceName} onChange={(e) => setEditResourceName(e.target.value)} required />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                Plain-language purpose
+                <textarea className={fieldClass} rows={3} value={editResourcePurpose} onChange={(e) => setEditResourcePurpose(e.target.value)} required />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                Participant note
+                <textarea className={fieldClass} rows={2} value={editResourceBoundary} onChange={(e) => setEditResourceBoundary(e.target.value)} />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                State
+                <input className={fieldClass} maxLength={2} value={editResourceState} onChange={(e) => setEditResourceState(e.target.value)} />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                Service area
+                <input className={fieldClass} value={editResourceServiceArea} onChange={(e) => setEditResourceServiceArea(e.target.value)} />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                Review cadence
+                <select className={fieldClass} value={editResourceCadence} onChange={(e) => setEditResourceCadence(e.target.value)}>
+                  <option value="fast_changing">Fast changing · about every 90 days</option>
+                  <option value="moderate">Moderate · about every 6 months</option>
+                  <option value="stable">Stable · about every 12 months</option>
+                </select>
+              </label>
+              <button
+                disabled={working === "resource" || !editResourceName.trim() || !editResourcePurpose.trim()}
+                className="w-fit self-end rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              >
+                {working === "resource" ? "Saving..." : "Save Resource details"}
+              </button>
+            </form>
+          ) : null}
         </header>
 
         {pageError ? (
@@ -566,13 +838,44 @@ export default function ResourceMaintenancePage() {
                 const organization = organizationById.get(role.organization_id);
                 return (
                   <div key={role.id} className="rounded-2xl bg-slate-50 p-4">
-                    <p className="font-black">{organization?.organization_name ?? "Linked organization"}</p>
-                    <p className="mt-1 text-sm text-slate-600">{labelFor(organizationRoles, role.role_type)}{role.is_primary ? " · primary" : ""}</p>
-                    {organization?.official_website_url ? <p className="mt-1 break-all text-sm text-slate-500">{organization.official_website_url}</p> : null}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-black">{organization?.organization_name ?? "Linked organization"}</p>
+                        <p className="mt-1 text-sm text-slate-600">{labelFor(organizationRoles, role.role_type)}{role.is_primary ? " · primary" : ""}</p>
+                        {organization?.official_website_url ? <p className="mt-1 break-all text-sm text-slate-500">{organization.official_website_url}</p> : null}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={working === `role-${role.id}`}
+                        onClick={() => void archiveOrganizationRole(role)}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-40"
+                      >
+                        {working === `role-${role.id}` ? "Archiving..." : "Archive link"}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
+          ) : null}
+          {organizations.filter((org) => !activeRoles.some((role) => role.organization_id === org.id)).length > 0 ? (
+            <form onSubmit={linkExistingOrganization} className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-end">
+              <label className="grid min-w-0 flex-1 gap-2 text-sm font-bold text-slate-700">
+                Link an existing authority
+                <select className={fieldClass} value={existingOrganizationId} onChange={(e) => setExistingOrganizationId(e.target.value)}>
+                  <option value="">Choose an existing organization</option>
+                  {organizations
+                    .filter((org) => !activeRoles.some((role) => role.organization_id === org.id))
+                    .map((org) => <option key={org.id} value={org.id}>{org.organization_name}</option>)}
+                </select>
+              </label>
+              <button
+                disabled={working === "existing-organization" || !existingOrganizationId}
+                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
+              >
+                {working === "existing-organization" ? "Linking..." : "Link existing"}
+              </button>
+            </form>
           ) : null}
           <button type="button" onClick={() => setShowAuthorityForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
             {showAuthorityForm ? "Close" : activeRoles.length > 0 ? "+ Add authority" : "+ Add authority organization"}
@@ -591,7 +894,37 @@ export default function ResourceMaintenancePage() {
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
           <p className="text-sm font-bold uppercase text-emerald-700">2 · Access</p>
           <h2 className="mt-2 text-2xl font-black">How can someone reach the official source?</h2>
-          {activePaths.length > 0 ? <div className="mt-4 grid gap-3">{activePaths.map((path) => <div key={path.id} className="rounded-2xl bg-slate-50 p-4"><p className="font-black">{path.label}</p><p className="mt-1 text-sm text-slate-600">{labelFor(accessPathTypes,path.path_type)}{path.is_primary ? " · primary" : ""}</p><p className="mt-2 break-all text-sm text-slate-500">{path.url || path.phone || path.email}</p></div>)}</div> : null}
+          {activePaths.length > 0 ? (
+            <div className="mt-4 grid gap-3">
+              {activePaths.map((path) => (
+                <div key={path.id} className="rounded-2xl bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-black">{path.label}</p>
+                      <p className="mt-1 text-sm text-slate-600">{labelFor(accessPathTypes,path.path_type)}{path.is_primary ? " · primary" : ""}</p>
+                      <p className="mt-2 break-all text-sm text-slate-500">{path.url || path.phone || path.email}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {path.organization_id ? organizationById.get(path.organization_id)?.organization_name ?? "Linked authority" : "No authority linked"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => beginAccessEdit(path)} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800">
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        disabled={working === `path-${path.id}`}
+                        onClick={() => void archiveAccessPath(path)}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-40"
+                      >
+                        {working === `path-${path.id}` ? "Archiving..." : "Archive"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <button type="button" onClick={() => setShowAccessForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
             {showAccessForm ? "Close" : activePaths.length > 0 ? "+ Add access path" : "+ Add official access path"}
           </button>
@@ -604,7 +937,14 @@ export default function ResourceMaintenancePage() {
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">URL<input className={fieldClass} value={pathUrl} onChange={(e) => setPathUrl(e.target.value)} inputMode="url" placeholder="https://..." /></label>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Phone<input className={fieldClass} value={pathPhone} onChange={(e) => setPathPhone(e.target.value)} inputMode="tel" placeholder="Optional" /></label>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Email<input className={fieldClass} value={pathEmail} onChange={(e) => setPathEmail(e.target.value)} inputMode="email" placeholder="Optional" /></label>
-              <button disabled={working === "path" || !pathLabel.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "path" ? "Saving..." : "Add official access path"}</button>
+              <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <button disabled={working === "path" || !pathLabel.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">{working === "path" ? "Saving..." : editingPathId ? "Save access path" : "Add official access path"}</button>
+                {editingPathId ? (
+                  <button type="button" onClick={() => { resetAccessForm(); setShowAccessForm(false); }} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                    Cancel edit
+                  </button>
+                ) : null}
+              </div>
             </form>
           ) : null}
         </section>
@@ -612,7 +952,34 @@ export default function ResourceMaintenancePage() {
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
           <p className="text-sm font-bold uppercase text-emerald-700">3 · Guidance</p>
           <h2 className="mt-2 text-2xl font-black">What should THRIVE explain?</h2>
-          {activeGuidance.length > 0 ? <div className="mt-4 grid gap-3">{activeGuidance.map((section) => <div key={section.id} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase text-emerald-700">{labelFor(guidanceTypes,section.section_type)}</p><p className="mt-1 font-black">{section.heading}</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{section.content}</p></div>)}</div> : null}
+          {activeGuidance.length > 0 ? (
+            <div className="mt-4 grid gap-3">
+              {activeGuidance.map((section) => (
+                <div key={section.id} className="rounded-2xl bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase text-emerald-700">{labelFor(guidanceTypes,section.section_type)}</p>
+                      <p className="mt-1 font-black">{section.heading}</p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{section.content}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => beginGuidanceEdit(section)} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800">
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        disabled={working === `guidance-${section.id}`}
+                        onClick={() => void archiveGuidance(section)}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-40"
+                      >
+                        {working === `guidance-${section.id}` ? "Archiving..." : "Archive"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <button type="button" onClick={() => setShowGuidanceForm((value) => !value)} className="mt-5 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800">
             {showGuidanceForm ? "Close" : activeGuidance.length > 0 ? "+ Add guidance" : "+ Add THRIVE guidance"}
           </button>
@@ -622,7 +989,14 @@ export default function ResourceMaintenancePage() {
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700">Source access path<select className={fieldClass} value={guidanceSourcePathId} onChange={(e) => setGuidanceSourcePathId(e.target.value)}><option value="">Not linked</option>{activePaths.map((path) => <option key={path.id} value={path.id}>{path.label}</option>)}</select></label>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Heading<input className={fieldClass} value={guidanceHeading} onChange={(e) => setGuidanceHeading(e.target.value)} required placeholder="Start here" /></label>
               <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-700 sm:col-span-2">Guidance<textarea className={fieldClass} value={guidanceContent} onChange={(e) => setGuidanceContent(e.target.value)} required rows={4} placeholder="Plain-language participant guidance based on verified facts" /></label>
-              <button disabled={working === "guidance" || !guidanceHeading.trim() || !guidanceContent.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40 sm:col-span-2">{working === "guidance" ? "Saving..." : "Add THRIVE guidance"}</button>
+              <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <button disabled={working === "guidance" || !guidanceHeading.trim() || !guidanceContent.trim()} className="w-fit rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">{working === "guidance" ? "Saving..." : editingGuidanceId ? "Save guidance" : "Add THRIVE guidance"}</button>
+                {editingGuidanceId ? (
+                  <button type="button" onClick={() => { resetGuidanceForm(); setShowGuidanceForm(false); }} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                    Cancel edit
+                  </button>
+                ) : null}
+              </div>
             </form>
           ) : null}
         </section>

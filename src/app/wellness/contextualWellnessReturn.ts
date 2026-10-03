@@ -50,6 +50,27 @@ function supportHref(checkin: WellnessCheckinRow) {
   return `/support?${params.toString()}`;
 }
 
+function recoverySupportHref(checkin: WellnessCheckinRow) {
+  const params = new URLSearchParams({ from: "wellness" });
+
+  const values: Array<[string, string | null]> = [
+    ["overall", checkin.overall_day],
+    ["stress", checkin.stress],
+    ["sleep", checkin.sleep],
+    ["energy", checkin.energy],
+    ["confidence", checkin.confidence],
+    ["routine", checkin.routine],
+    ["recoverySupport", checkin.recovery_support],
+    ["supportNeeded", checkin.support_needed],
+  ];
+
+  for (const [key, value] of values) {
+    if (value) params.set(key, value);
+  }
+
+  return `/recovery-support?${params.toString()}`;
+}
+
 function summarizeSignals(checkin: WellnessCheckinRow) {
   const observations: string[] = [];
 
@@ -147,9 +168,21 @@ export function buildContextualWellnessReturn(
 
   const comparison = prior ? compare(current, prior) : null;
   const signalDetail = summarizeSignals(current);
-  const supportRelevant =
-    current.support_needed === "yes" ||
+  const humanSupportRequested = current.support_needed === "yes";
+  const recoverySupportRequested =
     current.recovery_support === "could_use_support";
+
+  const actionLabel = humanSupportRequested
+    ? "Open Support"
+    : recoverySupportRequested
+      ? "Explore Recovery Support"
+      : null;
+
+  const actionHref = humanSupportRequested
+    ? supportHref(current)
+    : recoverySupportRequested
+      ? recoverySupportHref(current)
+      : null;
 
   if (comparison) {
     return {
@@ -158,20 +191,22 @@ export function buildContextualWellnessReturn(
       detail: signalDetail
         ? `${comparison.detail} ${signalDetail}`
         : comparison.detail,
-      actionLabel: supportRelevant ? "Open Support" : null,
-      actionHref: supportRelevant ? supportHref(current) : null,
+      actionLabel,
+      actionHref,
     };
   }
 
-  if (supportRelevant) {
+  if (humanSupportRequested || recoverySupportRequested) {
     return {
       kind: "support",
       headline: "You gave THRIVE a clearer picture.",
       detail:
         signalDetail ??
-        "You said support could be useful right now. You can act on that, or leave the check-in here.",
-      actionLabel: "Open Support",
-      actionHref: supportHref(current),
+        (humanSupportRequested
+          ? "You said support could be useful right now. You can act on that, or leave the check-in here."
+          : "You said recovery support could be useful right now. THRIVE can show a few different starting points, or you can leave the check-in here."),
+      actionLabel,
+      actionHref,
     };
   }
 
