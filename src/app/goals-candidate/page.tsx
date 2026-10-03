@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import AuthGate from "../AuthGate";
 import { GoalProgressStatus, ParticipantGoal, useParticipantGoals } from "../goals/useParticipantGoals";
 import { getGoalArea, getGoalPreset, goalAreas } from "../goals/goalPresets";
@@ -108,13 +108,18 @@ function goalSupportHref(goal: ParticipantGoal) {
   return `/support?${params.toString()}`;
 }
 
-function GoalThreadCard({ goal, working, onStatusChange }: { goal: ParticipantGoal; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void> }) {
+function GoalThreadCard({ goal, working, onStatusChange, focused = false }: { goal: ParticipantGoal; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void>; focused?: boolean }) {
   const visual = statusVisuals[goal.progress_status];
   const [guidanceChoice, setGuidanceChoice] = useState<GoalGuidanceChoice>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const job = goalGuidanceJob(goal);
   const guidance = guidanceChoice ? guidanceCopy(job, guidanceChoice, goal) : null;
 
-  return <details className="group overflow-hidden rounded-[1.6rem] border border-white/80 bg-white/78 shadow-sm backdrop-blur-xl">
+  useEffect(() => {
+    if (focused) setIsOpen(true);
+  }, [focused]);
+
+  return <details id={`goal-${goal.id}`} open={isOpen} onToggle={(event) => setIsOpen(event.currentTarget.open)} className={`group scroll-mt-24 overflow-hidden rounded-[1.6rem] border bg-white/78 shadow-sm backdrop-blur-xl ${focused ? "border-emerald-400 ring-4 ring-emerald-100" : "border-white/80"}`}>
     <summary className="cursor-pointer list-none p-5">
       <div className="flex items-start gap-4">
         <span className={`mt-1 h-3.5 w-3.5 shrink-0 rounded-full ${visual.dot}`} />
@@ -165,7 +170,7 @@ function GoalThreadCard({ goal, working, onStatusChange }: { goal: ParticipantGo
   </details>;
 }
 
-function GoalThreadGroup({ title, note, goals, working, onStatusChange }: { title: string; note: string; goals: ParticipantGoal[]; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void> }) {
+function GoalThreadGroup({ title, note, goals, working, onStatusChange, focusedGoalId }: { title: string; note: string; goals: ParticipantGoal[]; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void>; focusedGoalId?: string }) {
   if (goals.length === 0) return null;
 
   return <section className="rounded-[2rem] border border-white/80 bg-white/58 p-5 shadow-sm backdrop-blur-xl sm:p-6">
@@ -177,7 +182,7 @@ function GoalThreadGroup({ title, note, goals, working, onStatusChange }: { titl
       <span className="rounded-full bg-white/80 px-3 py-1.5 text-sm font-black text-slate-600">{goals.length}</span>
     </div>
     <div className="mt-4 space-y-3">
-      {goals.map((goal) => <GoalThreadCard key={goal.id} goal={goal} working={working} onStatusChange={onStatusChange} />)}
+      {goals.map((goal) => <GoalThreadCard key={goal.id} goal={goal} working={working} onStatusChange={onStatusChange} focused={goal.id === focusedGoalId} />)}
     </div>
   </section>;
 }
@@ -191,6 +196,7 @@ export default function GoalsCandidatePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [justSavedGoal, setJustSavedGoal] = useState<ParticipantGoal | null>(null);
   const [justCompletedGoal, setJustCompletedGoal] = useState<ParticipantGoal | null>(null);
+  const [focusedGoalId, setFocusedGoalId] = useState("");
 
   const canCreate = Boolean(participant && participation);
   const selectedArea = useMemo(() => getGoalArea(draft.areaId), [draft.areaId]);
@@ -201,6 +207,7 @@ export default function GoalsCandidatePage() {
   const pausedGoals = useMemo(() => currentGoals.filter((goal) => goal.progress_status === "paused"), [currentGoals]);
   const completedGoals = useMemo(() => activeGoals.filter((goal) => goal.progress_status === "completed"), [activeGoals]);
   const pastGoals = useMemo(() => [...completedGoals, ...archivedGoals], [completedGoals, archivedGoals]);
+  const allGoals = useMemo(() => [...activeGoals, ...archivedGoals], [activeGoals, archivedGoals]);
   const pastGoalAreas = useMemo(() => {
     const counts = new Map<string, number>();
     pastGoals.forEach((goal) => {
@@ -209,6 +216,38 @@ export default function GoalsCandidatePage() {
     });
     return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
   }, [pastGoals]);
+
+  useEffect(() => {
+    const goalId = new URLSearchParams(window.location.search).get("goal")?.trim() ?? "";
+    if (goalId) setFocusedGoalId(goalId);
+  }, []);
+
+  useEffect(() => {
+    if (loading || !focusedGoalId) return;
+    const targetGoal = allGoals.find((goal) => goal.id === focusedGoalId);
+    if (!targetGoal) return;
+
+    setJustSavedGoal(null);
+    setJustCompletedGoal(null);
+    setShowCreate(false);
+    if (["completed", "archived"].includes(targetGoal.progress_status)) {
+      setShowHistory(true);
+    }
+
+    const moveToGoal = () => {
+      const target = document.getElementById(`goal-${focusedGoalId}`);
+      if (!target) return;
+      const top = window.scrollY + target.getBoundingClientRect().top - 76;
+      window.scrollTo({ top: Math.max(top, 0), behavior: "auto" });
+    };
+
+    const firstPass = window.setTimeout(moveToGoal, 80);
+    const settlePass = window.setTimeout(moveToGoal, 420);
+    return () => {
+      window.clearTimeout(firstPass);
+      window.clearTimeout(settlePass);
+    };
+  }, [allGoals, focusedGoalId, loading]);
 
   function resetCreation() { setDraft(emptyDraft); setStep(1); setShowCreate(false); setNotice(""); }
   function beginCreation() { setShowCreate(true); setStep(1); setDraft(emptyDraft); setNotice(""); setJustSavedGoal(null); setJustCompletedGoal(null); }
@@ -294,9 +333,9 @@ export default function GoalsCandidatePage() {
           </div>
         </section>
 
-        <GoalThreadGroup title="Active" note="Things you’re working on now." goals={activeNow} working={working} onStatusChange={changeStatus} />
-        <GoalThreadGroup title="Ready" note="Things waiting for you to start." goals={readyGoals} working={working} onStatusChange={changeStatus} />
-        <GoalThreadGroup title="Paused" note="Things you chose to set aside for now." goals={pausedGoals} working={working} onStatusChange={changeStatus} />
+        <GoalThreadGroup title="Active" note="Things you’re working on now." goals={activeNow} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
+        <GoalThreadGroup title="Ready" note="Things waiting for you to start." goals={readyGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
+        <GoalThreadGroup title="Paused" note="Things you chose to set aside for now." goals={pausedGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
       </section> : null}
 
       {!justSavedGoal && !justCompletedGoal && !showCreate ? <button type="button" onClick={beginCreation} className="flex w-full items-center justify-between rounded-[2rem] border border-white/80 bg-white/72 p-5 text-left shadow-sm backdrop-blur-xl"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Add</p><p className="mt-1 text-xl font-black">{currentGoals.length ? "Start another goal" : "Start a goal"}</p></div><span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-2xl font-black text-emerald-800">+</span></button> : null}
@@ -323,7 +362,7 @@ export default function GoalsCandidatePage() {
           <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-slate-500">Archived</p><p className="mt-2 text-2xl font-black text-slate-950">{archivedGoals.length}</p></div>
         </div>
         {pastGoalAreas.length > 0 ? <div className="mt-4 flex flex-wrap gap-2">{pastGoalAreas.slice(0, 6).map(([area, count]) => <span key={area} className="rounded-full bg-white px-3 py-2 text-sm font-black text-slate-600 shadow-sm">{area} · {count}</span>)}</div> : null}
-        {showHistory ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{pastGoals.length === 0 ? <p className="text-sm text-slate-600">No past goals yet.</p> : pastGoals.map((goal) => { const visual = statusVisuals[goal.progress_status]; return <details key={goal.id} className="rounded-2xl bg-slate-50 p-5"><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{goal.goal_area ?? "Goal"}</p><span className={`rounded-full px-3 py-1 text-xs font-black ${visual.badge}`}>{statusLabels[goal.progress_status]}</span></div><h3 className="mt-2 text-lg font-black">{goal.title}</h3></summary><p className="mt-3 text-sm font-bold leading-6 text-slate-600">Last step: {goal.next_step}</p>{goal.why_it_matters ? <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">Why it mattered: {goal.why_it_matters}</p> : null}</details>; })}</div> : null}
+        {showHistory ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{pastGoals.length === 0 ? <p className="text-sm text-slate-600">No past goals yet.</p> : pastGoals.map((goal) => { const visual = statusVisuals[goal.progress_status]; const focused = goal.id === focusedGoalId; return <details key={goal.id} id={`goal-${goal.id}`} open={focused ? true : undefined} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-5 ${focused ? "ring-4 ring-sky-100" : ""}`}><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{goal.goal_area ?? "Goal"}</p><span className={`rounded-full px-3 py-1 text-xs font-black ${visual.badge}`}>{statusLabels[goal.progress_status]}</span></div><h3 className="mt-2 text-lg font-black">{goal.title}</h3></summary><p className="mt-3 text-sm font-bold leading-6 text-slate-600">Last step: {goal.next_step}</p>{goal.why_it_matters ? <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">Why it mattered: {goal.why_it_matters}</p> : null}</details>; })}</div> : null}
       </section> : null}
     </> : null}
 
