@@ -146,9 +146,11 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
   } = useWellnessCheckinCandidate();
 
   useEffect(() => {
-    if (!loading && !todayCheckin && flow.phase === "current") {
-      dispatch({ type: "START_NEW_CHECKIN" });
-    }
+    if (loading || todayCheckin || flow.phase !== "current") return;
+    const focusedDay =
+      new URLSearchParams(window.location.search).get("day")?.trim() ?? "";
+    if (focusedDay) return;
+    dispatch({ type: "START_NEW_CHECKIN" });
   }, [flow.phase, loading, todayCheckin]);
 
   useEffect(() => {
@@ -174,6 +176,30 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
   );
 
   const recentDates = Object.keys(recentByDate);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const day = new URLSearchParams(window.location.search).get("day")?.trim() ?? "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !recentByDate[day]?.length) return;
+
+    setHistoryDay(day);
+
+    const moveToHistory = () => {
+      const target = document.getElementById("wellness-history");
+      if (!target) return;
+      const top = window.scrollY + target.getBoundingClientRect().top - 76;
+      window.scrollTo({ top: Math.max(top, 0), behavior: "auto" });
+    };
+
+    const firstPass = window.setTimeout(moveToHistory, 80);
+    const settlePass = window.setTimeout(moveToHistory, 420);
+    return () => {
+      window.clearTimeout(firstPass);
+      window.clearTimeout(settlePass);
+    };
+  }, [loading, recentByDate]);
+
   const weekKeys = useMemo(
     () => Array.from({ length: 7 }, (_, index) => shiftDateKey(today, index - 6)),
     [today],
@@ -553,7 +579,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
       ) : null}
 
       {flow.phase === "current" && recentDates.length > 0 ? (
-        <section className="wellness-week-history rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
+        <section id="wellness-history" className="wellness-week-history scroll-mt-24 rounded-[2rem] border border-white/70 bg-[#fbf7ef]/76 p-5 shadow-[0_20px_56px_rgba(8,35,46,0.09)] backdrop-blur-2xl sm:p-8">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-[#147a84]">
