@@ -150,7 +150,7 @@ export function buildStoryReadModel({
         dateKey: createdKey,
         title: "Goal added",
         detail: goal.title,
-        href: "/goals",
+        href: `/goals?goal=${encodeURIComponent(goal.id)}`,
       });
     }
 
@@ -164,7 +164,7 @@ export function buildStoryReadModel({
           dateKey: updatedKey,
           title: "Goal is marked completed",
           detail: goal.title,
-          href: "/goals",
+          href: `/goals?goal=${encodeURIComponent(goal.id)}`,
         });
       }
     }
@@ -251,7 +251,7 @@ export function buildStoryReadModel({
       lane: "Goals",
       title: currentGoal.title,
       detail: currentGoal.next_step,
-      href: "/goals",
+      href: `/goals?goal=${encodeURIComponent(currentGoal.id)}`,
     });
   }
 
