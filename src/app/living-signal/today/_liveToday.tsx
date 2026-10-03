@@ -288,7 +288,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
         label: "Needs you",
         title: "Support needs your reply",
         detail: "There is a message waiting for you.",
-        href: "/support",
+        href: `/support?request=${encodeURIComponent(unresolvedSupportRequest.id)}`,
         action: "Reply",
       };
     }
@@ -418,7 +418,10 @@ export default function LiveToday({ mode }: { mode: Mode }) {
             iconClass: "ls-icon--support",
             title: "Support moved today",
             copy: supportLaneLabel,
-            href: "/support",
+            href:
+              supportEvents.length === 1
+                ? `/support?request=${encodeURIComponent(supportEvents[0].support_request_id)}`
+                : "/support",
           },
         ]
       : []),

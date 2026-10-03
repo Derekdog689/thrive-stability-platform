@@ -118,7 +118,7 @@ function SupportBottomNav() {
   return <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[1.75rem] border border-white/60 bg-white/90 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:bottom-5"><div className="grid grid-cols-5 gap-1">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-center transition ${item.href === "/support" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-900"}`}><span className="text-xl font-black leading-none">{item.icon}</span><span className="mt-1 truncate text-[10px] font-black uppercase tracking-wide sm:text-xs">{item.label}</span></Link>)}</div></nav>;
 }
 
-function SupportCard({ request, statusEvents, participantResponses, participantReplies, assistedBudgetLink, working, onWithdraw, onSubmitReply, compact = false }: {
+function SupportCard({ request, statusEvents, participantResponses, participantReplies, assistedBudgetLink, working, onWithdraw, onSubmitReply, compact = false, focused = false }: {
   request: ParticipantSupportRequest;
   statusEvents: ParticipantSupportStatusEvent[];
   participantResponses: ParticipantSupportResponse[];
@@ -128,6 +128,7 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
   onWithdraw: (request: ParticipantSupportRequest) => Promise<{ ok: boolean; message: string }>;
   onSubmitReply: (request: ParticipantSupportRequest, content: string) => Promise<ParticipantReplyResult>;
   compact?: boolean;
+  focused?: boolean;
 }) {
   const [replyDraft, setReplyDraft] = useState("");
   const [replyNotice, setReplyNotice] = useState("");
@@ -163,7 +164,7 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
     setWithdrawNotice(result.message);
   }
 
-  return <article className={`overflow-hidden rounded-[1.8rem] border bg-white/78 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-xl ${needsYou ? "border-amber-200" : "border-white/80"}`}>
+  return <article id={`support-request-${request.id}`} className={`scroll-mt-24 overflow-hidden rounded-[1.8rem] border bg-white/78 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-xl ${focused ? "border-emerald-400 ring-4 ring-emerald-100" : needsYou ? "border-amber-200" : "border-white/80"}`}>
     <div className={compact ? "p-4" : "p-5 sm:p-6"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{labelCategory(request.participant_category)}</p><h3 className={`mt-2 font-black leading-tight text-slate-950 ${compact ? "text-lg" : "text-2xl"}`}>{request.participant_message}</h3></div>
@@ -211,10 +212,13 @@ export default function SupportPage() {
   const [goalContext, setGoalContext] = useState<GoalSupportContext | null>(null);
   const [wellnessContext, setWellnessContext] = useState<WellnessSupportContext | null>(null);
   const [moneyContext, setMoneyContext] = useState(false);
+  const [focusedRequestId, setFocusedRequestId] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const source = params.get("from");
+    const requestId = params.get("request")?.trim() ?? "";
+    if (requestId) setFocusedRequestId(requestId);
 
     if (source === "money") {
       setMoneyContext(true);
@@ -297,7 +301,22 @@ export default function SupportPage() {
 
   const openRequests = useMemo(() => requests.filter((request) => !["completed", "withdrawn", "archived"].includes(request.status)), [requests]);
   const pastRequests = useMemo(() => requests.filter((request) => ["completed", "withdrawn", "archived"].includes(request.status)), [requests]);
-  const priorityRequest = useMemo(() => openRequests.find((request) => request.status === "waiting_for_participant") ?? openRequests[0] ?? null, [openRequests]);
+  const focusedRequest = useMemo(
+    () => requests.find((request) => request.id === focusedRequestId) ?? null,
+    [requests, focusedRequestId],
+  );
+  const focusedOpenRequest =
+    focusedRequest && !["completed", "withdrawn", "archived"].includes(focusedRequest.status)
+      ? focusedRequest
+      : null;
+  const focusedPastRequest =
+    focusedRequest && ["completed", "withdrawn", "archived"].includes(focusedRequest.status)
+      ? focusedRequest
+      : null;
+  const priorityRequest = useMemo(
+    () => focusedOpenRequest ?? openRequests.find((request) => request.status === "waiting_for_participant") ?? openRequests[0] ?? null,
+    [focusedOpenRequest, openRequests],
+  );
   const otherOpenRequests = useMemo(() => priorityRequest ? openRequests.filter((request) => request.id !== priorityRequest.id) : openRequests, [openRequests, priorityRequest]);
   const assistedBudgetByRequestId = useMemo(
     () => new Map(assistedBudgetLinks.map((item) => [item.support_request_id, item])),
@@ -308,6 +327,31 @@ export default function SupportPage() {
     priorityRequest?.status === "waiting_for_participant" &&
     priorityAssistedBudget?.budget_status !== "active";
   const selectedArea = participantAreas.find((area) => area.value === draft.participantCategory) ?? participantAreas.at(-1)!;
+
+  useEffect(() => {
+    if (loading || !focusedRequestId || !focusedRequest) return;
+
+    setShowCreate(false);
+    setGoalContext(null);
+    setWellnessContext(null);
+    setMoneyContext(false);
+
+    if (focusedPastRequest) setShowHistory(true);
+
+    const moveToRequest = () => {
+      const target = document.getElementById(`support-request-${focusedRequestId}`);
+      if (!target) return;
+      const top = window.scrollY + target.getBoundingClientRect().top - 76;
+      window.scrollTo({ top: Math.max(top, 0), behavior: "auto" });
+    };
+
+    const firstPass = window.setTimeout(moveToRequest, 80);
+    const settlePass = window.setTimeout(moveToRequest, 420);
+    return () => {
+      window.clearTimeout(firstPass);
+      window.clearTimeout(settlePass);
+    };
+  }, [focusedPastRequest, focusedRequest, focusedRequestId, loading]);
 
   function beginCreate() { setGoalContext(null); setWellnessContext(null); setMoneyContext(false); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
   function closeCreate() {
@@ -352,7 +396,7 @@ export default function SupportPage() {
     {!loading && !errorMessage && !canCreate ? <section className="rounded-[1.8rem] bg-white/75 p-6"><h2 className="text-xl font-black">Support is not connected yet</h2></section> : null}
 
     {!loading && !errorMessage && canCreate ? <>
-      {!goalContext && !wellnessContext && !moneyContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityNeedsParticipant ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">{priorityAssistedBudget?.budget_status === "draft" ? "Plan ready" : "Needs you"}</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={priorityAssistedBudget} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} /></section> : !goalContext && !wellnessContext && !moneyContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
+      {!goalContext && !wellnessContext && !moneyContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityNeedsParticipant ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">{priorityAssistedBudget?.budget_status === "draft" ? "Plan ready" : "Needs you"}</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={priorityAssistedBudget} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} focused={priorityRequest.id === focusedRequestId} /></section> : !goalContext && !wellnessContext && !moneyContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
 
       {!showCreate && !goalContext && !wellnessContext && !moneyContext ? <button type="button" onClick={beginCreate} className="w-full rounded-[1.5rem] bg-emerald-700 px-5 py-4 text-left text-lg font-black text-white shadow-[0_12px_28px_rgba(4,120,87,0.18)]">+ Ask for support</button> : null}
 
@@ -390,8 +434,8 @@ export default function SupportPage() {
           <button type="submit" disabled={working || !draft.participantMessage.trim()} className="mt-4 w-full rounded-full bg-emerald-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send to Support"}</button>{notice ? <p className="mt-3 text-sm font-bold text-slate-600">{notice}</p> : null}</section> : null}
       </form> : null}
 
-      {otherOpenRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/55 p-4"><button type="button" onClick={() => setShowAllOpen((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-700"><span>{otherOpenRequests.length} other open request{otherOpenRequests.length === 1 ? "" : "s"}</span><span>{showAllOpen ? "−" : "+"}</span></button>{showAllOpen ? <div className="mt-4 space-y-3">{otherOpenRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact />)}</div> : null}</section> : null}
-      {pastRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/45 p-4"><button type="button" onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-600"><span>Past requests · {pastRequests.length}</span><span>{showHistory ? "−" : "+"}</span></button>{showHistory ? <div className="mt-4 space-y-3">{pastRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact />)}</div> : null}</section> : null}
+      {otherOpenRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/55 p-4"><button type="button" onClick={() => setShowAllOpen((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-700"><span>{otherOpenRequests.length} other open request{otherOpenRequests.length === 1 ? "" : "s"}</span><span>{showAllOpen ? "−" : "+"}</span></button>{showAllOpen ? <div className="mt-4 space-y-3">{otherOpenRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact focused={request.id === focusedRequestId} />)}</div> : null}</section> : null}
+      {pastRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/45 p-4"><button type="button" onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-600"><span>Past requests · {pastRequests.length}</span><span>{showHistory ? "−" : "+"}</span></button>{showHistory ? <div className="mt-4 space-y-3">{pastRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact={!focusedPastRequest || request.id !== focusedRequestId} focused={request.id === focusedRequestId} />)}</div> : null}</section> : null}
     </> : null}
 
     <Link href="/resources" className="group flex items-center justify-between rounded-[1.5rem] border border-white/80 bg-white/58 p-4 shadow-[0_14px_38px_rgba(15,23,42,0.06)] backdrop-blur-xl transition active:scale-[0.99]">
