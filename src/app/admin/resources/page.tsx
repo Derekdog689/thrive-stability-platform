@@ -347,7 +347,7 @@ export default function ResourcesAdminPage() {
   if (state === "checking" || loading) {
     return (
       <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
-        <section className="mx-auto max-w-6xl rounded-3xl border border-emerald-100 bg-white p-8 shadow-sm">
+        <section className="mx-auto max-w-[1500px] rounded-3xl border border-emerald-100 bg-white p-8 shadow-sm">
           <p className="text-sm font-bold uppercase text-emerald-700">THRIVE Admin</p>
           <h1 className="mt-2 text-3xl font-black">Loading Resource Library</h1>
         </section>
@@ -358,7 +358,7 @@ export default function ResourcesAdminPage() {
   if (state === "signed-out") {
     return (
       <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
-        <section className="mx-auto max-w-6xl rounded-3xl border border-amber-100 bg-white p-8 shadow-sm">
+        <section className="mx-auto max-w-[1500px] rounded-3xl border border-amber-100 bg-white p-8 shadow-sm">
           <h1 className="text-3xl font-black">THRIVE Admin access required</h1>
           <Link
             href="/login"
@@ -374,7 +374,7 @@ export default function ResourcesAdminPage() {
   if (!canAccessSystemAdmin) {
     return (
       <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
-        <section className="mx-auto max-w-6xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <section className="mx-auto max-w-[1500px] rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm font-bold uppercase text-slate-500">THRIVE Admin</p>
           <h1 className="mt-2 text-3xl font-black">Admin access not available</h1>
           <p className="mt-3 text-slate-600">
@@ -387,7 +387,7 @@ export default function ResourcesAdminPage() {
 
   return (
     <main className="min-h-screen bg-[#eef4ef] px-6 py-10 text-slate-950">
-      <section className="mx-auto max-w-6xl space-y-6">
+      <section className="mx-auto max-w-[1500px] space-y-6">
         <header className="rounded-3xl border border-emerald-100 bg-white p-8 shadow-sm">
           <p className="text-sm font-bold uppercase text-emerald-700">
             THRIVE Admin · Resources
@@ -563,7 +563,7 @@ export default function ResourcesAdminPage() {
               No canonical Resources are currently available to this Admin.
             </div>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {resources.map((resource) => {
                 const mapping = visibilityByResource.get(resource.id);
                 const signals = readiness.get(resource.id) ?? {
@@ -581,85 +581,57 @@ export default function ResourcesAdminPage() {
                 return (
                   <article
                     key={resource.id}
-                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+                    className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <div className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-wide">
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
-                            Canonical · {resource.status}
-                          </span>
-                          <span
-                            className={`rounded-full px-3 py-1 ${
-                              mapping?.status === "active"
-                                ? "bg-emerald-100 text-emerald-900"
-                                : "bg-amber-100 text-amber-900"
-                            }`}
-                          >
-                            Visibility · {mapping?.status ?? "not mapped"}
-                          </span>
-                        </div>
-                        <h3 className="mt-3 text-2xl font-black">{resource.resource_name}</h3>
-                        <p className="mt-1 text-sm font-semibold text-emerald-800">
-                          {categoryLabel(resource.category)}
-                        </p>
-                        <p className="mt-3 max-w-3xl leading-6 text-slate-600">
-                          {resource.plain_language_purpose}
-                        </p>
-                      </div>
+                    <div className="flex flex-wrap gap-1.5 text-[10px] font-black uppercase tracking-wide">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                        {resource.status}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 ${
+                          mapping?.status === "active"
+                            ? "bg-emerald-100 text-emerald-900"
+                            : "bg-amber-100 text-amber-900"
+                        }`}
+                      >
+                        {mapping?.status ?? "not mapped"}
+                      </span>
                     </div>
 
-                    <dl className="mt-5 grid gap-4 text-sm md:grid-cols-3">
-                      <div>
-                        <dt className="font-bold text-slate-500">Visibility scope</dt>
-                        <dd className="mt-1 font-semibold text-slate-900">
-                          {mapping
-                            ? mapping.scope_type === "workspace"
-                              ? "This workspace"
-                              : "Program-specific"
-                            : "No mapping"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="font-bold text-slate-500">Service area</dt>
-                        <dd className="mt-1 font-semibold text-slate-900">
-                          {resource.service_area_text || resource.state_code || "Not specified"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="font-bold text-slate-500">Review cadence</dt>
-                        <dd className="mt-1 font-semibold text-slate-900">
-                          {cadenceLabel(resource.verification_cadence)}
-                        </dd>
-                      </div>
-                    </dl>
+                    <h3 className="mt-3 break-words text-lg font-black leading-tight">
+                      {resource.resource_name}
+                    </h3>
+                    <p className="mt-1 text-xs font-bold text-emerald-800">
+                      {categoryLabel(resource.category)}
+                    </p>
+                    <p className="mt-2 line-clamp-3 text-sm leading-5 text-slate-600">
+                      {resource.plain_language_purpose}
+                    </p>
 
-                    <section className="mt-5 rounded-2xl bg-slate-50 p-4">
-                      <p className="text-sm font-black text-slate-900">Content readiness</p>
-                      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                        <p>{signals.organizationRoles > 0 ? "✓" : "○"} Authority organization</p>
-                        <p>{signals.accessPaths > 0 ? "✓" : "○"} Official access path</p>
-                        <p>{signals.verifications > 0 ? "✓" : "○"} Verification record</p>
-                        <p>{signals.guidanceSections > 0 ? "✓" : "○"} THRIVE guidance</p>
-                      </div>
-                      <p className="mt-3 text-xs leading-5 text-slate-500">
-                        {resource.status === "active"
-                          ? "Canonical Resource is already active. Visibility may be paused or resumed independently."
-                          : activationReady
-                            ? "Core activation prerequisites are present. Canonical activation is intentionally deferred to C2."
-                            : "Draft remains unpublished while content setup is incomplete."}
+                    <div className="mt-3 space-y-1 text-xs text-slate-500">
+                      <p className="truncate">{resource.service_area_text || resource.state_code || "Service area not specified"}</p>
+                      <p>{cadenceLabel(resource.verification_cadence)}</p>
+                      <p className={activationReady ? "font-bold text-emerald-700" : "font-semibold text-amber-700"}>
+                        {signals.organizationRoles > 0 ? "✓" : "○"} authority · {signals.accessPaths > 0 ? "✓" : "○"} access · {signals.verifications > 0 ? "✓" : "○"} verified · {signals.guidanceSections > 0 ? "✓" : "○"} guidance
                       </p>
-                    </section>
+                    </div>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="mt-auto grid gap-2 pt-4">
+                      <Link
+                        href={`/admin/resources/${resource.id}`}
+                        className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white"
+                      >
+                        Maintain
+                      </Link>
+
                       {mapping?.status === "active" ? (
                         <button
                           type="button"
                           disabled={working}
                           onClick={() => void changeVisibility(resource, "pause")}
-                          className="rounded-2xl border border-amber-400 bg-white px-4 py-3 text-sm font-bold text-amber-900 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-40"
                         >
-                          {working ? "Updating..." : "Pause participant visibility"}
+                          {working ? "Updating..." : "Pause visibility"}
                         </button>
                       ) : null}
 
@@ -668,16 +640,10 @@ export default function ResourcesAdminPage() {
                           type="button"
                           disabled={working}
                           onClick={() => void changeVisibility(resource, "resume")}
-                          className="rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                          className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 disabled:opacity-40"
                         >
-                          {working ? "Updating..." : "Resume participant visibility"}
+                          {working ? "Updating..." : "Resume visibility"}
                         </button>
-                      ) : null}
-
-                      {resource.status !== "active" ? (
-                        <span className="inline-flex items-center rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
-                          Canonical activation comes in C2
-                        </span>
                       ) : null}
                     </div>
                   </article>
