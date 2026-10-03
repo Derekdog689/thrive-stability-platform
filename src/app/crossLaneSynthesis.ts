@@ -50,6 +50,17 @@ function readableStatus(value: string) {
   return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
+function requestsHumanSupport(checkin: WellnessCheckinRow) {
+  if (checkin.support_needed === "yes") return true;
+  if (checkin.chosen_next_step === "contact_supportive_person") return true;
+
+  if (checkin.chosen_next_step === "ask_for_help") {
+    return checkin.recovery_support !== "could_use_support";
+  }
+
+  return false;
+}
+
 function buildSupportHref(checkin: WellnessCheckinRow) {
   const params = new URLSearchParams({ from: "wellness" });
 
@@ -128,12 +139,7 @@ export function buildCrossLaneSynthesis({
 
   // 2. A participant-selected Wellness next step that explicitly asks for
   // support is stronger evidence than a general inferred relationship.
-  if (
-    todayCheckin &&
-    (todayCheckin.support_needed === "yes" ||
-      todayCheckin.chosen_next_step === "ask_for_help" ||
-      todayCheckin.chosen_next_step === "contact_supportive_person")
-  ) {
+  if (todayCheckin && requestsHumanSupport(todayCheckin)) {
     const selected = todayCheckin.chosen_next_step
       ? wellnessNextStepLabels[todayCheckin.chosen_next_step] ??
         readableStatus(todayCheckin.chosen_next_step).toLowerCase()
