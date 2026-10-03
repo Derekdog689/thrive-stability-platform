@@ -430,7 +430,11 @@ export default function ResourcesAdminPage() {
           </section>
         ) : null}
 
-        <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
+        <details className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+          <summary className="cursor-pointer list-none text-sm font-black text-emerald-800">
+            + Create Resource draft
+          </summary>
+          <div className="mt-4">
           <p className="text-sm font-bold uppercase text-emerald-700">Add Resource</p>
           <h2 className="mt-2 text-2xl font-black">Create a safe draft</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
@@ -537,17 +541,12 @@ export default function ResourcesAdminPage() {
               {creating ? "Creating draft..." : "Create Resource draft"}
             </button>
           </form>
-        </section>
+          </div>
+        </details>
 
-        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
-          <p className="text-sm font-black uppercase tracking-wide">C1 boundary</p>
-          <p className="mt-2 max-w-4xl text-sm leading-6">
-            Draft creation and visibility are available here. Authority organizations,
-            access paths, THRIVE guidance, verification records, and canonical
-            activation are maintained in the next Resources slice. Visibility never
-            establishes eligibility, recommendation, diagnosis, urgency, or priority.
-          </p>
-        </section>
+        <p className="px-1 text-xs leading-5 text-slate-500">
+          Drafts stay unpublished until activation. Visibility and canonical status remain separate.
+        </p>
 
         <section>
           <div className="mb-4">
