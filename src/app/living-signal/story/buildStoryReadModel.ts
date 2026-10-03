@@ -114,16 +114,28 @@ export function buildStoryReadModel({
   const startKey = shiftDateKey(todayKey, -6);
   const events: StoryEvent[] = [];
 
+  const wellnessByDate = new Map<string, WellnessCheckinRow[]>();
   for (const checkin of wellnessCheckins) {
     if (!inWindow(checkin.checkin_date, startKey, todayKey)) continue;
+    const bucket = wellnessByDate.get(checkin.checkin_date) ?? [];
+    bucket.push(checkin);
+    wellnessByDate.set(checkin.checkin_date, bucket);
+  }
+
+  for (const [dateKey, items] of wellnessByDate.entries()) {
+    const latest = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    if (!latest) continue;
 
     events.push({
-      id: `wellness:${checkin.id}`,
+      id: `wellness:${dateKey}`,
       lane: "Wellness",
-      occurredAt: checkin.created_at,
-      dateKey: checkin.checkin_date,
-      title: "Wellness check-in",
-      detail: `You marked things ${wellnessOverallLabel(checkin.overall_day).toLowerCase()}.`,
+      occurredAt: latest.created_at,
+      dateKey,
+      title:
+        items.length === 1
+          ? "Wellness check-in"
+          : `${items.length} Wellness check-ins`,
+      detail: `Latest: ${wellnessOverallLabel(latest.overall_day)}.`,
       href: "/wellness",
     });
   }
