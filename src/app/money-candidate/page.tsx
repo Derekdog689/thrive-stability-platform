@@ -730,7 +730,7 @@ export default function MoneyCandidatePage() {
         <p className="mt-2 text-sm font-semibold leading-6 text-emerald-950">You can reuse what worked, change the amounts, leave money flexible again, or start fresh. The numbers are information, not a grade.</p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <button type="button" onClick={() => { setShowPlanSetup(true); scrollToMoneySection("money-plan-setup"); }} className="rounded-full bg-emerald-700 px-4 py-3 font-black text-white">Start the next plan</button>
-          <Link href="/support?from=money" className="flex items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-3 font-black text-emerald-900">Talk it through with Support</Link>
+          <Link href={`/support?from=money&intent=review-plan&budgetPeriod=${encodeURIComponent(latestCompletedPeriod.id)}`} className="flex items-center justify-center rounded-full border border-emerald-200 bg-white px-4 py-3 font-black text-emerald-900">Talk it through with Support</Link>
         </div>
       </div>
     </section> : null}
