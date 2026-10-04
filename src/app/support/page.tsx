@@ -37,6 +37,11 @@ type WellnessSupportContext = {
   question: string | null;
 };
 
+type MoneySupportContext = {
+  intent: "starter-plan" | "review-plan";
+  budgetPeriodId: string | null;
+};
+
 function readableSignal(label: string, value: string) {
   return `${label}: ${value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase())}`;
 }
@@ -211,7 +216,7 @@ export default function SupportPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [goalContext, setGoalContext] = useState<GoalSupportContext | null>(null);
   const [wellnessContext, setWellnessContext] = useState<WellnessSupportContext | null>(null);
-  const [moneyContext, setMoneyContext] = useState(false);
+  const [moneyContext, setMoneyContext] = useState<MoneySupportContext | null>(null);
   const [focusedRequestId, setFocusedRequestId] = useState("");
 
   useEffect(() => {
@@ -221,13 +226,25 @@ export default function SupportPage() {
     if (requestId) setFocusedRequestId(requestId);
 
     if (source === "money") {
-      setMoneyContext(true);
+      const requestedIntent = params.get("intent")?.trim() ?? "";
+      const intent: MoneySupportContext["intent"] =
+        requestedIntent === "review-plan" ? "review-plan" : "starter-plan";
+      const budgetPeriodId =
+        intent === "review-plan" ? params.get("budgetPeriod")?.trim() || null : null;
+
+      setMoneyContext({ intent, budgetPeriodId });
       setGoalContext(null);
       setWellnessContext(null);
       setDraft({
         participantCategory: "budget_money",
-        participantMessage: "I’d like help building a starter Money plan.",
-        requestedSupport: "Help me build a starter plan I can review before I use it.",
+        participantMessage:
+          intent === "review-plan"
+            ? "I’d like help talking through this Money plan."
+            : "I’d like help building a starter Money plan.",
+        requestedSupport:
+          intent === "review-plan"
+            ? "Help me understand what I want to carry forward, change, or ask about from this plan."
+            : "Help me build a starter plan I can review before I use it.",
         contactPreference: "in_app",
       });
       setStep(2);
@@ -334,7 +351,7 @@ export default function SupportPage() {
     setShowCreate(false);
     setGoalContext(null);
     setWellnessContext(null);
-    setMoneyContext(false);
+    setMoneyContext(null);
 
     if (focusedPastRequest) setShowHistory(true);
 
@@ -353,12 +370,12 @@ export default function SupportPage() {
     };
   }, [focusedPastRequest, focusedRequest, focusedRequestId, loading]);
 
-  function beginCreate() { setGoalContext(null); setWellnessContext(null); setMoneyContext(false); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
+  function beginCreate() { setGoalContext(null); setWellnessContext(null); setMoneyContext(null); setDraft(emptyDraft); setStep(1); setNotice(""); setShowCreate(true); }
   function closeCreate() {
     setShowCreate(false);
     setGoalContext(null);
     setWellnessContext(null);
-    setMoneyContext(false);
+    setMoneyContext(null);
     setDraft(emptyDraft);
     setStep(1);
     setNotice("");
@@ -403,8 +420,16 @@ export default function SupportPage() {
       {showCreate ? <form id="support-request-create" onSubmit={submit} className="rounded-[1.8rem] border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur-xl sm:p-7">
         {moneyContext ? <section className="mb-5 rounded-[1.4rem] border border-sky-200 bg-sky-50 p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">Continuing from Money</p>
-          <h2 className="mt-2 text-xl font-black text-slate-950">You do not need to figure out the whole plan first.</h2>
-          <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">Support can help prepare a starter plan for you to review. Nothing becomes active until you choose to use it.</p>
+          <h2 className="mt-2 text-xl font-black text-slate-950">
+            {moneyContext.intent === "review-plan"
+              ? "You do not need to explain the plan again."
+              : "You do not need to figure out the whole plan first."}
+          </h2>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">
+            {moneyContext.intent === "review-plan"
+              ? "Support can help you talk through the Money plan you were just looking at."
+              : "Support can help prepare a starter plan for you to review. Nothing becomes active until you choose to use it."}
+          </p>
           <p className="mt-3 text-sm leading-6 text-slate-600">Review or edit the request below, then send it when you are ready.</p>
         </section> : null}
         {wellnessContext ? <section className="mb-5 rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-4">
