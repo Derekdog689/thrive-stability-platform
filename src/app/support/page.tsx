@@ -197,6 +197,7 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
         <div className="border-t border-slate-200/70 p-4 text-sm text-slate-600">
           <div className="grid grid-cols-2 gap-3"><div><p className="text-[10px] font-black uppercase text-slate-400">Requested</p><p className="mt-1 font-bold">{formatDate(request.created_at)}</p></div><div><p className="text-[10px] font-black uppercase text-slate-400">Follow-up</p><p className="mt-1 font-bold">{labelContact(request.contact_preference)}</p></div></div>
           {request.requested_support ? <div className="mt-4"><p className="text-[10px] font-black uppercase text-slate-400">What would help</p><p className="mt-1 leading-6">{request.requested_support}</p></div> : null}
+          {assistedBudgetLink?.budget_status === "completed" ? <div className="mt-4"><p className="text-[10px] font-black uppercase text-slate-400">Money context</p><Link href={"/budget?review=" + encodeURIComponent(assistedBudgetLink.budget_period_id)} className="mt-1 inline-flex font-black text-emerald-800 underline decoration-emerald-200 underline-offset-4">Completed plan attached · Open plan</Link></div> : null}
           {entries.length || replies.length || events.length ? <div className="mt-4"><p className="text-[10px] font-black uppercase text-slate-400">History</p><p className="mt-1">{events.length} status update{events.length === 1 ? "" : "s"} · {entries.length} Support message{entries.length === 1 ? "" : "s"} · {replies.length} repl{replies.length === 1 ? "y" : "ies"}</p></div> : null}
           {request.status === "submitted" ? <button type="button" disabled={working} onClick={() => void withdraw()} className="mt-4 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-600">Withdraw request</button> : null}
           {withdrawNotice ? <p className="mt-2 text-sm font-bold">{withdrawNotice}</p> : null}
@@ -388,7 +389,12 @@ export default function SupportPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice("");
-    const result = await createRequest(draft);
+    const result = await createRequest(draft, {
+      budgetPeriodId:
+        moneyContext?.intent === "review-plan"
+          ? moneyContext.budgetPeriodId
+          : null,
+    });
     setNotice(result.message);
     if (!result.ok) return;
     setDraft(emptyDraft);
@@ -396,6 +402,7 @@ export default function SupportPage() {
     setShowCreate(false);
     setGoalContext(null);
     setWellnessContext(null);
+    setMoneyContext(null);
     if (typeof window !== "undefined" && ["goal", "wellness", "money"].includes(new URLSearchParams(window.location.search).get("from") ?? "")) {
       window.history.replaceState({}, "", "/support");
     }
