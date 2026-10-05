@@ -31,6 +31,8 @@ export default function FinancialActivityPage() {
   refresh,
 } = useParticipantFinancial();
 
+  const [requestedDay, setRequestedDay] = useState("");
+
   const [showManualForm, setShowManualForm] = useState(false);
   const [activityDate, setActivityDate] = useState("");
   const [activityDirection, setActivityDirection] = useState<
@@ -116,6 +118,43 @@ const [uploadFileHash, setUploadFileHash] = useState("");
 const [uploadRows, setUploadRows] = useState<UploadPreviewRow[]>([]);
 const [uploadNotice, setUploadNotice] = useState("");
 const [uploadSaving, setUploadSaving] = useState(false);
+
+  useEffect(() => {
+    const day = new URLSearchParams(window.location.search).get("day") ?? "";
+    setRequestedDay(/^\\d{4}-\\d{2}-\\d{2}$/.test(day) ? day : "");
+  }, []);
+
+  const focusedDayActivity = requestedDay
+    ? financialActivity.filter((activity) => activity.activity_date === requestedDay)
+    : [];
+
+  const focusedMoneyIn = focusedDayActivity.reduce(
+    (sum, activity) =>
+      activity.activity_direction === "inflow"
+        ? sum + Math.abs(Number(activity.signed_amount ?? 0))
+        : sum,
+    0,
+  );
+
+  const focusedMoneyOut = focusedDayActivity.reduce(
+    (sum, activity) =>
+      activity.activity_direction === "outflow"
+        ? sum + Math.abs(Number(activity.signed_amount ?? 0))
+        : sum,
+    0,
+  );
+
+  useEffect(() => {
+    if (loading || errorMessage || focusedDayActivity.length === 0) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById("financial-activity-day-focus")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading, errorMessage, requestedDay, focusedDayActivity.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1176,6 +1215,78 @@ async function handleAllocationSave(
                     </p>
                   ) : null}
                 </section>
+
+                {focusedDayActivity.length > 0 ? (
+                  <section
+                    id="financial-activity-day-focus"
+                    className="scroll-mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm sm:p-8"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-emerald-800">
+                          Financial Activity · focused day
+                        </p>
+                        <h2 className="mt-2 text-2xl font-black">
+                          {formatDate(requestedDay)}
+                        </h2>
+                        <p className="mt-2 text-sm font-semibold text-slate-600">
+                          {focusedDayActivity.length} {focusedDayActivity.length === 1 ? "record" : "records"} on this day.
+                        </p>
+                      </div>
+
+                      <a
+                        href="/financial-activity"
+                        className="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-black text-emerald-900"
+                      >
+                        Show all activity
+                      </a>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl bg-white p-4">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                          Money in
+                        </p>
+                        <p className="mt-1 text-xl font-black">
+                          {formatMoney(focusedMoneyIn)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-white p-4">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                          Money out
+                        </p>
+                        <p className="mt-1 text-xl font-black">
+                          {formatMoney(focusedMoneyOut)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 space-y-3">
+                      {focusedDayActivity.map((activity) => (
+                        <article
+                          key={`focus:${activity.activity_record_type}:${activity.activity_id}`}
+                          className="rounded-2xl border border-emerald-100 bg-white p-4"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="font-black">{activity.description}</p>
+                              <p className="mt-1 text-sm text-slate-500">
+                                {activity.source_name}
+                                {" · "}
+                                {activity.provenance_type === "participant_manual"
+                                  ? "Added by you"
+                                  : activity.provenance_type === "participant_csv_upload"
+                                    ? "Uploaded by you"
+                                    : "Bank import"}
+                              </p>
+                            </div>
+                            <p className="font-black">{formatMoney(activity.signed_amount)}</p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
 
                 <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
                   <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
