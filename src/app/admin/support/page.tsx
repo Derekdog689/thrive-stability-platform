@@ -77,6 +77,16 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatDateOnly(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+
 function labelStatus(value: string) {
   const labels: Record<string, string> = {
     submitted: "Received",
@@ -316,7 +326,7 @@ function MoneyRequestContext({
             Review Money plan
           </p>
           <p className="mt-1 text-lg font-black text-emerald-950">
-            {formatDate(context.periodStart)} to {formatDate(context.periodEnd)}
+            {formatDateOnly(context.periodStart)} to {formatDateOnly(context.periodEnd)}
           </p>
         </div>
         <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800">
