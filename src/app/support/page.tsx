@@ -388,7 +388,12 @@ export default function SupportPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice("");
-    const result = await createRequest(draft);
+    const result = await createRequest(draft, {
+      budgetPeriodId:
+        moneyContext?.intent === "review-plan"
+          ? moneyContext.budgetPeriodId
+          : null,
+    });
     setNotice(result.message);
     if (!result.ok) return;
     setDraft(emptyDraft);
@@ -396,6 +401,7 @@ export default function SupportPage() {
     setShowCreate(false);
     setGoalContext(null);
     setWellnessContext(null);
+    setMoneyContext(null);
     if (typeof window !== "undefined" && ["goal", "wellness", "money"].includes(new URLSearchParams(window.location.search).get("from") ?? "")) {
       window.history.replaceState({}, "", "/support");
     }
