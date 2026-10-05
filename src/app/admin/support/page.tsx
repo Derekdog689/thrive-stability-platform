@@ -155,7 +155,7 @@ function MoneyRequestContext({
   });
 
   useEffect(() => {
-    if (request.participant_category !== "budget_money") {
+    if (request.participant_category !== "budget_money" || !canPrepareStarter) {
       return;
     }
 
@@ -274,9 +274,9 @@ function MoneyRequestContext({
     return () => {
       cancelled = true;
     };
-  }, [request.id, request.participant_category]);
+  }, [request.id, request.participant_category, canPrepareStarter]);
 
-  if (request.participant_category !== "budget_money") return null;
+  if (request.participant_category !== "budget_money" || !canPrepareStarter) return null;
 
   if (context.kind === "loading") {
     return (
