@@ -407,7 +407,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
                 ? "Money activity recorded"
                 : `${moneyEvents.length} Money activities recorded`,
             copy: "Recorded in your Financial Activity today",
-            href: "/financial-activity",
+            href: `/financial-activity?day=${encodeURIComponent(today)}`,
           },
         ]
       : []),
