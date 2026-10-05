@@ -101,6 +101,10 @@ export type SupportRequestDraft = {
   contactPreference: ContactPreference;
 };
 
+export type SupportRequestContext = {
+  budgetPeriodId?: string | null;
+};
+
 type SupportedPerson = {
   id: string;
   workspace_id: string;
@@ -437,6 +441,7 @@ export function useParticipantSupport() {
 
   async function createRequest(
     draft: SupportRequestDraft,
+    context?: SupportRequestContext,
   ): Promise<SupportCreateResult> {
     setErrorMessage("");
 
@@ -503,6 +508,66 @@ export function useParticipantSupport() {
 
     const row = result.data as ParticipantSupportRequest;
     let createMessage = "Your Support request was sent.";
+
+    const reviewBudgetPeriodId =
+      draft.participantCategory === "budget_money"
+        ? context?.budgetPeriodId?.trim() || null
+        : null;
+
+    if (reviewBudgetPeriodId) {
+      let moneyContextAttached = false;
+
+      try {
+        const periodResult = await supabase
+          .from("participant_budget_periods")
+          .select("id, status")
+          .eq("id", reviewBudgetPeriodId)
+          .eq("workspace_id", row.workspace_id)
+          .eq("program_id", row.program_id)
+          .eq("supported_person_id", row.supported_person_id)
+          .eq("status", "completed")
+          .maybeSingle();
+
+        if (!periodResult.error && periodResult.data?.id) {
+          const linkResult = await supabase
+            .from("support_request_links")
+            .insert({
+              workspace_id: row.workspace_id,
+              program_id: row.program_id,
+              supported_person_id: row.supported_person_id,
+              support_request_id: row.id,
+              budget_period_id: periodResult.data.id,
+              created_by: authenticatedUserId,
+            })
+            .select("support_request_id, budget_period_id")
+            .single();
+
+          if (!linkResult.error && linkResult.data?.budget_period_id) {
+            const attachedBudgetPeriodId = linkResult.data.budget_period_id as string;
+            moneyContextAttached = true;
+            setAssistedBudgetLinks((current) => [
+              {
+                support_request_id: row.id,
+                budget_period_id: attachedBudgetPeriodId,
+                budget_status: "completed",
+              },
+              ...current.filter(
+                (item) => item.support_request_id !== row.id,
+              ),
+            ]);
+            createMessage =
+              "Your Support request was received, and this Money plan was attached for context.";
+          }
+        }
+      } catch {
+        moneyContextAttached = false;
+      }
+
+      if (!moneyContextAttached) {
+        createMessage =
+          "Your Support request was sent, but the exact Money plan context could not be attached. Support will still receive the words you submitted.";
+      }
+    }
 
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
