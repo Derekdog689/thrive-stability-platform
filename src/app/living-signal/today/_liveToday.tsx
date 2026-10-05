@@ -39,6 +39,12 @@ function resolvedMode(mode: Mode): "morning" | "evening" {
   return hour >= 17 || hour < 5 ? "evening" : "morning";
 }
 
+function greetingForHour(hour: number) {
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 function businessDateKey() {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
@@ -429,6 +435,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
 
   const displayMode = resolvedMode(mode);
   const isEvening = displayMode === "evening";
+  const greeting = greetingForHour(easternHour());
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -456,7 +463,7 @@ export default function LiveToday({ mode }: { mode: Mode }) {
             eyebrow={isEvening ? "Same THRIVE" : "A brighter tomorrow"}
             title={
               <>
-                {isEvening ? "Good evening" : "Good morning"},<br />
+                {greeting},<br />
                 {participantName}.
               </>
             }
