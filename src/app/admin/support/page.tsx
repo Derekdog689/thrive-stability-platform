@@ -120,6 +120,245 @@ function canCompleteRequest(status: string) {
 }
 
 
+type MoneyReviewContextState =
+  | { kind: "loading" }
+  | { kind: "starter" }
+  | { kind: "error"; message: string }
+  | {
+      kind: "review";
+      budgetPeriodId: string;
+      periodStart: string;
+      periodEnd: string;
+      status: string;
+      available: number;
+      planned: number;
+      recordedOut: number;
+      activityCount: number;
+    };
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(value);
+}
+
+function MoneyRequestContext({
+  request,
+  canPrepareStarter,
+}: {
+  request: SupportRequestRow;
+  canPrepareStarter: boolean;
+}) {
+  const [context, setContext] = useState<MoneyReviewContextState>({
+    kind: "loading",
+  });
+
+  useEffect(() => {
+    if (request.participant_category !== "budget_money" || !canPrepareStarter) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadMoneyContext() {
+      const linkResult = await supabase
+        .from("support_request_links")
+        .select("budget_period_id")
+        .eq("support_request_id", request.id)
+        .is("archived_at", null)
+        .not("budget_period_id", "is", null)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (linkResult.error) {
+        setContext({ kind: "error", message: linkResult.error.message });
+        return;
+      }
+
+      const budgetPeriodId = linkResult.data?.budget_period_id as string | null | undefined;
+
+      if (!budgetPeriodId) {
+        setContext({ kind: "starter" });
+        return;
+      }
+
+      const [periodResult, lineResult, allocationResult, periodLinkResult] =
+        await Promise.all([
+          supabase
+            .from("participant_budget_periods")
+            .select("id, period_start, period_end, status, expected_income")
+            .eq("id", budgetPeriodId)
+            .single(),
+          supabase
+            .from("participant_budget_lines")
+            .select("planned_amount, is_active")
+            .eq("budget_period_id", budgetPeriodId),
+          supabase
+            .from("participant_financial_activity_allocations")
+            .select(
+              "activity_record_type, staged_transaction_id, manual_financial_activity_id, allocated_amount",
+            )
+            .eq("budget_period_id", budgetPeriodId)
+            .eq("status", "active")
+            .is("archived_at", null),
+          supabase
+            .from("participant_financial_activity_period_links")
+            .select(
+              "activity_record_type, staged_transaction_id, manual_financial_activity_id",
+            )
+            .eq("budget_period_id", budgetPeriodId)
+            .eq("status", "active")
+            .is("archived_at", null),
+        ]);
+
+      if (cancelled) return;
+
+      const firstError =
+        periodResult.error ??
+        lineResult.error ??
+        allocationResult.error ??
+        periodLinkResult.error;
+
+      if (firstError || !periodResult.data) {
+        setContext({
+          kind: "error",
+          message: firstError?.message ?? "The attached Money plan could not be loaded.",
+        });
+        return;
+      }
+
+      const planned = (lineResult.data ?? [])
+        .filter((line) => line.is_active)
+        .reduce((sum, line) => sum + Number(line.planned_amount ?? 0), 0);
+
+      const recordedOut = (allocationResult.data ?? []).reduce(
+        (sum, allocation) => sum + Number(allocation.allocated_amount ?? 0),
+        0,
+      );
+
+      const activityKeys = new Set<string>();
+
+      for (const row of allocationResult.data ?? []) {
+        const activityId =
+          row.activity_record_type === "imported"
+            ? row.staged_transaction_id
+            : row.manual_financial_activity_id;
+        if (activityId) activityKeys.add(row.activity_record_type + ":" + activityId);
+      }
+
+      for (const row of periodLinkResult.data ?? []) {
+        const activityId =
+          row.activity_record_type === "imported"
+            ? row.staged_transaction_id
+            : row.manual_financial_activity_id;
+        if (activityId) activityKeys.add(row.activity_record_type + ":" + activityId);
+      }
+
+      setContext({
+        kind: "review",
+        budgetPeriodId,
+        periodStart: periodResult.data.period_start,
+        periodEnd: periodResult.data.period_end,
+        status: periodResult.data.status,
+        available: Number(periodResult.data.expected_income ?? 0),
+        planned,
+        recordedOut,
+        activityCount: activityKeys.size,
+      });
+    }
+
+    void loadMoneyContext();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [request.id, request.participant_category, canPrepareStarter]);
+
+  if (request.participant_category !== "budget_money" || !canPrepareStarter) return null;
+
+  if (context.kind === "loading") {
+    return (
+      <span className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-500">
+        Loading Money context...
+      </span>
+    );
+  }
+
+  if (context.kind === "starter") {
+    return canPrepareStarter ? (
+      <Link
+        href={"/admin/assisted-budget?request=" + encodeURIComponent(request.id)}
+        className="rounded-2xl bg-sky-700 px-4 py-2 text-sm font-bold text-white"
+      >
+        Prepare starter budget
+      </Link>
+    ) : null;
+  }
+
+  if (context.kind === "error") {
+    return (
+      <div className="w-full rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <p className="text-sm font-black text-amber-950">
+          Attached Money context could not be loaded.
+        </p>
+        <p className="mt-1 text-xs leading-5 text-amber-800">{context.message}</p>
+      </div>
+    );
+  }
+
+  return (
+    <section className="w-full rounded-[1.4rem] border border-emerald-200 bg-emerald-50/80 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+            Review Money plan
+          </p>
+          <p className="mt-1 text-lg font-black text-emerald-950">
+            {formatDate(context.periodStart)} to {formatDate(context.periodEnd)}
+          </p>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800">
+          {labelStatus(context.status)}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-white p-3">
+          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+            Available
+          </p>
+          <p className="mt-1 font-black text-slate-950">{formatMoney(context.available)}</p>
+        </div>
+        <div className="rounded-2xl bg-white p-3">
+          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+            Planned
+          </p>
+          <p className="mt-1 font-black text-slate-950">{formatMoney(context.planned)}</p>
+        </div>
+        <div className="rounded-2xl bg-white p-3">
+          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+            Recorded out
+          </p>
+          <p className="mt-1 font-black text-slate-950">{formatMoney(context.recordedOut)}</p>
+        </div>
+        <div className="rounded-2xl bg-white p-3">
+          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+            Activity
+          </p>
+          <p className="mt-1 font-black text-slate-950">{context.activityCount}</p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-sm font-semibold leading-6 text-emerald-950">
+        This request is about this completed Money plan. Review these attached facts before deciding what Support should do next.
+      </p>
+    </section>
+  );
+}
+
+
 function newestTimestamp(values: Array<string | null | undefined>) {
   const valid = values.filter((value): value is string => Boolean(value));
   if (valid.length === 0) return null;
@@ -992,14 +1231,10 @@ export default function AdminSupportPage() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap items-center gap-3">
-                        {membership?.member_role === "admin" && request.participant_category === "budget_money" ? (
-                          <Link
-                            href={"/admin/assisted-budget?request=" + encodeURIComponent(request.id)}
-                            className="rounded-2xl bg-sky-700 px-4 py-2 text-sm font-bold text-white"
-                          >
-                            Prepare starter budget
-                          </Link>
-                        ) : null}
+                        <MoneyRequestContext
+                          request={request}
+                          canPrepareStarter={membership?.member_role === "admin"}
+                        />
 
                         {request.status === "submitted" ? (
                           <button
