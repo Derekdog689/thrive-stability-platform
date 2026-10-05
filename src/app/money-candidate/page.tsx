@@ -15,6 +15,7 @@ import {
 import ActiveBudgetEditor from "../budget/ActiveBudgetEditor";
 import BudgetDraftCategoryBuilder from "../budget/BudgetDraftCategoryBuilder";
 import { useParticipantBudgetBuilder } from "../budget/useParticipantBudgetBuilder";
+import { buildMoneyPeriodSummary } from "../money/buildMoneyPeriodSummary";
 import {
   ParticipantTransactionExplanation,
   TransactionExplanationCategory,
@@ -262,13 +263,6 @@ export default function MoneyCandidatePage() {
       : completedPeriods[1] ?? null;
   const activeLines = activePeriod ? budgetLines.filter((line) => line.budget_period_id === activePeriod.id && line.is_active) : [];
   const draftLines = draftPeriod ? budgetLines.filter((line) => line.budget_period_id === draftPeriod.id && line.is_active) : [];
-  const latestCompletedLines = latestCompletedPeriod
-    ? budgetLines.filter((line) => line.budget_period_id === latestCompletedPeriod.id && line.is_active)
-    : [];
-  const previousCompletedLines = previousCompletedPeriod
-    ? budgetLines.filter((line) => line.budget_period_id === previousCompletedPeriod.id && line.is_active)
-    : [];
-
   const allRelatedActivityKeys = new Set([
     ...financialActivityAllocations
       .filter((item) => item.status === "active" && item.archived_at === null)
@@ -327,35 +321,27 @@ export default function MoneyCandidatePage() {
     .filter((activity) => activity.activity_direction === "inflow")
     .reduce((sum, activity) => sum + Math.abs(toNumber(activity.signed_amount)), 0);
 
-  const latestCompletedActivityKeys = latestCompletedPeriod ? new Set([
-    ...financialActivityAllocations
-      .filter((item) => item.status === "active" && item.archived_at === null && item.budget_period_id === latestCompletedPeriod.id)
-      .map((item) => financialActivityKey(item.activity_record_type, item.activity_id)),
-    ...financialActivityPeriodLinks
-      .filter((item) => item.status === "active" && item.archived_at === null && item.budget_period_id === latestCompletedPeriod.id)
-      .map((item) => financialActivityKey(item.activity_record_type, item.activity_id)),
-  ]) : new Set<string>();
-
-  const latestCompletedActivity = latestCompletedPeriod
-    ? financialActivity.filter((activity) => latestCompletedActivityKeys.has(financialActivityKey(activity.activity_record_type, activity.activity_id)))
-    : [];
-
-  const completedAvailable = latestCompletedPeriod ? toNumber(latestCompletedPeriod.expected_income) : 0;
-  const completedPlanned = latestCompletedLines.reduce((sum, line) => sum + toNumber(line.planned_amount), 0);
-  const completedOut = latestCompletedLines.reduce((sum, line) => sum + toNumber(line.derived_actual_amount), 0);
-  const completedRemaining = latestCompletedLines.reduce((sum, line) => sum + toNumber(line.derived_remaining_amount), 0);
-  const completedUnassigned = Math.max(completedAvailable - completedPlanned, 0);
-  const completedUnspentOverall = Math.max(completedAvailable - completedOut, 0);
-  const completedWithinPlanLines = latestCompletedLines.filter((line) => {
-    const used = toNumber(line.derived_actual_amount);
-    return used > 0 && used <= toNumber(line.planned_amount);
-  });
-  const completedOverPlanLines = latestCompletedLines.filter((line) => toNumber(line.derived_actual_amount) > toNumber(line.planned_amount));
-
-  const previousCompletedPlanned = previousCompletedLines.reduce((sum, line) => sum + toNumber(line.planned_amount), 0);
-  const previousCompletedOut = previousCompletedLines.reduce((sum, line) => sum + toNumber(line.derived_actual_amount), 0);
-  const completedOutDelta = previousCompletedPeriod ? completedOut - previousCompletedOut : null;
-  const completedPlanDelta = previousCompletedPeriod ? completedPlanned - previousCompletedPlanned : null;
+  const completedSummary = latestCompletedPeriod
+    ? buildMoneyPeriodSummary({
+        period: latestCompletedPeriod,
+        periods: budgetPeriods,
+        budgetLines,
+        financialActivity,
+        financialActivityAllocations,
+        financialActivityPeriodLinks,
+      })
+    : null;
+  const completedAvailable = completedSummary?.available ?? 0;
+  const completedPlanned = completedSummary?.planned ?? 0;
+  const completedOut = completedSummary?.recordedOut ?? 0;
+  const completedRemaining = completedSummary?.remainingInCategories ?? 0;
+  const completedUnassigned = completedSummary?.unassigned ?? 0;
+  const completedUnspentOverall = completedSummary?.unspentOverall ?? 0;
+  const completedWithinPlanLines = completedSummary?.withinPlanLines ?? [];
+  const completedOverPlanLines = completedSummary?.overPlanLines ?? [];
+  const latestCompletedActivityCount = completedSummary?.activityCount ?? 0;
+  const completedOutDelta = completedSummary?.recordedOutDelta ?? null;
+  const completedPlanDelta = completedSummary?.plannedDelta ?? null;
   const orientationPeriod = activePeriod ?? draftPeriod;
   const orientationExpectedIncome = orientationPeriod ? toNumber(orientationPeriod.expected_income) : null;
   const orientationActivityCount = activePeriod ? currentActivity.length : draftPeriod ? draftActivity.length : financialActivity.length;
@@ -710,7 +696,7 @@ export default function MoneyCandidatePage() {
         <div className="rounded-2xl bg-white/85 p-4"><p className="text-[10px] font-black uppercase text-slate-400">Available</p><p className="mt-1 text-xl font-black">{formatMoney(completedAvailable)}</p></div>
         <div className="rounded-2xl bg-white/85 p-4"><p className="text-[10px] font-black uppercase text-slate-400">Planned</p><p className="mt-1 text-xl font-black">{formatMoney(completedPlanned)}</p></div>
         <div className="rounded-2xl bg-white/85 p-4"><p className="text-[10px] font-black uppercase text-slate-400">Used</p><p className="mt-1 text-xl font-black">{formatMoney(completedOut)}</p></div>
-        <div className="rounded-2xl bg-white/85 p-4"><p className="text-[10px] font-black uppercase text-slate-400">Activity</p><p className="mt-1 text-xl font-black">{latestCompletedActivity.length}</p></div>
+        <div className="rounded-2xl bg-white/85 p-4"><p className="text-[10px] font-black uppercase text-slate-400">Activity</p><p className="mt-1 text-xl font-black">{latestCompletedActivityCount}</p></div>
       </div>
 
       <div className="mt-5 rounded-[1.5rem] border border-violet-100 bg-white/75 p-4">
