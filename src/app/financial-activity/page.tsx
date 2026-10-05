@@ -34,7 +34,7 @@ function FinancialActivityContent() {
 
   const searchParams = useSearchParams();
   const requestedDayParam = searchParams.get("day") ?? "";
-  const requestedDay = /^\\d{4}-\\d{2}-\\d{2}$/.test(requestedDayParam)
+  const requestedDay = /^\d{4}-\d{2}-\d{2}$/.test(requestedDayParam)
     ? requestedDayParam
     : "";
 
