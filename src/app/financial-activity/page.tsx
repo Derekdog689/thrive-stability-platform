@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import AuthGate from "../AuthGate";
 import ThriveSidebar from "../ThriveSidebar";
 import {
@@ -19,7 +20,7 @@ type TransactionExplanation = {
   submitted_at: string | null;
 };
 
-export default function FinancialActivityPage() {
+function FinancialActivityContent() {
   const {
   activeProgramId,
   financialActivity,
@@ -31,7 +32,11 @@ export default function FinancialActivityPage() {
   refresh,
 } = useParticipantFinancial();
 
-  const [requestedDay, setRequestedDay] = useState("");
+  const searchParams = useSearchParams();
+  const requestedDayParam = searchParams.get("day") ?? "";
+  const requestedDay = /^\\d{4}-\\d{2}-\\d{2}$/.test(requestedDayParam)
+    ? requestedDayParam
+    : "";
 
   const [showManualForm, setShowManualForm] = useState(false);
   const [activityDate, setActivityDate] = useState("");
@@ -118,11 +123,6 @@ const [uploadFileHash, setUploadFileHash] = useState("");
 const [uploadRows, setUploadRows] = useState<UploadPreviewRow[]>([]);
 const [uploadNotice, setUploadNotice] = useState("");
 const [uploadSaving, setUploadSaving] = useState(false);
-
-  useEffect(() => {
-    const day = new URLSearchParams(window.location.search).get("day") ?? "";
-    setRequestedDay(/^\\d{4}-\\d{2}-\\d{2}$/.test(day) ? day : "");
-  }, []);
 
   const focusedDayActivity = requestedDay
     ? financialActivity.filter((activity) => activity.activity_date === requestedDay)
@@ -2102,5 +2102,20 @@ async function handleArchiveAllocation(allocationId: string) {
         </section>
       </main>
     </AuthGate>
+  );
+}
+
+
+export default function FinancialActivityPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#edf5f1] px-4 py-10 text-slate-700">
+          Loading Financial Activity...
+        </div>
+      }
+    >
+      <FinancialActivityContent />
+    </Suspense>
   );
 }
