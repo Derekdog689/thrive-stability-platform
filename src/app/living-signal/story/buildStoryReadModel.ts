@@ -190,7 +190,7 @@ export function buildStoryReadModel({
           ? "Money activity recorded"
           : `${items.length} Money activities recorded`,
       detail: "Recorded in your Financial Activity.",
-      href: "/financial-activity",
+      href: `/financial-activity?day=${encodeURIComponent(dateKey)}`,
     });
   }
 
