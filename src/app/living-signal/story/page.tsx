@@ -134,6 +134,18 @@ export default function StoryLiving() {
     { left: "76%", top: "27%" },
     { left: "86%", top: "18%" },
   ];
+  const storyDays = Array.from(
+    story.events.reduce<Map<string, typeof story.events>>((days, event) => {
+      const current = days.get(event.dateKey) ?? [];
+      current.push(event);
+      days.set(event.dateKey, current);
+      return days;
+    }, new Map()),
+  ).map(([dateKey, events]) => ({
+    dateKey,
+    events,
+    lanes: Array.from(new Set(events.map((event) => event.lane))),
+  }));
 
   return (
     <AuthGate>
@@ -217,25 +229,45 @@ export default function StoryLiving() {
             ) : null}
 
             {!errorMessage && !loading && story.events.length > 0 ? (
-              <div className="ls-grid" style={{ marginTop: 16 }}>
-                {story.events.map((event) => (
-                  <Link key={event.id} href={event.href} className="ls-card">
-                    <span className={`ls-icon ${laneIconClass(event.lane)}`}>
-                      {laneIcon(event.lane)}
-                    </span>
-                    <span style={{ minWidth: 0 }}>
-                      <span className="ls-section-title" style={{ display: "block" }}>
-                        {event.lane} · {formatDateKey(event.dateKey)}
+              <div className="story-day-groups">
+                {storyDays.map((day, index) => (
+                  <details
+                    key={day.dateKey}
+                    className="story-day-group"
+                    open={index === 0}
+                  >
+                    <summary className="story-day-summary">
+                      <span>
+                        <span className="story-day-date">{formatDateKey(day.dateKey)}</span>
+                        <span className="story-day-meta">
+                          {day.events.length} {day.events.length === 1 ? "moment" : "moments"} · {day.lanes.join(" · ")}
+                        </span>
                       </span>
-                      <span className="ls-card-title" style={{ display: "block", marginTop: 4 }}>
-                        {event.title}
-                      </span>
-                      <span className="ls-card-copy" style={{ display: "block", marginTop: 4 }}>
-                        {event.detail}
-                      </span>
-                    </span>
-                    <span className="ls-arrow">›</span>
-                  </Link>
+                      <span className="story-day-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+
+                    <div className="story-day-events">
+                      {day.events.map((event) => (
+                        <Link key={event.id} href={event.href} className="story-day-event">
+                          <span className={`ls-icon ${laneIconClass(event.lane)}`}>
+                            {laneIcon(event.lane)}
+                          </span>
+                          <span style={{ minWidth: 0 }}>
+                            <span className="ls-section-title" style={{ display: "block" }}>
+                              {event.lane}
+                            </span>
+                            <span className="ls-card-title" style={{ display: "block", marginTop: 4 }}>
+                              {event.title}
+                            </span>
+                            <span className="ls-card-copy" style={{ display: "block", marginTop: 4 }}>
+                              {event.detail}
+                            </span>
+                          </span>
+                          <span className="ls-arrow">›</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
                 ))}
               </div>
             ) : null}
