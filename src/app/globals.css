@@ -1142,7 +1142,7 @@ body.wellness-expanded-open .wellness-bottom-nav {
 }
 
 .goals-living-hero {
-  min-height: 330px;
+  min-height: 255px;
   background:
     linear-gradient(180deg, rgba(255,255,255,.03), rgba(18,12,39,.16)) !important;
   box-shadow:
@@ -1188,7 +1188,7 @@ body.wellness-expanded-open .wellness-bottom-nav {
 }
 
 .goals-hero-glass {
-  margin-top: 4rem !important;
+  margin-top: 1.6rem !important;
   max-width: 43rem;
   box-shadow:
     0 24px 64px rgba(18,12,40,.30),
@@ -1328,37 +1328,41 @@ body.wellness-expanded-open .wellness-bottom-nav {
   }
 
   .goals-living-hero {
-    min-height: 310px;
+    min-height: 232px;
   }
 
   .goals-hero-glass {
-    margin-top: 2.6rem !important;
-    padding: 1rem 1.05rem !important;
+    margin-top: .9rem !important;
+    padding: .85rem .95rem !important;
+    border-radius: 1.45rem !important;
   }
 
   .goals-hero-glass h1 {
-    font-size: clamp(2.9rem, 12vw, 4.1rem) !important;
-    line-height: .96;
+    font-size: clamp(2.35rem, 10.5vw, 3.35rem) !important;
+    line-height: .94;
   }
 
   .goals-hero-glass p:last-child {
-    font-size: 1.05rem !important;
-    line-height: 1.45;
+    margin-top: .65rem !important;
+    font-size: .98rem !important;
+    line-height: 1.35;
   }
 
   .goals-hero-orb--ring {
-    width: 6.25rem;
-    height: 6.25rem;
-    right: -.9rem;
-    top: .7rem;
-    border-width: 7px;
+    width: 4.75rem;
+    height: 4.75rem;
+    right: -.5rem;
+    top: .35rem;
+    border-width: 5px;
+    opacity: .18;
   }
 
   .goals-hero-orb--wash {
-    width: 8.5rem;
-    height: 8.5rem;
-    left: -2.75rem;
-    bottom: -2rem;
+    width: 6.75rem;
+    height: 6.75rem;
+    left: -2.25rem;
+    bottom: -1.25rem;
+    opacity: .16;
   }
 
   .goals-scroll-content {
