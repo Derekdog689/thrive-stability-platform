@@ -10,6 +10,35 @@ type Draft = { areaId: string; presetId: string; title: string; why: string; nex
 
 const emptyDraft: Draft = { areaId: "", presetId: "", title: "", why: "", nextStep: "", goalArea: "" };
 
+type IconName = "today" | "wellness" | "goal" | "money" | "support";
+
+function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: string }) {
+  const common = {
+    className,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (name === "today") {
+    return <svg {...common}><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10.5V20h13v-9.5" /><path d="M9.5 20v-5.5h5V20" /></svg>;
+  }
+  if (name === "wellness") {
+    return <svg {...common}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>;
+  }
+  if (name === "goal") {
+    return <svg {...common}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /><path d="m15 9 5-5M16.5 4H20v3.5" /></svg>;
+  }
+  if (name === "money") {
+    return <svg {...common}><rect x="3" y="6" width="18" height="12" rx="3" /><path d="M7 10h.01M17 14h.01" /><circle cx="12" cy="12" r="2.5" /></svg>;
+  }
+  return <svg {...common}><path d="M20.8 5.8c-2-2-5.2-1.8-7 .3L12 8.2l-1.8-2.1c-1.8-2.1-5-2.3-7-.3-2.1 2.1-2 5.6.2 7.6L12 21l8.6-7.6c2.2-2 2.3-5.5.2-7.6Z" /></svg>;
+}
+
 const statusLabels: Record<GoalProgressStatus, string> = {
   not_started: "Ready",
   in_progress: "Active",
@@ -37,14 +66,14 @@ const goalAreaVisuals: Record<string, { symbol: string; label: string }> = {
 };
 
 function GoalsBottomNav() {
-  const items = [
-    { href: "/", label: "Today", icon: "⌂" },
-    { href: "/wellness", label: "Wellness", icon: "☼" },
-    { href: "/goals", label: "Goals", icon: "◎" },
-    { href: "/budget", label: "Money", icon: "$" },
-    { href: "/support", label: "Support", icon: "♡" },
+  const items: { href: string; label: string; icon: IconName }[] = [
+    { href: "/living-signal/today", label: "Today", icon: "today" },
+    { href: "/wellness", label: "Wellness", icon: "wellness" },
+    { href: "/goals", label: "Goals", icon: "goal" },
+    { href: "/budget", label: "Money", icon: "money" },
+    { href: "/support", label: "Support", icon: "support" },
   ];
-  return <nav className="goals-bottom-nav fixed left-1/2 z-50 grid w-[calc(100%-20px)] max-w-[660px] -translate-x-1/2 grid-cols-5 gap-[3px] rounded-[24px] border border-white/75 bg-[#fbf9f3]/90 p-[6px] shadow-[0_20px_62px_rgba(10,31,39,0.18)] backdrop-blur-[26px] [bottom:calc(6px+env(safe-area-inset-bottom,0px))]">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 text-center text-[10px] font-black uppercase text-[#536174] no-underline transition active:scale-95 ${item.href === "/goals" ? "bg-[linear-gradient(180deg,#159784,#0a7d6f)] text-white shadow-[0_9px_24px_rgba(9,126,111,0.20)]" : "hover:bg-white/70 hover:text-[#173644]"}`}><span className="text-xl font-black leading-none">{item.icon}</span><span className="truncate">{item.label}</span></Link>)}</nav>;
+  return <nav className="goals-bottom-nav fixed left-1/2 z-50 grid w-[calc(100%-20px)] max-w-[660px] -translate-x-1/2 grid-cols-5 gap-[3px] rounded-[24px] border border-white/75 bg-[#fbf9f3]/90 p-[6px] shadow-[0_20px_62px_rgba(10,31,39,0.18)] backdrop-blur-[26px] [bottom:calc(6px+env(safe-area-inset-bottom,0px))]">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 text-center text-[10px] font-black uppercase text-[#536174] no-underline transition active:scale-95 ${item.href === "/goals" ? "bg-[linear-gradient(180deg,#159784,#0a7d6f)] text-white shadow-[0_9px_24px_rgba(9,126,111,0.20)]" : "hover:bg-white/70 hover:text-[#173644]"}`}><Icon name={item.icon} className="h-5 w-5" /><span className="truncate">{item.label}</span></Link>)}</nav>;
 }
 
 type GoalGuidanceJob = "do" | "understand" | "practice" | "decide" | "connect";
@@ -300,7 +329,7 @@ export default function GoalsCandidatePage() {
   }
 
   return <AuthGate><main className={`goals-living-signal relative min-h-screen overflow-x-hidden text-[#17152a] ${showCreate ? "pb-44 sm:pb-36" : "pb-28 sm:pb-32"}`}><div className="goals-fixed-environment" aria-hidden="true" /><section className="goals-scroll-content relative z-10 mx-auto max-w-5xl space-y-5 px-3 pt-3 sm:space-y-6 sm:px-6 sm:pt-6">
-    {showCreate ? <header className="rounded-[1.8rem] border border-white/80 bg-white/72 px-4 py-3 shadow-sm backdrop-blur-2xl sm:px-6 sm:py-4"><div className="flex items-center justify-between gap-3"><Link href="/" className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-base font-black shadow-sm">T</div><div><p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-700">DSS Enterprises</p><p className="text-sm font-black">THRIVE · Goals</p></div></Link><button type="button" onClick={resetCreation} className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-black text-slate-700">Close</button></div></header> : <header className="goals-lane-header rounded-[1.55rem] border border-white/50 bg-white/38 px-4 py-3.5 shadow-[0_14px_38px_rgba(27,16,54,0.09)] backdrop-blur-xl sm:px-5 sm:py-4"><div className="flex items-center justify-between gap-3"><Link href="/" className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/88 text-base font-black shadow-sm">T</div><div><p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-800">DSS Enterprises</p><p className="text-sm font-black text-slate-950">THRIVE</p></div></Link><span className="rounded-full bg-white/82 px-3 py-2 text-sm font-black text-emerald-900 shadow-sm">◎ Goals</span></div><div className="mt-4 max-w-2xl"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">Goals</p><h1 className="mt-1 text-3xl font-black tracking-tight text-[#21173a] sm:text-4xl">What are you working toward?</h1><p className="mt-2 text-base font-semibold leading-6 text-slate-700">Keep one next step clear. THRIVE can hold the rest.</p></div></header>}
+    {showCreate ? <header className="rounded-[1.8rem] border border-white/80 bg-white/72 px-4 py-3 shadow-sm backdrop-blur-2xl sm:px-6 sm:py-4"><div className="flex items-center justify-between gap-3"><Link href="/" className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-base font-black shadow-sm">T</div><div><p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-700">DSS Enterprises</p><p className="text-sm font-black">THRIVE · Goals</p></div></Link><button type="button" onClick={resetCreation} className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-black text-slate-700">Close</button></div></header> : <header className="goals-lane-header rounded-[1.55rem] border border-white/50 bg-white/38 px-4 py-3.5 shadow-[0_14px_38px_rgba(27,16,54,0.09)] backdrop-blur-xl sm:px-5 sm:py-4"><div className="flex items-center justify-between gap-3"><Link href="/living-signal/today" className="flex items-center gap-2.5"><div className="wellness-brandmark" aria-hidden="true"><span className="wellness-leaf wellness-leaf--one" /><span className="wellness-leaf wellness-leaf--two" /><span className="wellness-leaf wellness-leaf--three" /></div><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#146f78]">DSS Enterprises</p><p className="text-sm font-black tracking-[0.04em] text-[#0b3138]">THRIVE</p></div></Link><span className="flex items-center gap-2 rounded-full border border-white/75 bg-white/70 px-3 py-2 text-xs font-black text-[#0b4b55] shadow-sm backdrop-blur-xl"><Icon name="goal" className="h-5 w-5" />Goals</span></div><div className="mt-4 max-w-2xl"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#157a73]">Goals</p><h1 className="mt-1 font-serif text-4xl font-semibold leading-[0.98] tracking-[-0.035em] text-[#0b3138] sm:text-5xl">What are you working toward?</h1><p className="mt-2 text-base font-semibold leading-6 text-slate-700">Keep one next step clear. THRIVE can hold the rest.</p></div></header>}
 
     {loading ? <section className="rounded-[2rem] bg-white/75 p-6 shadow-sm">Loading goals.</section> : null}
     {errorMessage ? <section role="alert" className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6"><p className="font-black">Goals could not be loaded.</p><p className="mt-2 text-sm">{errorMessage}</p></section> : null}
@@ -346,7 +375,7 @@ export default function GoalsCandidatePage() {
 
         {primaryGoal ? <section className="goals-primary-thread rounded-[2rem] border border-white/60 bg-white/48 p-4 shadow-[0_22px_66px_rgba(29,18,56,0.12)] backdrop-blur-2xl sm:p-5">
           <div className="mb-3 px-1">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-700">Current focus</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#157a73]">Current focus</p>
             <h2 className="mt-1 text-2xl font-black text-[#21173a]">One thing to move</h2>
           </div>
           <GoalThreadCard goal={primaryGoal} working={working} onStatusChange={changeStatus} focused={primaryGoal.id === focusedGoalId} />
@@ -358,12 +387,12 @@ export default function GoalsCandidatePage() {
 
       {!justSavedGoal && !justCompletedGoal && !showCreate ? <>
         {currentGoals.length === 0 ? <section className="goals-empty-state rounded-[2rem] border border-white/75 bg-white/62 p-5 shadow-[0_20px_58px_rgba(29,18,56,0.10)] backdrop-blur-2xl sm:p-6">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-700">Right now</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#157a73]">Right now</p>
           <h2 className="mt-2 text-3xl font-black text-[#21173a]">Nothing active right now.</h2>
           <p className="mt-2 text-base font-semibold leading-7 text-slate-600">Your past goals are still here. Start something new when it matters.</p>
-          <button type="button" onClick={beginCreation} className="mt-5 flex w-full items-center justify-between rounded-[1.5rem] bg-[#2d2150] px-5 py-4 text-left text-white shadow-[0_16px_34px_rgba(36,23,71,0.22)] sm:w-auto sm:min-w-72">
+          <button type="button" onClick={beginCreation} className="mt-5 flex w-full items-center justify-between rounded-[1.5rem] bg-[linear-gradient(180deg,#159784,#0a7d6f)] px-5 py-4 text-left text-white shadow-[0_16px_34px_rgba(9,126,111,0.22)] sm:w-auto sm:min-w-72">
             <span>
-              <span className="block text-[11px] font-black uppercase tracking-[0.18em] text-violet-200">Start</span>
+              <span className="block text-[11px] font-black uppercase tracking-[0.18em] text-[#c9fff5]">Start</span>
               <span className="mt-1 block text-xl font-black">Start a goal</span>
             </span>
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/14 text-2xl font-black">+</span>
