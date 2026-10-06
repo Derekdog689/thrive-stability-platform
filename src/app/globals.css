@@ -1395,3 +1395,175 @@ body.wellness-expanded-open .wellness-bottom-nav {
     animation: none !important;
   }
 }
+
+
+/* Money Living Signal environment v0.1
+   Presentation-only. Money plan logic, activity semantics, and writes are unchanged. */
+.money-living-signal {
+  isolation: isolate;
+  background: #e7f2ef;
+}
+
+.money-fixed-environment {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(255, 210, 126, .42), transparent 24%),
+    radial-gradient(circle at 14% 30%, rgba(83, 196, 183, .28), transparent 31%),
+    radial-gradient(circle at 78% 64%, rgba(99, 150, 225, .18), transparent 28%),
+    linear-gradient(180deg, #eef8f4 0%, #e3f2ee 34%, #dcebec 66%, #e9f1ec 100%);
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+.money-fixed-environment::before,
+.money-fixed-environment::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.money-fixed-environment::before {
+  width: min(68vw, 34rem);
+  height: min(68vw, 34rem);
+  right: -12rem;
+  top: 10rem;
+  border: 1px solid rgba(255, 255, 255, .56);
+  box-shadow:
+    0 0 0 2rem rgba(255,255,255,.08),
+    0 0 0 5rem rgba(255,210,126,.05);
+  animation: moneyAtmosphereDrift 16s ease-in-out infinite alternate;
+}
+
+.money-fixed-environment::after {
+  width: min(54vw, 26rem);
+  height: min(54vw, 26rem);
+  left: -10rem;
+  bottom: 7rem;
+  background: rgba(64, 190, 169, .10);
+  filter: blur(2px);
+  animation: moneyAtmosphereBreathe 11s ease-in-out infinite;
+}
+
+.money-scroll-content {
+  position: relative;
+  z-index: 2;
+}
+
+.money-lane-header,
+.money-now-surface,
+.money-current-plan,
+.money-completed-surface,
+.money-plan-setup,
+.money-categories-surface,
+.money-activity-surface {
+  backdrop-filter: blur(20px) saturate(1.06);
+  -webkit-backdrop-filter: blur(20px) saturate(1.06);
+}
+
+.money-lane-header {
+  background:
+    linear-gradient(155deg, rgba(255,255,255,.76), rgba(241,251,247,.54)) !important;
+}
+
+.money-now-surface {
+  position: relative;
+  overflow: hidden;
+}
+
+.money-now-surface::before {
+  content: "";
+  position: absolute;
+  width: 10rem;
+  height: 10rem;
+  right: -4rem;
+  top: -4rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(247,196,105,.18), rgba(247,196,105,0) 68%);
+  pointer-events: none;
+}
+
+.money-now-surface > *,
+.money-current-plan > *,
+.money-completed-surface > *,
+.money-plan-setup > *,
+.money-categories-surface > *,
+.money-activity-surface > * {
+  position: relative;
+  z-index: 1;
+}
+
+.money-current-plan {
+  background:
+    radial-gradient(circle at 90% 10%, rgba(248,198,109,.12), transparent 27%),
+    linear-gradient(155deg, rgba(255,255,255,.77), rgba(238,250,247,.60)) !important;
+}
+
+.money-completed-surface {
+  background:
+    radial-gradient(circle at 78% 10%, rgba(145,120,220,.11), transparent 28%),
+    linear-gradient(155deg, rgba(255,255,255,.76), rgba(244,247,250,.62)) !important;
+}
+
+.money-plan-setup {
+  background:
+    linear-gradient(155deg, rgba(255,255,255,.76), rgba(239,249,247,.62)) !important;
+}
+
+.money-categories-surface,
+.money-activity-surface {
+  background:
+    linear-gradient(155deg, rgba(255,255,255,.72), rgba(244,249,247,.58)) !important;
+}
+
+.money-activity-card {
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.68),
+    0 10px 30px rgba(20,65,70,.05);
+}
+
+.money-scroll-content {
+  padding-bottom: 10rem;
+}
+
+@keyframes moneyAtmosphereDrift {
+  0% { transform: translate3d(0, 0, 0) scale(.98); opacity: .72; }
+  100% { transform: translate3d(-1.1rem, 1.25rem, 0) scale(1.04); opacity: 1; }
+}
+
+@keyframes moneyAtmosphereBreathe {
+  0%, 100% { transform: scale(.96); opacity: .58; }
+  50% { transform: scale(1.08); opacity: .92; }
+}
+
+@media (max-width: 639px) {
+  .money-fixed-environment::before {
+    width: 19rem;
+    height: 19rem;
+    right: -10rem;
+    top: 13rem;
+  }
+
+  .money-fixed-environment::after {
+    width: 17rem;
+    height: 17rem;
+    left: -9rem;
+    bottom: 11rem;
+  }
+
+  .money-scroll-content {
+    padding-bottom: 11rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .money-fixed-environment::before,
+  .money-fixed-environment::after {
+    animation: none !important;
+  }
+}
