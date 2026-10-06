@@ -26,6 +26,27 @@ import {
   useParticipantSupport,
 } from "./useParticipantSupport";
 
+type IconName = "today" | "wellness" | "goal" | "money" | "support";
+
+function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: string }) {
+  const common = {
+    className,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (name === "today") return <svg {...common}><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10.5V20h13v-9.5" /><path d="M9.5 20v-5.5h5V20" /></svg>;
+  if (name === "wellness") return <svg {...common}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>;
+  if (name === "goal") return <svg {...common}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /><path d="m15 9 5-5M16.5 4H20v3.5" /></svg>;
+  if (name === "money") return <svg {...common}><rect x="3" y="6" width="18" height="12" rx="3" /><path d="M7 10h.01M17 14h.01" /><circle cx="12" cy="12" r="2.5" /></svg>;
+  return <svg {...common}><path d="M20.8 5.8c-2-2-5.2-1.8-7 .3L12 8.2l-1.8-2.1c-1.8-2.1-5-2.3-7-.3-2.1 2.1-2 5.6.2 7.6L12 21l8.6-7.6c2.2-2 2.3-5.5.2-7.6Z" /></svg>;
+}
+
 type SupportArea = {
   value: ParticipantSupportCategory;
   label: string;
@@ -121,15 +142,15 @@ function formatDate(value: string) {
 }
 
 function SupportBottomNav() {
-  const items = [
-    { href: "/", label: "Today", icon: "⌂" },
-    { href: "/wellness", label: "Wellness", icon: "☼" },
-    { href: "/goals", label: "Goals", icon: "◎" },
-    { href: "/budget", label: "Money", icon: "$" },
-    { href: "/support", label: "Support", icon: "♡" },
+  const items: { href: string; label: string; icon: IconName }[] = [
+    { href: "/living-signal/today", label: "Today", icon: "today" },
+    { href: "/wellness", label: "Wellness", icon: "wellness" },
+    { href: "/goals", label: "Goals", icon: "goal" },
+    { href: "/budget", label: "Money", icon: "money" },
+    { href: "/support", label: "Support", icon: "support" },
   ];
 
-  return <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[1.75rem] border border-white/60 bg-white/90 px-2 py-2 shadow-[0_18px_55px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:bottom-5"><div className="grid grid-cols-5 gap-1">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 text-center transition ${item.href === "/support" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-900"}`}><span className="text-xl font-black leading-none">{item.icon}</span><span className="mt-1 truncate text-[10px] font-black uppercase tracking-wide sm:text-xs">{item.label}</span></Link>)}</div></nav>;
+  return <nav className="support-bottom-nav fixed left-1/2 z-50 grid w-[calc(100%-20px)] max-w-[660px] -translate-x-1/2 grid-cols-5 gap-[3px] rounded-[24px] border border-white/75 bg-[#fbf9f3]/90 p-[6px] shadow-[0_20px_62px_rgba(10,31,39,0.18)] backdrop-blur-[26px] [bottom:calc(6px+env(safe-area-inset-bottom,0px))]">{items.map((item) => <Link key={item.href} href={item.href} className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 text-center text-[10px] font-black uppercase text-[#536174] no-underline transition active:scale-95 ${item.href === "/support" ? "bg-[linear-gradient(180deg,#bf745f,#a95349)] text-white shadow-[0_9px_24px_rgba(169,83,73,0.22)]" : "hover:bg-white/70 hover:text-[#173644]"}`}><Icon name={item.icon} className="h-5 w-5" /><span className="truncate">{item.label}</span></Link>)}</nav>;
 }
 
 function SupportCard({ request, statusEvents, participantResponses, participantReplies, assistedBudgetLink, moneySummary, working, onWithdraw, onSubmitReply, compact = false, focused = false }: {
@@ -179,7 +200,7 @@ function SupportCard({ request, statusEvents, participantResponses, participantR
     setWithdrawNotice(result.message);
   }
 
-  return <article id={`support-request-${request.id}`} className={`scroll-mt-24 overflow-hidden rounded-[1.8rem] border bg-white/78 shadow-[0_16px_45px_rgba(15,23,42,0.07)] backdrop-blur-xl ${focused ? "border-emerald-400 ring-4 ring-emerald-100" : needsYou ? "border-amber-200" : "border-white/80"}`}>
+  return <article id={`support-request-${request.id}`} className={`support-thread-card scroll-mt-24 overflow-hidden rounded-[1.8rem] border bg-white/72 shadow-[0_18px_48px_rgba(70,40,43,0.08)] backdrop-blur-xl ${focused ? "border-rose-300 ring-4 ring-rose-100/70" : needsYou ? "border-amber-200" : "border-white/72"}`}>
     <div className={compact ? "p-4" : "p-5 sm:p-6"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">{labelCategory(request.participant_category)}</p><h3 className={`mt-2 font-black leading-tight text-slate-950 ${compact ? "text-lg" : "text-2xl"}`}>{request.participant_message}</h3></div>
@@ -480,23 +501,19 @@ export default function SupportPage() {
     }
   }
 
-  return <AuthGate><main className="thrive-today-bg min-h-screen pb-36 text-slate-950"><section className="mx-auto max-w-5xl space-y-4 px-3 pt-3 sm:px-6 sm:pt-6">
-    <header className="thrive-ambient relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/32 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.09)] backdrop-blur-2xl sm:p-7">
-      <div className="thrive-orb thrive-orb-one" /><div className="thrive-orb thrive-orb-two" />
-      <div className="relative z-10 flex items-center justify-between gap-3"><Link href="/" className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/72 text-base font-black text-emerald-950">T</div><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-800">DSS Enterprises</p><p className="text-xs font-black text-emerald-950">THRIVE</p></div></Link><span className="rounded-full border border-white/80 bg-white/58 px-3 py-2 text-xs font-black text-emerald-900">♡ Support</span></div>
-      <div className="relative z-10 mt-8 max-w-2xl"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Support</p><h1 className="mt-2 font-serif text-4xl font-semibold leading-tight text-emerald-950 sm:text-6xl">What would help, {participantName}?</h1><p className="mt-3 text-base font-semibold text-slate-600">Ask once. THRIVE keeps the thread together.</p></div>
-    </header>
+  return <AuthGate><main className={`support-living-signal support-environment-v1 ${priorityNeedsParticipant ? "support-state-needs-you" : priorityRequest ? "support-state-open" : pastRequests.length > 0 ? "support-state-settled" : "support-state-clear"} relative min-h-screen overflow-x-hidden pb-36 text-[#2b2425]`}><div className="support-fixed-environment" aria-hidden="true" /><div className="support-connection-atmosphere" aria-hidden="true"><span className="support-path support-path--one" /><span className="support-path support-path--two" /><span className="support-glow support-glow--one" /><span className="support-glow support-glow--two" /></div><section className="support-scroll-content relative z-10 mx-auto max-w-5xl space-y-4 px-3 pt-3 sm:px-6 sm:pt-6">
+    <header className="support-scene-header relative overflow-hidden rounded-[2rem] border border-white/36 px-4 pb-5 pt-4 shadow-[0_28px_80px_rgba(49,26,29,0.22)] sm:px-6 sm:pb-6 sm:pt-5"><div className="support-scene-shade" aria-hidden="true" /><div className="relative z-10"><div className="flex items-center justify-between gap-3"><Link href="/living-signal/today" className="flex items-center gap-2.5"><div className="wellness-brandmark" aria-hidden="true"><span className="wellness-leaf wellness-leaf--one" /><span className="wellness-leaf wellness-leaf--two" /><span className="wellness-leaf wellness-leaf--three" /></div><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#ffe6dc]">DSS Enterprises</p><p className="text-sm font-black tracking-[0.04em] text-white">THRIVE</p></div></Link><span className="flex items-center gap-2 rounded-full border border-white/24 bg-[#4b2e31]/36 px-3 py-2 text-xs font-black text-white shadow-sm backdrop-blur-xl"><Icon name="support" className="h-5 w-5" />Support</span></div><div className="support-scene-copy mt-8 max-w-2xl sm:mt-12"><p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#ffd0a8]">{priorityNeedsParticipant ? "The thread is waiting for you" : priorityRequest ? "You already opened a door" : "Help can start here"}</p><h1 className="mt-2 font-serif text-[2.65rem] font-semibold leading-[0.93] tracking-[-0.045em] text-white sm:text-6xl">{priorityNeedsParticipant ? "There is a way back in." : priorityRequest ? "You do not have to start over." : `What would help, ${participantName}?`}</h1><p className="mt-3 max-w-xl text-base font-semibold leading-6 text-white/84">{priorityNeedsParticipant ? "Support left the thread open. See what is needed, respond when you are ready, and keep the context intact." : priorityRequest ? "Your request is already carrying forward. THRIVE keeps the conversation connected instead of making you repeat it." : "Ask once. THRIVE keeps the thread together and gives you a place to return."}</p></div><div className="support-connection-ribbon mt-6"><div className="support-connection-track" aria-hidden="true"><span className="support-connection-line" /><span className={`support-connection-node support-connection-node--ask ${openRequests.length > 0 ? "is-lit" : ""}`} /><span className={`support-connection-node support-connection-node--reply ${priorityNeedsParticipant ? "is-lit is-current" : priorityRequest ? "is-lit" : ""}`} /><span className={`support-connection-node support-connection-node--resolve ${pastRequests.length > 0 ? "is-lit" : ""}`} /></div><div className="support-connection-facts"><span><strong>{openRequests.length}</strong> open</span><span><strong>{priorityNeedsParticipant ? 1 : 0}</strong> needs you</span><span><strong>{pastRequests.length}</strong> history kept</span></div></div></div></header>
 
     {loading ? <section className="rounded-[1.8rem] bg-white/75 p-6">Loading Support.</section> : null}
     {errorMessage ? <section className="rounded-[1.8rem] border border-rose-200 bg-rose-50 p-5"><p className="font-black">Support could not be loaded.</p><p className="mt-2 text-sm">{errorMessage}</p></section> : null}
     {!loading && !errorMessage && !canCreate ? <section className="rounded-[1.8rem] bg-white/75 p-6"><h2 className="text-xl font-black">Support is not connected yet</h2></section> : null}
 
     {!loading && !errorMessage && canCreate ? <>
-      {!goalContext && !wellnessContext && !moneyContext && priorityRequest ? <section><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityNeedsParticipant ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">{priorityAssistedBudget?.budget_status === "draft" ? "Plan ready" : "Needs you"}</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={priorityAssistedBudget} moneySummary={priorityRequest ? moneySummaryByRequestId.get(priorityRequest.id) ?? null : null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} focused={priorityRequest.id === focusedRequestId} /></section> : !goalContext && !wellnessContext && !moneyContext ? <section className="rounded-[1.8rem] border border-white/80 bg-white/70 p-5 shadow-sm"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
+      {!goalContext && !wellnessContext && !moneyContext && priorityRequest ? <section className="support-current-thread"><div className="mb-3 flex items-center justify-between px-1"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Right now</p><h2 className="mt-1 text-2xl font-black">Your Support</h2></div>{priorityNeedsParticipant ? <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-amber-900">{priorityAssistedBudget?.budget_status === "draft" ? "Plan ready" : "Needs you"}</span> : null}</div><SupportCard request={priorityRequest} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={priorityAssistedBudget} moneySummary={priorityRequest ? moneySummaryByRequestId.get(priorityRequest.id) ?? null : null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} focused={priorityRequest.id === focusedRequestId} /></section> : !goalContext && !wellnessContext && !moneyContext ? <section className="support-clear-state rounded-[1.8rem] border border-white/60 bg-white/58 p-5 shadow-[0_18px_48px_rgba(70,40,43,0.08)] backdrop-blur-xl"><p className="font-black">No open Support requests</p><p className="mt-1 text-sm font-semibold text-slate-500">Nothing is waiting here right now.</p></section> : null}
 
       {!showCreate && !goalContext && !wellnessContext && !moneyContext ? <button type="button" onClick={beginCreate} className="w-full rounded-[1.5rem] bg-emerald-700 px-5 py-4 text-left text-lg font-black text-white shadow-[0_12px_28px_rgba(4,120,87,0.18)]">+ Ask for support</button> : null}
 
-      {showCreate ? <form id="support-request-create" onSubmit={submit} className="rounded-[1.8rem] border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur-xl sm:p-7">
+      {showCreate ? <form id="support-request-create" onSubmit={submit} className="support-create-surface rounded-[1.8rem] border border-white/60 bg-white/62 p-5 shadow-[0_20px_54px_rgba(70,40,43,0.10)] backdrop-blur-2xl sm:p-7">
         {moneyContext ? <section className="mb-5 rounded-[1.4rem] border border-sky-200 bg-sky-50 p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">Continuing from Money</p>
           <h2 className="mt-2 text-xl font-black text-slate-950">
@@ -538,11 +555,11 @@ export default function SupportPage() {
           <button type="submit" disabled={working || !draft.participantMessage.trim()} className="mt-4 w-full rounded-full bg-emerald-700 px-5 py-4 text-lg font-black text-white disabled:opacity-50">{working ? "Sending..." : "Send to Support"}</button>{notice ? <p className="mt-3 text-sm font-bold text-slate-600">{notice}</p> : null}</section> : null}
       </form> : null}
 
-      {otherOpenRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/55 p-4"><button type="button" onClick={() => setShowAllOpen((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-700"><span>{otherOpenRequests.length} other open request{otherOpenRequests.length === 1 ? "" : "s"}</span><span>{showAllOpen ? "−" : "+"}</span></button>{showAllOpen ? <div className="mt-4 space-y-3">{otherOpenRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} moneySummary={moneySummaryByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact focused={request.id === focusedRequestId} />)}</div> : null}</section> : null}
-      {pastRequests.length > 0 ? <section className="rounded-[1.5rem] border border-white/80 bg-white/45 p-4"><button type="button" onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-600"><span>Past requests · {pastRequests.length}</span><span>{showHistory ? "−" : "+"}</span></button>{showHistory ? <div className="mt-4 space-y-3">{pastRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} moneySummary={moneySummaryByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact={!focusedPastRequest || request.id !== focusedRequestId} focused={request.id === focusedRequestId} />)}</div> : null}</section> : null}
+      {otherOpenRequests.length > 0 ? <section className="support-other-open rounded-[1.5rem] border border-white/60 bg-white/52 p-4 backdrop-blur-xl"><button type="button" onClick={() => setShowAllOpen((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-700"><span>{otherOpenRequests.length} other open request{otherOpenRequests.length === 1 ? "" : "s"}</span><span>{showAllOpen ? "−" : "+"}</span></button>{showAllOpen ? <div className="mt-4 space-y-3">{otherOpenRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} moneySummary={moneySummaryByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact focused={request.id === focusedRequestId} />)}</div> : null}</section> : null}
+      {pastRequests.length > 0 ? <section className="support-history-surface rounded-[1.5rem] border border-white/60 bg-white/46 p-4 backdrop-blur-xl"><button type="button" onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between font-black text-slate-600"><span>Past requests · {pastRequests.length}</span><span>{showHistory ? "−" : "+"}</span></button>{showHistory ? <div className="mt-4 space-y-3">{pastRequests.map((request) => <SupportCard key={request.id} request={request} statusEvents={statusEvents} participantResponses={participantResponses} participantReplies={participantReplies} assistedBudgetLink={assistedBudgetByRequestId.get(request.id) ?? null} moneySummary={moneySummaryByRequestId.get(request.id) ?? null} working={working} onWithdraw={withdrawRequest} onSubmitReply={submitParticipantReply} compact={!focusedPastRequest || request.id !== focusedRequestId} focused={request.id === focusedRequestId} />)}</div> : null}</section> : null}
     </> : null}
 
-    <Link href="/resources" className="group flex items-center justify-between rounded-[1.5rem] border border-white/80 bg-white/58 p-4 shadow-[0_14px_38px_rgba(15,23,42,0.06)] backdrop-blur-xl transition active:scale-[0.99]">
+    <Link href="/resources" className="support-resource-bridge group flex items-center justify-between rounded-[1.5rem] border border-white/60 bg-white/54 p-4 shadow-[0_16px_42px_rgba(70,40,43,0.08)] backdrop-blur-xl transition active:scale-[0.99]">
       <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Resources</p><p className="mt-1 text-lg font-black text-slate-950">Find a starting point</p><p className="mt-1 text-sm font-semibold text-slate-600">Browse available help without starting a Support request.</p></div><span className="ml-4 text-2xl font-black text-emerald-800 transition group-hover:translate-x-1">›</span>
     </Link>
 
