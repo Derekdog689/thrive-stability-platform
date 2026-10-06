@@ -66,6 +66,12 @@ The active experience-reset roadmap is:
 
 `docs/THRIVE_EXPERIENCE_RESET_ROADMAP_v1_0.md`
 
+The current approved cross-thread visual standard is:
+
+`docs/THRIVE_LIVING_SIGNAL_ENVIRONMENT_STANDARD_v0_1.md`
+
+Use that file as the primary re-anchor before changing participant-facing Today, Wellness, Goals, Money, Support, Resources, Recovery Support, or Story. Today and Wellness are the current implementation benchmarks; Goals and Money remain visually unresolved against that standard.
+
 Supporting design candidates remain preserved as historical design evidence:
 
 - `docs/THRIVE_EXPERIENCE_RESET_v0_1.md`
