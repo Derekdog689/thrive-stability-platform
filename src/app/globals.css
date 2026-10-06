@@ -1141,6 +1141,14 @@ body.wellness-expanded-open .wellness-bottom-nav {
   z-index: 2;
 }
 
+.goals-lane-header {
+  background:
+    linear-gradient(160deg, rgba(255,255,255,.78), rgba(247,244,250,.62)) !important;
+  border-color: rgba(255,255,255,.72) !important;
+  backdrop-filter: blur(18px) saturate(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(1.04);
+}
+
 .goals-living-hero {
   min-height: 255px;
   background:
