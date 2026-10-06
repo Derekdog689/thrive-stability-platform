@@ -1,10 +1,14 @@
 # THRIVE Recovery Catalog Expansion v0.1 — Review Candidate
 
-**Status:** REVIEW ONLY  
+**Status:** REJECTED — NOT APPROVED FOR ADMIN ENTRY  
 **Date:** 2026-10-06  
-**Gate:** Recovery Catalog Expansion v0.1  
+**Gate:** CLOSED / REJECTED — superseded by THRIVE Core Resource Library v0.1  
 **Production changes:** None  
 **Admin entry:** Not authorized by this document
+
+## Rejection note
+
+Rejected on 2026-10-06 because the first 40 Resources are intended to support the full THRIVE environment, not expand Recovery from six to forty. The research below is retained as future scale runway only.
 
 ## Purpose
 
