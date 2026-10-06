@@ -2069,3 +2069,358 @@ body.wellness-expanded-open .wellness-bottom-nav {
     transform: none;
   }
 }
+
+
+/* Support Living Signal Environment v0.1
+   Presentation-only. Preserves Support lifecycle, replies, routing, RLS, and persistence.
+   Support metaphor: connection, warmth, refuge, access, pathways outward. */
+.support-environment-v1 {
+  isolation: isolate;
+  background: #3b2629;
+}
+
+.support-fixed-environment {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(37,20,24,.08) 0%, rgba(45,24,28,.16) 38%, rgba(23,18,22,.54) 100%),
+    radial-gradient(circle at 78% 12%, rgba(255,189,128,.24), transparent 24%),
+    url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&fm=jpg&q=88&w=2200');
+  background-size: cover;
+  background-position: 50% 48%;
+  background-repeat: no-repeat;
+  transform: translateZ(0);
+  filter: saturate(.96) contrast(1.02);
+}
+
+.support-state-needs-you .support-fixed-environment {
+  background-position: 54% 45%;
+}
+
+.support-state-open .support-fixed-environment {
+  background-position: 48% 49%;
+}
+
+.support-state-settled .support-fixed-environment {
+  background:
+    linear-gradient(180deg, rgba(33,21,24,.06) 0%, rgba(40,24,27,.14) 38%, rgba(24,18,21,.50) 100%),
+    radial-gradient(circle at 75% 12%, rgba(255,197,135,.30), transparent 26%),
+    url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&fm=jpg&q=88&w=2200');
+}
+
+.support-connection-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(38,20,23,.02) 0%,
+      rgba(38,20,23,.06) 28%,
+      rgba(52,31,34,.16) 50%,
+      rgba(240,232,226,.70) 78%,
+      rgba(242,238,232,.96) 100%
+    );
+}
+
+.support-path {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  border-radius: 50%;
+  border: 2px solid rgba(255,210,169,.20);
+  filter: drop-shadow(0 0 18px rgba(231,150,108,.14));
+}
+
+.support-path--one {
+  top: 35%;
+  height: 25%;
+  transform: rotate(-5deg);
+}
+
+.support-path--two {
+  top: 44%;
+  height: 31%;
+  transform: rotate(5deg);
+  border-color: rgba(166,215,204,.14);
+}
+
+.support-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(42px);
+}
+
+.support-glow--one {
+  width: 20rem;
+  height: 20rem;
+  right: -7rem;
+  top: 8rem;
+  background: rgba(236,150,103,.18);
+}
+
+.support-glow--two {
+  width: 17rem;
+  height: 17rem;
+  left: -6rem;
+  bottom: 10rem;
+  background: rgba(106,182,168,.10);
+}
+
+.support-scene-header {
+  min-height: 330px;
+  background:
+    linear-gradient(180deg, rgba(47,25,29,.12), rgba(61,32,36,.30) 52%, rgba(43,24,28,.62) 100%);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.09),
+    0 30px 82px rgba(41,22,26,.24);
+}
+
+.support-scene-header::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 46%;
+  background: linear-gradient(180deg, rgba(45,24,28,0), rgba(45,24,28,.54));
+  pointer-events: none;
+}
+
+.support-scene-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 75% 14%, rgba(255,205,154,.15), transparent 24%),
+    linear-gradient(90deg, rgba(35,19,23,.28), rgba(35,19,23,.04) 52%, rgba(35,19,23,.16));
+  pointer-events: none;
+}
+
+.support-scene-copy {
+  text-shadow: 0 2px 24px rgba(29,16,20,.30);
+}
+
+.support-connection-ribbon {
+  position: relative;
+  max-width: 36rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(58,31,35,.38);
+  padding: .85rem 1rem .78rem;
+  backdrop-filter: blur(14px) saturate(1.04);
+  -webkit-backdrop-filter: blur(14px) saturate(1.04);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.support-connection-track {
+  position: relative;
+  height: 24px;
+}
+
+.support-connection-line {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: 11px;
+  height: 2px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(255,204,159,.34), rgba(255,204,159,.86) 46%, rgba(132,206,193,.42));
+  box-shadow: 0 0 18px rgba(236,154,108,.14);
+}
+
+.support-connection-node {
+  position: absolute;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.52);
+  background: rgba(76,43,46,.92);
+  box-shadow: 0 0 0 4px rgba(255,255,255,.05);
+}
+
+.support-connection-node--ask { left: 4%; }
+.support-connection-node--reply { left: calc(50% - 6px); }
+.support-connection-node--resolve { right: 4%; }
+
+.support-connection-node.is-lit {
+  background: #e5a26f;
+  border-color: rgba(255,242,226,.96);
+  box-shadow: 0 0 0 4px rgba(229,162,111,.12), 0 0 18px rgba(229,162,111,.34);
+}
+
+.support-connection-node.is-current {
+  background: #8dcfbe;
+  box-shadow: 0 0 0 5px rgba(141,207,190,.14), 0 0 20px rgba(141,207,190,.44);
+  animation: supportCurrentNode 2.8s ease-in-out infinite;
+}
+
+.support-connection-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .5rem;
+  margin-top: .15rem;
+  color: rgba(255,255,255,.76);
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.support-connection-facts span:nth-child(2) {
+  text-align: center;
+}
+
+.support-connection-facts span:nth-child(3) {
+  text-align: right;
+}
+
+.support-connection-facts strong {
+  display: block;
+  color: #fff;
+  font-size: .82rem;
+  letter-spacing: 0;
+}
+
+.support-scroll-content {
+  padding-bottom: 10rem;
+}
+
+.support-thread-card,
+.support-create-surface,
+.support-other-open,
+.support-history-surface,
+.support-resource-bridge,
+.support-clear-state {
+  backdrop-filter: blur(18px) saturate(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(1.04);
+}
+
+.support-thread-card {
+  background:
+    linear-gradient(155deg, rgba(255,249,245,.80), rgba(244,239,238,.70)) !important;
+}
+
+.support-state-needs-you .support-thread-card {
+  background:
+    radial-gradient(circle at 86% 12%, rgba(250,194,113,.12), transparent 24%),
+    linear-gradient(155deg, rgba(255,250,244,.84), rgba(247,240,237,.72)) !important;
+}
+
+.support-create-surface {
+  background:
+    linear-gradient(155deg, rgba(255,250,246,.78), rgba(244,240,239,.68)) !important;
+}
+
+.support-other-open,
+.support-history-surface {
+  background:
+    linear-gradient(155deg, rgba(252,249,246,.68), rgba(242,240,240,.58)) !important;
+}
+
+.support-resource-bridge {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(155deg, rgba(255,248,241,.76), rgba(240,247,244,.64)) !important;
+}
+
+.support-resource-bridge::before {
+  content: "";
+  position: absolute;
+  right: -3rem;
+  top: -2.5rem;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 999px;
+  border: 1px solid rgba(227,146,102,.18);
+  box-shadow:
+    0 0 0 20px rgba(227,146,102,.04),
+    0 0 0 42px rgba(117,190,176,.03);
+  pointer-events: none;
+}
+
+.support-clear-state {
+  background:
+    linear-gradient(155deg, rgba(255,250,246,.78), rgba(239,246,242,.66)) !important;
+}
+
+.support-current-thread {
+  position: relative;
+}
+
+.support-current-thread::before {
+  content: "";
+  position: absolute;
+  left: .7rem;
+  top: 3.5rem;
+  bottom: 1.2rem;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(196,103,91,.74), rgba(113,194,177,.36));
+  box-shadow: 0 0 16px rgba(196,103,91,.15);
+  pointer-events: none;
+}
+
+.support-current-thread > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes supportCurrentNode {
+  0%, 100% { transform: scale(.92); opacity: .78; }
+  50% { transform: scale(1.10); opacity: 1; }
+}
+
+@media (max-width: 639px) {
+  .support-fixed-environment {
+    background-position: 52% 45%;
+  }
+
+  .support-state-needs-you .support-fixed-environment {
+    background-position: 56% 43%;
+  }
+
+  .support-scene-header {
+    min-height: 308px;
+  }
+
+  .support-scene-copy {
+    margin-top: 2rem !important;
+  }
+
+  .support-scene-copy h1 {
+    max-width: 19rem;
+  }
+
+  .support-connection-ribbon {
+    margin-top: 1.25rem !important;
+  }
+
+  .support-path--one {
+    top: 38%;
+  }
+
+  .support-path--two {
+    top: 47%;
+  }
+
+  .support-scroll-content {
+    padding-bottom: 11rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-fixed-environment {
+    transform: none;
+  }
+
+  .support-connection-node.is-current {
+    animation: none !important;
+  }
+}
