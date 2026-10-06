@@ -217,6 +217,17 @@ export default function GoalsCandidatePage() {
     return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
   }, [pastGoals]);
 
+  const primaryGoal = activeNow[0] ?? readyGoals[0] ?? pausedGoals[0] ?? null;
+  const secondaryActiveGoals = primaryGoal?.progress_status === "in_progress"
+    ? activeNow.filter((goal) => goal.id !== primaryGoal.id)
+    : activeNow;
+  const secondaryReadyGoals = primaryGoal?.progress_status === "not_started"
+    ? readyGoals.filter((goal) => goal.id !== primaryGoal.id)
+    : readyGoals;
+  const secondaryPausedGoals = primaryGoal?.progress_status === "paused"
+    ? pausedGoals.filter((goal) => goal.id !== primaryGoal.id)
+    : pausedGoals;
+
   useEffect(() => {
     const goalId = new URLSearchParams(window.location.search).get("goal")?.trim() ?? "";
     if (goalId) setFocusedGoalId(goalId);
@@ -288,8 +299,8 @@ export default function GoalsCandidatePage() {
     }
   }
 
-  return <AuthGate><main className={`min-h-screen bg-[radial-gradient(circle_at_12%_12%,rgba(167,243,208,0.32),transparent_30%),radial-gradient(circle_at_86%_18%,rgba(254,240,138,0.28),transparent_26%),linear-gradient(180deg,#edf7f1_0%,#eef5f7_48%,#edf1f4_100%)] px-3 pt-3 text-slate-950 sm:px-6 sm:pt-6 ${showCreate ? "pb-44 sm:pb-36" : "pb-28 sm:pb-32"}`}><section className="mx-auto max-w-5xl space-y-5 sm:space-y-6">
-    {showCreate ? <header className="rounded-[1.8rem] border border-white/80 bg-white/72 px-4 py-3 shadow-sm backdrop-blur-2xl sm:px-6 sm:py-4"><div className="flex items-center justify-between gap-3"><Link href="/" className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-base font-black shadow-sm">T</div><div><p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-700">DSS Enterprises</p><p className="text-sm font-black">THRIVE · Goals</p></div></Link><button type="button" onClick={resetCreation} className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-black text-slate-700">Close</button></div></header> : <header className="relative overflow-hidden rounded-[2.5rem] border border-white/80 bg-white/45 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-2xl sm:p-9"><div className="pointer-events-none absolute -right-14 top-8 h-48 w-48 rounded-full border-[24px] border-amber-100/60" /><div className="pointer-events-none absolute -left-16 bottom-[-5rem] h-56 w-56 rounded-full bg-emerald-200/45" /><div className="relative"><div className="flex items-center justify-between"><Link href="/" className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-lg font-black shadow-sm">T</div><div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-800">DSS Enterprises</p><p className="text-sm font-black">THRIVE</p></div></Link><span className="rounded-full bg-white/75 px-4 py-2 text-sm font-black text-emerald-900 shadow-sm">◎ Goals</span></div><div className="mt-16 max-w-3xl sm:mt-20"><p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-700">Goals</p><h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-emerald-950 sm:text-7xl">What are you working toward?</h1><p className="mt-4 text-xl font-bold text-slate-600">Keep track of what’s moving, what’s ready, and what can wait.</p></div></div></header>}
+  return <AuthGate><main className={`goals-living-signal relative min-h-screen overflow-x-hidden text-[#17152a] ${showCreate ? "pb-44 sm:pb-36" : "pb-28 sm:pb-32"}`}><div className="goals-fixed-environment" aria-hidden="true" /><div className="goals-fixed-veil" aria-hidden="true" /><section className="goals-scroll-content relative z-10 mx-auto max-w-5xl space-y-5 px-3 pt-3 sm:space-y-6 sm:px-6 sm:pt-6">
+    {showCreate ? <header className="rounded-[1.8rem] border border-white/80 bg-white/72 px-4 py-3 shadow-sm backdrop-blur-2xl sm:px-6 sm:py-4"><div className="flex items-center justify-between gap-3"><Link href="/" className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-base font-black shadow-sm">T</div><div><p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-700">DSS Enterprises</p><p className="text-sm font-black">THRIVE · Goals</p></div></Link><button type="button" onClick={resetCreation} className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-black text-slate-700">Close</button></div></header> : <header className="goals-living-hero goals-scenic-stage relative overflow-hidden rounded-[2.5rem] border border-white/45 p-6 shadow-[0_30px_90px_rgba(27,16,54,0.24)] sm:p-9"><div className="pointer-events-none absolute -right-14 top-8 h-48 w-48 rounded-full border-[24px] border-amber-100/60" /><div className="pointer-events-none absolute -left-16 bottom-[-5rem] h-56 w-56 rounded-full bg-emerald-200/45" /><div className="relative"><div className="flex items-center justify-between"><Link href="/" className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-lg font-black shadow-sm">T</div><div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-800">DSS Enterprises</p><p className="text-sm font-black">THRIVE</p></div></Link><span className="rounded-full bg-white/75 px-4 py-2 text-sm font-black text-emerald-900 shadow-sm">◎ Goals</span></div><div className="goals-hero-glass mt-16 max-w-3xl rounded-[1.8rem] border border-white/20 bg-[#17152a]/58 px-5 py-5 text-white shadow-[0_22px_60px_rgba(18,12,40,0.28)] backdrop-blur-[18px] sm:mt-20 sm:px-6 sm:py-6"><p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#d7b6ff]">Goals</p><h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-white sm:text-7xl">What are you working toward?</h1><p className="mt-4 text-xl font-bold text-white/78">Keep one next step clear. THRIVE can hold the rest.</p></div></div></header>}
 
     {loading ? <section className="rounded-[2rem] bg-white/75 p-6 shadow-sm">Loading goals.</section> : null}
     {errorMessage ? <section role="alert" className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6"><p className="font-black">Goals could not be loaded.</p><p className="mt-2 text-sm">{errorMessage}</p></section> : null}
@@ -297,7 +308,7 @@ export default function GoalsCandidatePage() {
     {!loading && !errorMessage && canCreate ? <>
       {justSavedGoal ? <section className="rounded-[2rem] border border-white/80 bg-white/72 p-6 shadow-sm backdrop-blur-2xl sm:p-8"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Saved</p><h2 className="mt-2 text-3xl font-black">{justSavedGoal.title}</h2><div className="mt-5 rounded-[1.6rem] bg-emerald-700 p-5 text-white shadow-[0_14px_30px_rgba(4,120,87,0.16)]"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">Next</p><p className="mt-2 text-2xl font-black">{justSavedGoal.next_step}</p></div><div className="mt-5 flex flex-wrap gap-3">{justSavedGoal.progress_status === "not_started" ? <button type="button" disabled={working} onClick={() => void changeStatus(justSavedGoal, "in_progress")} className="rounded-full border border-emerald-200 bg-emerald-50 px-5 py-2.5 text-sm font-black text-emerald-900">Start</button> : null}<button type="button" onClick={() => setJustSavedGoal(null)} className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-black">My goals</button><Link href="/?done=goals" className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-black">Done for now</Link></div></section> : null}
 
-      {justCompletedGoal && !showCreate ? <section className="relative overflow-hidden rounded-[2rem] border border-sky-100 bg-[linear-gradient(145deg,rgba(240,249,255,0.96),rgba(236,253,245,0.94))] p-6 shadow-sm sm:p-8">
+      {justCompletedGoal && !showCreate ? <section className="goals-completion-moment relative overflow-hidden rounded-[2rem] border border-violet-200/70 p-6 shadow-[0_26px_72px_rgba(50,29,86,0.18)] sm:p-8">
         <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-sky-100/70 blur-2xl" />
         <div className="relative">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-sky-700">Completed</p>
@@ -323,7 +334,7 @@ export default function GoalsCandidatePage() {
       </section> : null}
 
       {!justSavedGoal && !justCompletedGoal && currentGoals.length > 0 && !showCreate ? <section className="space-y-4">
-        <section className="rounded-[2rem] border border-white/80 bg-white/72 p-5 shadow-sm backdrop-blur-xl sm:p-6">
+        <section className="goals-current-overview rounded-[2rem] border border-white/70 bg-white/58 p-5 shadow-[0_20px_58px_rgba(29,18,56,0.10)] backdrop-blur-2xl sm:p-6">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">Goals right now</p>
           <h2 className="mt-2 text-3xl font-black text-slate-950">What’s moving</h2>
           <div className="mt-5 grid grid-cols-3 gap-3 text-center">
@@ -333,9 +344,16 @@ export default function GoalsCandidatePage() {
           </div>
         </section>
 
-        <GoalThreadGroup title="Active" note="Things you’re working on now." goals={activeNow} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
-        <GoalThreadGroup title="Ready" note="Things waiting for you to start." goals={readyGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
-        <GoalThreadGroup title="Paused" note="Things you chose to set aside for now." goals={pausedGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
+        {primaryGoal ? <section className="goals-primary-thread rounded-[2rem] border border-white/60 bg-white/48 p-4 shadow-[0_22px_66px_rgba(29,18,56,0.12)] backdrop-blur-2xl sm:p-5">
+          <div className="mb-3 px-1">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-700">Current focus</p>
+            <h2 className="mt-1 text-2xl font-black text-[#21173a]">One thing to move</h2>
+          </div>
+          <GoalThreadCard goal={primaryGoal} working={working} onStatusChange={changeStatus} focused={primaryGoal.id === focusedGoalId} />
+        </section> : null}
+        <GoalThreadGroup title="Also in motion" note="Other things you can return to when they matter." goals={secondaryActiveGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
+        <GoalThreadGroup title="Ready" note="Things waiting for you to start." goals={secondaryReadyGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
+        <GoalThreadGroup title="Paused" note="Things you chose to set aside for now." goals={secondaryPausedGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
       </section> : null}
 
       {!justSavedGoal && !justCompletedGoal && !showCreate ? <button type="button" onClick={beginCreation} className="flex w-full items-center justify-between rounded-[2rem] border border-white/80 bg-white/72 p-5 text-left shadow-sm backdrop-blur-xl"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Add</p><p className="mt-1 text-xl font-black">{currentGoals.length ? "Start another goal" : "Start a goal"}</p></div><span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-2xl font-black text-emerald-800">+</span></button> : null}
@@ -349,7 +367,7 @@ export default function GoalsCandidatePage() {
       </form> : null}
 
       {notice && !showCreate && !justSavedGoal && !justCompletedGoal ? <section role="alert" className="rounded-[2rem] border border-rose-200 bg-rose-50 p-5"><p className="font-black text-rose-900">{notice}</p></section> : null}
-      {!justSavedGoal && !justCompletedGoal && !showCreate ? <section className="rounded-[2rem] border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur-xl">
+      {!justSavedGoal && !justCompletedGoal && !showCreate ? <section className="goals-history-surface rounded-[2rem] border border-white/70 bg-white/58 p-6 shadow-[0_20px_58px_rgba(29,18,56,0.10)] backdrop-blur-2xl">
         <button type="button" aria-expanded={showHistory} onClick={() => setShowHistory((current) => !current)} className="flex w-full items-center justify-between text-left font-black text-slate-800">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.16em] text-sky-700">Progress kept</p>
