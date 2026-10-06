@@ -1956,3 +1956,119 @@
     font-size: 14px;
   }
 }
+
+
+/* Story v0.2 density / hierarchy closeout
+   Preserve every factual event while grouping the growing history into day-scale accumulation. */
+.story-day-groups {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.story-day-group {
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.78);
+  background: rgba(255,255,255,.66);
+  box-shadow: 0 12px 32px rgba(21,50,59,.06);
+}
+
+.story-day-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 68px;
+  padding: 13px 15px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.story-day-summary::-webkit-details-marker {
+  display: none;
+}
+
+.story-day-date {
+  display: block;
+  color: #173644;
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: -.01em;
+}
+
+.story-day-meta {
+  display: block;
+  margin-top: 3px;
+  color: #6b7887;
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: .055em;
+}
+
+.story-day-chevron {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(20,72,82,.07);
+  color: #315c66;
+  font-size: 18px;
+  font-weight: 900;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.story-day-group[open] .story-day-chevron {
+  transform: rotate(180deg);
+  background: rgba(97,82,170,.10);
+}
+
+.story-day-events {
+  display: grid;
+  gap: 1px;
+  padding: 0 9px 9px;
+}
+
+.story-day-event {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  min-height: 74px;
+  padding: 11px 9px;
+  border-top: 1px solid rgba(28,68,76,.07);
+  color: inherit;
+  text-decoration: none;
+}
+
+.story-day-event:first-child {
+  border-top: 1px solid rgba(28,68,76,.08);
+}
+
+.story-day-event .ls-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-day-chevron {
+    transition: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .story-day-summary {
+    min-height: 64px;
+    padding: 12px 13px;
+  }
+
+  .story-day-event {
+    min-height: 70px;
+  }
+}
