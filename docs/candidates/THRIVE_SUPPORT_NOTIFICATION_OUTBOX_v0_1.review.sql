@@ -12,6 +12,7 @@ create table if not exists public.support_notification_outbox (
   last_attempt_at timestamptz,
   delivered_at timestamptz,
   last_error_code text,
+  claim_token uuid,
   created_at timestamptz not null default now(),
   unique (event_kind, source_id)
 );
@@ -45,3 +46,13 @@ $$;
 -- Proposed install after review:
 -- create trigger ... AFTER INSERT ON public.support_requests ...
 -- create trigger ... AFTER INSERT ON public.support_request_entries ...
+
+-- Proposed trigger bindings, reviewed separately against existing triggers.
+-- CREATE TRIGGER thrive_enqueue_support_request_v01
+-- AFTER INSERT ON public.support_requests
+-- FOR EACH ROW EXECUTE FUNCTION public.thrive_enqueue_support_notification();
+-- CREATE TRIGGER thrive_enqueue_support_reply_v01
+-- AFTER INSERT ON public.support_request_entries
+-- FOR EACH ROW EXECUTE FUNCTION public.thrive_enqueue_support_notification();
+-- An install must explicitly revoke execute on security-definer trigger
+-- function from API roles after confirming trigger execution continues.
