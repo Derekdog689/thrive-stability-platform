@@ -1,0 +1,79 @@
+-- THRIVE automatic notification worker functions v0.1 REVIEW ONLY.
+-- Do not execute. Requires outbox table/claim_token, worker LOGIN role,
+-- independently approved workspace scope and audited function ownership.
+-- Install with a dedicated app-owned non-login function owner, not public.
+-- No service-role usage; no hard deletes; no historical backfill.
+--
+-- IMPORTANT: This file is a TEMPLATE. Replace WORKSPACE_UUID at gated install.
+-- These functions must NOT be installed with the placeholder present.
+--
+-- CREATE FUNCTION public.thrive_worker_claim_support_notification()
+-- RETURNS TABLE(job_id uuid,event_kind text,claim_token uuid)
+-- LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+-- AS $$
+-- DECLARE
+--   v_token uuid := gen_random_uuid();
+-- BEGIN
+--   IF session_user <> 'thrive_support_notifier' THEN
+--     RAISE EXCEPTION 'Unauthorized worker' USING ERRCODE = '42501';
+--   END IF;
+--   RETURN QUERY
+--   WITH picked AS (
+--     SELECT q.id
+--     FROM public.support_notification_outbox AS q
+--     WHERE q.workspace_id = 'WORKSPACE_UUID'::uuid
+--       AND q.status IN ('pending', 'failed')
+--       AND q.attempt_count < 3
+--       AND (q.last_attempt_at IS NULL
+--         OR q.last_attempt_at <= now() - interval '5 minutes')
+--     ORDER BY q.created_at, q.id
+--     LIMIT 1 FOR UPDATE SKIP LOCKED
+--   )
+--   UPDATE public.support_notification_outbox AS q
+--   SET status = 'sending', attempt_count = q.attempt_count + 1,
+--       last_attempt_at = now(), claim_token = v_token
+--   FROM picked
+--   WHERE q.id = picked.id
+--   RETURNING q.id, q.event_kind, q.claim_token;
+-- END;
+-- $$;
+--
+-- CREATE FUNCTION public.thrive_worker_finish_support_notification(
+--   p_job_id uuid, p_claim_token uuid, p_delivered boolean,
+--   p_error text DEFAULT NULL
+-- ) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+-- AS $$
+-- BEGIN
+--   IF session_user <> 'thrive_support_notifier' THEN
+--     RAISE EXCEPTION 'Unauthorized worker' USING ERRCODE = '42501';
+--   END IF;
+--   IF NOT p_delivered AND p_error NOT IN ('transport', 'configuration') THEN
+--     RAISE EXCEPTION 'Invalid failure category';
+--   END IF;
+--   UPDATE public.support_notification_outbox AS q
+--   SET status = CASE WHEN p_delivered THEN 'sent' ELSE 'failed' END,
+--       delivered_at = CASE WHEN p_delivered THEN now() ELSE NULL END,
+--       last_error_code = CASE WHEN p_delivered THEN NULL ELSE p_error END,
+--       claim_token = NULL
+--   WHERE q.id = p_job_id AND q.claim_token = p_claim_token
+--     AND q.status = 'sending'
+--     AND q.workspace_id = 'WORKSPACE_UUID'::uuid;
+--   RETURN found;
+-- END;
+-- $$;
+--
+-- -- After reviewing owner, privileges and grants:
+-- REVOKE ALL ON FUNCTION public.thrive_worker_claim_support_notification()
+--   FROM PUBLIC, anon, authenticated, service_role;
+-- REVOKE ALL ON FUNCTION public.thrive_worker_finish_support_notification(uuid,uuid,boolean,text)
+--   FROM PUBLIC, anon, authenticated, service_role;
+-- GRANT EXECUTE ON FUNCTION public.thrive_worker_claim_support_notification()
+--   TO thrive_support_notifier;
+-- GRANT EXECUTE ON FUNCTION public.thrive_worker_finish_support_notification(uuid,uuid,boolean,text)
+--   TO thrive_support_notifier;
+--
+-- Worker claims must be restricted to the one approved workspace and role.
+-- A stranded 'sending' row is intentionally NOT automatically requeued;
+-- SMTP acceptance might have happened before the database acknowledgment.
+-- Separate operator reconciliation/notification is required for such rows.
+-- Trigger privilege behavior and request/entry lifecycle guards need testing.
