@@ -48,7 +48,8 @@ export function createGoogleSmtpTransport(options: SmtpOptions): MailTransport {
       });
 
       let incoming = "";
-      let responses: Array<{ code: number; message: string }> = [];
+      const responses: Array<{ code: number; message: string }> = [];
+      let closed = false;
       let pending: ((response: { code: number; message: string }) => void) | null = null;
       let pendingReject: ((error: Error) => void) | null = null;
       let multiCode: number | null = null;
@@ -70,9 +71,13 @@ export function createGoogleSmtpTransport(options: SmtpOptions): MailTransport {
       };
 
       socket.setTimeout(options.timeoutMs ?? 15000);
+      // Never log SMTP AUTH commands or authentication responses.
       socket.on("timeout", () => socket.destroy(new Error("SMTP connection timed out")));
       socket.on("error", fail);
-      socket.on("close", () => fail(new Error("SMTP connection closed")));
+      socket.on("close", () => {
+        closed = true;
+        fail(new Error("SMTP connection closed"));
+      });
       socket.on("data", (part: Buffer) => {
         incoming += part.toString("utf8");
         if (incoming.length > 64_000) {
@@ -103,12 +108,12 @@ export function createGoogleSmtpTransport(options: SmtpOptions): MailTransport {
 
       const read = () => new Promise<{ code: number; message: string }>((resolve, reject) => {
         if (responses.length) { resolve(responses.shift()!); return; }
-        if (socket.destroyed) { reject(new Error("SMTP disconnected")); return; }
+        if (closed || socket.destroyed) { reject(new Error("SMTP disconnected")); return; }
         pending = resolve;
         pendingReject = reject;
       });
       const command = async (line: string, expected: number) => {
-        if (socket.destroyed) throw new Error("SMTP disconnected");
+        if (closed || socket.destroyed) throw new Error("SMTP disconnected");
         socket.write(line + "\r\n");
         const reply = await read();
         if (reply.code !== expected) throw new Error("SMTP command rejected: " + reply.code);
