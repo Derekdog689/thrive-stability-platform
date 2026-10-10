@@ -87,6 +87,31 @@ export default function LoginPage() {
     setLoading(false);
   }
 
+  async function handlePasswordRecovery() {
+    const recoveryEmail = email.trim();
+    if (!recoveryEmail) {
+      setError("Enter your email address first, then select Forgot password.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(
+      recoveryEmail,
+      { redirectTo: "https://thrive-stability-platform.vercel.app/reset-password" },
+    );
+
+    setLoading(false);
+    if (recoveryError) {
+      setError("We could not process that request right now. Please try again later.");
+      return;
+    }
+
+    setMessage("If an account exists for that email, we'll send password reset instructions.");
+  }
+
   async function handleSignOut() {
     setLoading(true);
     setMessage("");
@@ -233,6 +258,17 @@ export default function LoginPage() {
                     {loading ? "Opening..." : "Enter THRIVE"}
                   </button>
                 </form>
+
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handlePasswordRecovery}
+                    disabled={loading}
+                    className="min-h-10 rounded-md px-2 text-sm font-bold text-[#b8e3d7] underline underline-offset-4 transition hover:text-white disabled:opacity-50"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <button
