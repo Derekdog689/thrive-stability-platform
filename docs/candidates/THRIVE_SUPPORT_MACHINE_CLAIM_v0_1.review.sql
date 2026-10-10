@@ -1,0 +1,41 @@
+-- REVIEW ONLY, NOT AN INSTALLABLE MIGRATION.
+-- Illustrative worker-only claim/finish function boundaries.
+-- Requires one approved workspace UUID as a private configuration value
+-- during installation; DO NOT use an unconstrained cross-workspace queue.
+--
+-- CREATE FUNCTION public.thrive_worker_claim_support_notification()
+-- RETURNS TABLE(job_id uuid,event_kind text,claim_token uuid)
+-- LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+-- AS $$
+-- DECLARE token uuid := gen_random_uuid();
+-- BEGIN
+--   IF session_user <> 'thrive_support_notifier' THEN
+--     RAISE EXCEPTION 'Unauthorized worker' USING ERRCODE='42501';
+--   END IF;
+--   RETURN QUERY
+--   WITH claimed AS (
+--     SELECT q.id
+--     FROM public.support_notification_outbox q
+--     WHERE q.status IN ('pending','failed')
+--       AND q.workspace_id = '<APPROVED_WORKSPACE_UUID>'::uuid
+--       AND q.attempt_count < 3
+--       AND (q.last_attempt_at IS NULL
+--         OR q.last_attempt_at < now() - interval '5 minutes')
+--     ORDER BY q.created_at, q.id
+--     FOR UPDATE SKIP LOCKED LIMIT 1
+--   ), updated AS (
+--     UPDATE public.support_notification_outbox q
+--     SET status='sending', attempt_count=q.attempt_count+1,
+--         last_attempt_at=now(), claim_token=token
+--     FROM claimed WHERE q.id=claimed.id
+--     RETURNING q.id, q.event_kind, q.claim_token
+--   ) SELECT u.id,u.event_kind,u.claim_token FROM updated u;
+-- END;
+-- $$;
+--
+-- Production-ready version must replace literal placeholder safely,
+-- configure an audited function owner, reconcile role grants,
+-- and add finish function with original session_user role check,
+-- matching token/status/workspace and bounded event transition.
+-- Never use SECURITY DEFINER to allow non-worker actors access.
+-- Never persist message text or recipient-selected input from participants.
