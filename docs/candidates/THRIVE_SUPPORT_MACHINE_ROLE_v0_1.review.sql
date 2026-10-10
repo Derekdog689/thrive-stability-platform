@@ -1,0 +1,30 @@
+-- REVIEW ONLY. Do not execute.
+-- Candidate machine-worker boundaries for automatic Support notifications.
+-- Requires explicit approval before role creation or installing functions.
+-- The role's PASSWORD must be entered privately in a protected operations step;
+-- never save it here. Restrict connect/schema privileges after checking live grants.
+--
+-- CREATE ROLE thrive_support_notifier LOGIN NOINHERIT NOBYPASSRLS
+--   NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION PASSWORD '<PRIVATE>';
+-- GRANT CONNECT ON DATABASE postgres TO thrive_support_notifier;
+-- GRANT USAGE ON SCHEMA public TO thrive_support_notifier;
+--
+-- Critical design: do NOT grant the worker direct read of Support requests,
+-- their entries, or the entire notification queue.
+-- A dedicated SECURITY DEFINER function must check CURRENT_USER or SESSION_USER
+-- for the exact worker role, have a pinned empty search_path, fixed eligible
+-- workspace configuration, and return only event kind + opaque claim ID/token.
+-- Grant EXECUTE solely to thrive_support_notifier, revoke from PUBLIC, anon,
+-- authenticated, and service_role after confirming other dependencies.
+--
+-- PostgreSQL SECURITY DEFINER changes CURRENT_USER to the function owner.
+-- Verify original caller through SESSION_USER where a direct LOGIN connection
+-- is used; do not mistakenly check CURRENT_USER inside the definer function.
+--
+-- Worker claim must use SKIP LOCKED and a bounded batch. Existing 'sending'
+-- rows are NOT auto-retried because an SMTP acceptance/DB ack split may have
+-- occurred. Manual reconciliation required.
+--
+-- No backfill of historical requests. New INSERT events only.
+-- Install gate: confirm Supabase connection/pooler compatibility, role privileges,
+-- DB TLS and function ownership with an isolated reversible test before enabling.
