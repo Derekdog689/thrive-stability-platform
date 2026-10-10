@@ -29,12 +29,12 @@ export default function ResetPasswordPage() {
       },
     );
 
-    // Supabase can exchange the recovery URL before this page subscribes.
-    // An authenticated session permits updating only that user's password.
-    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+    // A normal signed-in session is NOT evidence of password recovery.
+    // Only the PASSWORD_RECOVERY auth event may enable this form.
+    // INITIAL_SESSION and SIGNED_IN must not grant recovery access.
+    void supabase.auth.initialize().then(({ error: initError }) => {
       if (!active) return;
-      if (sessionError) setError("This recovery link could not be verified. Request a new one.");
-      setReady(Boolean(data.session));
+      if (initError) setError("This recovery link could not be verified. Request a new one.");
       setChecking(false);
     });
 
