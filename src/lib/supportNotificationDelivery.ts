@@ -46,6 +46,9 @@ export async function deliverOneSupportNotification(
   // Validate BEFORE claiming, so configuration errors do not strand rows.
   const from = validateMailbox(settings.sender);
   const to = validateMailbox(settings.recipient);
+  // Validate the canonical origin before claiming a queued event.
+  // A missing or unsafe origin must not strand a claimed job.
+  buildSupportNotificationEmail("request_created", { origin: settings.origin });
   const bodyOrigin = settings.origin;
   const job = await outbox.claimNext();
   if (!job) return "idle";
@@ -53,12 +56,16 @@ export async function deliverOneSupportNotification(
   try {
     const { subject, text } = buildSupportNotificationEmail(job.eventKind, { origin: bodyOrigin });
     await transport.send({ from, to, subject, text });
-    await outbox.markSent(job.id);
-    return "sent";
   } catch (error) {
-    // Never store exception text: SMTP errors may carry addresses or server details.
+    // The transport failed before accepting this delivery.
     const category = error instanceof TypeError ? "configuration" : "transport";
     await outbox.markFailed(job.id, category);
     return "failed";
   }
+
+  // SMTP accepted the message. If database confirmation fails, propagate the
+  // failure for operator reconciliation instead of mislabeling it as an SMTP
+  // failure and causing an automatic duplicate resend.
+  await outbox.markSent(job.id);
+  return "sent";
 }
