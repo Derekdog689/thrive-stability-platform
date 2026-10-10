@@ -39,14 +39,15 @@ export async function POST(request: NextRequest) {
 
   // No service-role or bypass token. The RPC checks is_support_reviewer
   // for the workspace of the claimed outbox item.
+  const claimTokens = new Map<string, string>();
   const outbox: OutboxAdapter = {
     async claimNext() {
       const { data, error } = await supabase.rpc("thrive_claim_support_notification");
       if (error) throw new Error("Claim failed");
       const claimed = Array.isArray(data) ? data[0] : undefined;
-      return claimed
-        ? { id: claimed.job_id, eventKind: claimed.event_kind, attempts: 0 }
-        : null;
+      if (!claimed) return null;
+      claimTokens.set(claimed.job_id, claimed.claim_token);
+      return { id: claimed.job_id, eventKind: claimed.event_kind, attempts: 0 };
     },
     async markSent(id) {
       const token = claimTokens.get(id);
@@ -65,18 +66,6 @@ export async function POST(request: NextRequest) {
       if (error || data !== true) throw new Error("Failure acknowledgment failed");
     },
   };
-
-  const claimTokens = new Map<string, string>();
-  const originalClaim = outbox.claimNext;
-  outbox.claimNext = async () => {
-    const { data, error } = await supabase.rpc("thrive_claim_support_notification");
-    if (error) throw new Error("Claim failed");
-    const claimed = Array.isArray(data) ? data[0] : undefined;
-    if (!claimed) return null;
-    claimTokens.set(claimed.job_id, claimed.claim_token);
-    return { id: claimed.job_id, eventKind: claimed.event_kind, attempts: 0 };
-  };
-  void originalClaim;
 
   try {
     const transport = createGoogleSmtpTransport({
