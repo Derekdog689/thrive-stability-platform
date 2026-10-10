@@ -23,3 +23,12 @@
 
 ## Exact next gate
 Review recipient + transport decision, then implement an isolated server-only delivery/outbox candidate and tests on this branch. Verify on preview, request explicit approval before production activation.
+
+## 2026-10-10 confirmed decision / live-schema follow-up
+- User approved **initial recipient** `derek@dssenterprisesusa.llc` and **proposed From alias** `thrive@dssenterprisesusa.llc`, subject to a real authenticated SMTP send-as test.
+- The database has existing Support lifecycle, scope, audit and no-hard-delete triggers. New outbox triggers must not replace them.
+- Review-only SQL candidate: `docs/candidates/THRIVE_SUPPORT_NOTIFICATION_OUTBOX_v0_1.review.sql`. It is NOT a migration and has NOT been executed.
+- Existing Supabase Auth SMTP settings cannot be read as application credentials. A separate secure server transport configuration is needed.
+- Server send worker remains unimplemented. No live notifications are enabled; no database writes occurred.
+- Before installing, validate supported schema privileges/RLS, application delivery credentials, outbox claim/retry/concurrency behavior and monitoring against real environment. Avoid silent failure and duplicate delivery.
+- Proof checklist: request insert creates one pending event; participant reply creates one distinct pending event; no event for admin response; no double event for retry; email delivery shows only safe subject and Admin link; 401/403 for unauthenticated callers; recipient verified; delivery failure visible and recoverable; do not claim participant request failed if only notification failed.
