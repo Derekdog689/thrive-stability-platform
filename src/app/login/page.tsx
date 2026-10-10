@@ -100,7 +100,7 @@ export default function LoginPage() {
 
     const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(
       recoveryEmail,
-      { redirectTo: `${window.location.origin}/reset-password` },
+      { redirectTo: "https://thrive-stability-platform.vercel.app/reset-password" },
     );
 
     setLoading(false);
