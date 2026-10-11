@@ -38,6 +38,7 @@ jobs:
         run: |
           npm audit --omit=dev --json > security-audit.json || true
           node -e "const a=require('./security-audit.json'); console.log('Vulnerability totals', JSON.stringify(a.metadata?.vulnerabilities || {}))"
+          node -e "const a=require('./security-audit.json'); console.log('Remaining packages',Object.entries(a.vulnerabilities||{}).map(([n,v])=>n+':'+v.severity).join(','))"
       - name: Upload candidate audit report
         uses: actions/upload-artifact@v4
         with:
