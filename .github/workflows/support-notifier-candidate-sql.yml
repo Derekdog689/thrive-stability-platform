@@ -53,3 +53,5 @@ jobs:
           PGPASSWORD: worker_ci_only
         run: |
           psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.thrive_worker_claim_support_notification()" | grep -qx 1
+      - name: Verify concurrent distinct claims
+        run: bash tests/postgres/candidate-concurrent-claims.sh
