@@ -27,7 +27,7 @@ jobs:
       - name: Install pinned current dependency tree
         run: npm ci
       - name: Install candidate patched framework temporarily
-        run: npm install --no-save --package-lock=false next@16.4.0 eslint-config-next@16.4.0
+        run: npm install --save-exact next@16.4.0 eslint-config-next@16.4.0
       - name: Report effective package versions
         run: node -e "console.log('next',require('next/package.json').version)"
       - name: Test isolated notification behavior
