@@ -7,7 +7,7 @@ Date: 2026-10-11. REVIEW ONLY. PR #66. No production modifications.
 - Existing Support triggers: support_requests has BEFORE assignment guard, no-hard-delete, scope/lifecycle guard, updated-at setter, and AFTER event record; support_request_entries has immutable/archive guard, no-hard-delete, and AFTER archive record.
 - No thrive_support_notifier or thrive_support_notification_owner role. No thrive_enqueue_support_notification, thrive_worker_claim_support_notification or thrive_worker_finish_support_notification functions. No support_notification_outbox table.
 - Entry composite FK already binds request, workspace, program and supported person.
-- public schema owner is pg_database_owner. Superuser/CREATEROLE capability and effective CREATE/ALTER OWNER privileges of intended live installer are NOT yet proven; introspection query result did not include these values.
+- public schema owner is pg_database_owner. The current postgres role has CREATEROLE=true, SUPERUSER=false, and CREATE privilege on public=true. These alone do NOT prove non-superuser ALTER OWNER, role membership, or future restricted owner grants.
 
 ## Important compatibility issue to resolve
 The v0.2 review SQL creates notification outbox as installer and later reassigns ownership to dedicated NOLOGIN owner. ALTER OWNER requires suitable rights and schema privileges. For foreign keys on parent Support tables, installer and role ownership/grant assumptions must be checked against Supabase privileges. CI uses standalone postgres superuser, which is NOT equivalent to production Supabase installer.
