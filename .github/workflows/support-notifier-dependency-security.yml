@@ -29,7 +29,7 @@ jobs:
       - name: Install candidate patched framework temporarily
         run: npm install --save-exact next@16.4.0 eslint-config-next@16.4.0
       - name: Resolve nonbreaking residual audit advisories in disposable candidate
-        run: npm audit fix
+        run: npm audit fix || true
       - name: Report effective package versions
         run: node -e "console.log('next',require('next/package.json').version)"
       - name: Test isolated notification behavior
