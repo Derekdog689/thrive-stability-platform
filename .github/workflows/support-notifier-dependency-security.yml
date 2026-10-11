@@ -1,0 +1,62 @@
+name: THRIVE dependency security candidate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/support-notifier-dependency-security.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-next-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-only-not-a-real-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned current dependency tree
+        run: npm ci
+      - name: Install candidate patched framework temporarily
+        run: npm install --save-exact next@16.4.0 eslint-config-next@16.4.0
+      - name: Resolve nonbreaking residual audit advisories in disposable candidate
+        run: npm audit fix || true
+      - name: Report effective package versions
+        run: node -e "console.log('next',require('next/package.json').version)"
+      - name: Test isolated notification behavior
+        run: node --test tests/support-notification-isolated.test.cjs
+      - name: Compile full application
+        run: npm run build
+      - name: Audit production dependencies (report findings without mutation)
+        run: |
+          npm audit --omit=dev --json > security-audit.json || true
+          node -e "const a=require('./security-audit.json'); console.log('Vulnerability totals', JSON.stringify(a.metadata?.vulnerabilities || {}))"
+          node -e "const a=require('./security-audit.json'); console.log('Remaining packages',Object.entries(a.vulnerabilities||{}).map(([n,v])=>n+':'+v.severity).join(','))"
+      - name: Verify remediated runtime tree
+        run: |
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));const a=JSON.parse(fs.readFileSync('security-audit.json'));if(p.dependencies.next!=='16.4.0'||p.devDependencies['eslint-config-next']!=='16.4.0')process.exit(1);if(a.metadata.vulnerabilities.total!==0)process.exit(1)"
+          npm ci --ignore-scripts
+          node --test tests/support-notification-isolated.test.cjs
+      - name: Export reviewed dependency manifest and lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: thrive-patched-dependency-manifests
+          path: |
+            package.json
+            package-lock.json
+          retention-days: 7
+      - name: Upload candidate audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-security-candidate-audit
+          path: security-audit.json
+          retention-days: 7

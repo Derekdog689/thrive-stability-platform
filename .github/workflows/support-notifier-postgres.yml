@@ -1,0 +1,53 @@
+name: Support notifier isolated PostgreSQL gate
+
+on:
+  pull_request:
+    paths:
+      - 'tests/postgres/**'
+      - '.github/workflows/support-notifier-postgres.yml'
+      - 'docs/candidates/THRIVE_SUPPORT_NOTIFICATION_INSTALL_v0_2.review.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restricted-worker-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: postgres
+      PGUSER: postgres
+      PGPASSWORD: synthetic_ci_only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Synthetic fixture and isolated worker roles
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/postgres/support-notifier-fixture.sql
+          psql -v ON_ERROR_STOP=1 -c "ALTER ROLE thrive_support_notifier PASSWORD 'worker_ci_only'"
+      - name: Restricted worker permission assertions
+        env:
+          PGUSER: thrive_support_notifier
+          PGPASSWORD: worker_ci_only
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/support-notifier-assertions.sql
+      - name: Verify no global direct grants
+        run: |
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT CASE WHEN has_table_privilege('thrive_support_notifier','public.support_notification_outbox','SELECT') THEN 1 ELSE 0 END" | grep -qx 0
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT CASE WHEN has_function_privilege('anon','public.thrive_worker_claim_support_notification()','EXECUTE') THEN 1 ELSE 0 END" | grep -qx 0
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT CASE WHEN has_function_privilege('authenticated','public.thrive_worker_claim_support_notification()','EXECUTE') THEN 1 ELSE 0 END" | grep -qx 0

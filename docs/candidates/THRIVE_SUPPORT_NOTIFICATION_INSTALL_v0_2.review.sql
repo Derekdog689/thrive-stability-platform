@@ -1,0 +1,163 @@
+-- THRIVE Support notification v0.2: INSTALLATION CANDIDATE ONLY.
+-- REVIEW / ISOLATED TEST ONLY. DO NOT EXECUTE IN PRODUCTION.
+-- Before test replace EXACT_APPROVED_WORKSPACE_UUID, and verify that role names
+-- are available, an authorized installer has ownership grants, and no legacy
+-- notification objects exist. No historical backfill. No service-role usage.
+-- Separate explicit approval required for every installation/environment step.
+--
+-- Verified live: support_request_entries_request_scope_fk enforces
+-- (support_request_id,workspace_id,program_id,supported_person_id) against
+-- support_requests(id,workspace_id,program_id,supported_person_id).
+-- No additional request-scope FK is needed.
+--
+-- Intended transaction boundaries: execute the reviewed migration in ONE
+-- authorized transaction so PUBLIC never sees default EXECUTE on definer funcs.
+-- Test permission design first in isolated Postgres with RLS enabled.
+--
+-- BEGIN;
+-- CREATE ROLE thrive_support_notification_owner NOLOGIN NOINHERIT NOBYPASSRLS
+--   NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+-- CREATE ROLE thrive_support_notifier LOGIN NOINHERIT NOBYPASSRLS
+--   NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+-- -- No password in source. Set a privately generated password only at approved
+-- -- credential gate (role cannot connect until configured).
+-- GRANT CONNECT ON DATABASE postgres TO thrive_support_notifier;
+-- GRANT USAGE ON SCHEMA public TO thrive_support_notifier;
+-- GRANT USAGE ON SCHEMA public TO thrive_support_notification_owner;
+-- -- PostgreSQL ALTER OWNER requires target role CREATE privilege on public;
+-- -- installer must prove they may grant it. Grant only within the migration
+-- -- transaction, then revoke BEFORE COMMIT.
+-- GRANT CREATE ON SCHEMA public TO thrive_support_notification_owner;
+--
+-- CREATE TABLE public.support_notification_outbox (
+--   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+--   event_kind text NOT NULL CHECK (event_kind IN ('request_created','participant_replied')),
+--   source_id uuid NOT NULL,
+--   support_request_id uuid NOT NULL REFERENCES public.support_requests(id) ON DELETE RESTRICT,
+--   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+--   status text NOT NULL DEFAULT 'pending'
+--     CHECK (status IN ('pending','sending','sent','failed','paused')),
+--   attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+--   last_attempt_at timestamptz,
+--   delivered_at timestamptz,
+--   last_error_code text,
+--   claim_token uuid,
+--   created_at timestamptz NOT NULL DEFAULT now(),
+--   CONSTRAINT thrive_notification_unique_source UNIQUE(event_kind, source_id)
+-- );
+-- ALTER TABLE public.support_notification_outbox OWNER TO thrive_support_notification_owner;
+-- ALTER TABLE public.support_notification_outbox ENABLE ROW LEVEL SECURITY;
+-- -- No FORCE RLS: only the dedicated owner can bypass this table's RLS.
+-- -- Never grant worker direct SELECT, INSERT, UPDATE or DELETE.
+-- REVOKE ALL ON public.support_notification_outbox FROM PUBLIC, anon, authenticated, service_role;
+--
+-- CREATE FUNCTION public.thrive_enqueue_support_notification()
+-- RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+-- AS $FN$
+-- BEGIN
+--   IF tg_table_schema <> 'public' OR tg_op <> 'INSERT' THEN
+--     RAISE EXCEPTION 'Invalid notification trigger context';
+--   END IF;
+--   IF tg_table_name = 'support_requests' THEN
+--     INSERT INTO public.support_notification_outbox
+--       (event_kind,source_id,support_request_id,workspace_id)
+--     VALUES ('request_created',new.id,new.id,new.workspace_id)
+--     ON CONFLICT (event_kind,source_id) DO NOTHING;
+--   ELSIF tg_table_name = 'support_request_entries' AND new.entry_type = 'participant_reply' THEN
+--     INSERT INTO public.support_notification_outbox
+--       (event_kind,source_id,support_request_id,workspace_id)
+--     VALUES ('participant_replied',new.id,new.support_request_id,new.workspace_id)
+--     ON CONFLICT (event_kind,source_id) DO NOTHING;
+--   ELSIF tg_table_name <> 'support_request_entries' THEN
+--     RAISE EXCEPTION 'Unexpected notification trigger table';
+--   END IF;
+--   RETURN new;
+-- END;
+-- $FN$;
+-- ALTER FUNCTION public.thrive_enqueue_support_notification()
+--   OWNER TO thrive_support_notification_owner;
+-- REVOKE ALL ON FUNCTION public.thrive_enqueue_support_notification()
+--   FROM PUBLIC, anon, authenticated, service_role;
+-- CREATE TRIGGER thrive_enqueue_support_request_v02 AFTER INSERT
+--   ON public.support_requests FOR EACH ROW
+--   EXECUTE FUNCTION public.thrive_enqueue_support_notification();
+-- CREATE TRIGGER thrive_enqueue_support_reply_v02 AFTER INSERT
+--   ON public.support_request_entries FOR EACH ROW
+--   EXECUTE FUNCTION public.thrive_enqueue_support_notification();
+--
+-- CREATE FUNCTION public.thrive_worker_claim_support_notification()
+-- RETURNS TABLE(job_id uuid,event_kind text,claim_token uuid)
+-- LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+-- AS $FN$
+-- DECLARE v_token uuid := gen_random_uuid();
+-- BEGIN
+--   IF session_user <> 'thrive_support_notifier' THEN
+--     RAISE EXCEPTION 'Unauthorized worker' USING ERRCODE='42501';
+--   END IF;
+--   RETURN QUERY
+--   WITH picked AS (
+--     SELECT q.id FROM public.support_notification_outbox q
+--     WHERE q.workspace_id = 'EXACT_APPROVED_WORKSPACE_UUID'::uuid
+--       AND q.status IN ('pending','failed')
+--       AND q.attempt_count < 3
+--       AND (q.last_attempt_at IS NULL OR
+--            q.last_attempt_at <= pg_catalog.now() - interval '5 minutes')
+--     ORDER BY q.created_at,q.id
+--     FOR UPDATE SKIP LOCKED LIMIT 1
+--   )
+--   UPDATE public.support_notification_outbox q
+--   SET status='sending',attempt_count=q.attempt_count+1,
+--       last_attempt_at=pg_catalog.now(), claim_token=v_token
+--   FROM picked WHERE q.id=picked.id
+--   RETURNING q.id,q.event_kind,q.claim_token;
+-- END;
+-- $FN$;
+-- ALTER FUNCTION public.thrive_worker_claim_support_notification()
+--   OWNER TO thrive_support_notification_owner;
+-- REVOKE ALL ON FUNCTION public.thrive_worker_claim_support_notification()
+--   FROM PUBLIC,anon,authenticated,service_role;
+-- GRANT EXECUTE ON FUNCTION public.thrive_worker_claim_support_notification()
+--   TO thrive_support_notifier;
+--
+-- CREATE FUNCTION public.thrive_worker_finish_support_notification(
+--   p_job_id uuid,p_claim_token uuid,p_delivered boolean,p_error text
+-- ) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
+-- AS $FN$
+-- DECLARE v_count integer;
+-- BEGIN
+--   IF session_user <> 'thrive_support_notifier' THEN
+--     RAISE EXCEPTION 'Unauthorized worker' USING ERRCODE='42501';
+--   END IF;
+--   IF p_delivered IS NULL OR
+--      (NOT p_delivered AND (p_error IS NULL OR p_error NOT IN ('transport','configuration'))) OR
+--      (p_delivered AND p_error IS NOT NULL) THEN
+--     RAISE EXCEPTION 'Invalid delivery completion';
+--   END IF;
+--   UPDATE public.support_notification_outbox q
+--   SET status=CASE WHEN p_delivered THEN 'sent' ELSE 'failed' END,
+--       delivered_at=CASE WHEN p_delivered THEN pg_catalog.now() ELSE NULL END,
+--       last_error_code=CASE WHEN p_delivered THEN NULL ELSE p_error END,
+--       claim_token=NULL
+--   WHERE q.id=p_job_id AND q.claim_token=p_claim_token
+--     AND q.status='sending'
+--     AND q.workspace_id='EXACT_APPROVED_WORKSPACE_UUID'::uuid;
+--   GET DIAGNOSTICS v_count = ROW_COUNT;
+--   RETURN v_count = 1;
+-- END;
+-- $FN$;
+-- ALTER FUNCTION public.thrive_worker_finish_support_notification(uuid,uuid,boolean,text)
+--   OWNER TO thrive_support_notification_owner;
+-- REVOKE ALL ON FUNCTION public.thrive_worker_finish_support_notification(uuid,uuid,boolean,text)
+--   FROM PUBLIC,anon,authenticated,service_role;
+-- GRANT EXECUTE ON FUNCTION public.thrive_worker_finish_support_notification(uuid,uuid,boolean,text)
+--   TO thrive_support_notifier;
+-- REVOKE CREATE ON SCHEMA public FROM thrive_support_notification_owner;
+-- COMMIT;
+--
+-- INSTALL BLOCKERS: Confirm Supabase permits intended role ownership, the
+-- definer trigger writes under existing FORCE-RLS participant tables, and that
+-- role owner can access this outbox without BYPASSRLS. Trigger insert must not
+-- break existing participant Support writes. Verify pooler SESSION_USER and TLS.
+-- Check table-creation default grants and future grants before installing.
+-- No routine DROP/DELETE rollback: disable cron first, revoke worker EXECUTE
+-- and pause routing; preserve queue for audited operator reconciliation.

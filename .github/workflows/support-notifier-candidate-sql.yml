@@ -1,0 +1,57 @@
+name: Support notification actual SQL candidate
+
+on:
+  pull_request:
+    paths:
+      - 'tests/postgres/**'
+      - '.github/workflows/support-notifier-candidate-sql.yml'
+      - 'docs/candidates/THRIVE_SUPPORT_NOTIFICATION_INSTALL_v0_2.review.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: postgres
+      PGUSER: postgres
+      PGPASSWORD: synthetic_ci_only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build synthetic Support schema
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres/candidate-schema.sql
+      - name: Apply exact reviewed SQL candidate
+        run: |
+          python3 tests/postgres/extract-review-candidate.py
+          psql -v ON_ERROR_STOP=1 -f /tmp/support-notifier-ci-install.sql
+      - name: Assert trigger transaction and denied access
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/postgres/candidate-trigger-assertions.sql
+          psql -v ON_ERROR_STOP=1 -c "ALTER ROLE thrive_support_notifier PASSWORD 'worker_ci_only'"
+      - name: Assert worker can claim authorized queue only
+        env:
+          PGUSER: thrive_support_notifier
+          PGPASSWORD: worker_ci_only
+        run: |
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.thrive_worker_claim_support_notification()" | grep -qx 1
+      - name: Verify concurrent distinct claims
+        run: bash tests/postgres/candidate-concurrent-claims.sh
