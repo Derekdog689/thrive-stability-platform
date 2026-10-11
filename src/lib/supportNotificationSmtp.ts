@@ -1,6 +1,6 @@
 import "server-only";
 import tls from "node:tls";
-import type { MailTransport } from "./supportNotificationDelivery";
+type MailTransport = { send(message: { from: string; to: string; subject: string; text: string }): Promise<void> };
 
 /**
  * Narrow SMTP-over-TLS transport for THRIVE's initial plain-text alerts.
