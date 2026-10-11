@@ -1,0 +1,46 @@
+name: THRIVE dependency security candidate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/support-notifier-dependency-security.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-next-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-only-not-a-real-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned current dependency tree
+        run: npm ci
+      - name: Install candidate patched framework temporarily
+        run: npm install --no-save --package-lock=false next@16.4.0 eslint-config-next@16.4.0
+      - name: Report effective package versions
+        run: npm ls next eslint-config-next --depth=0
+      - name: Test isolated notification behavior
+        run: node --test tests/support-notification-isolated.test.cjs
+      - name: Compile full application
+        run: npm run build
+      - name: Audit production dependencies (report findings without mutation)
+        run: |
+          npm audit --omit=dev --json > security-audit.json || true
+          node -e "const a=require('./security-audit.json'); console.log('Vulnerability totals', JSON.stringify(a.metadata?.vulnerabilities || {}))"
+      - name: Upload candidate audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-security-candidate-audit
+          path: security-audit.json
+          retention-days: 7
