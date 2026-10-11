@@ -24,6 +24,10 @@
 -- GRANT CONNECT ON DATABASE postgres TO thrive_support_notifier;
 -- GRANT USAGE ON SCHEMA public TO thrive_support_notifier;
 -- GRANT USAGE ON SCHEMA public TO thrive_support_notification_owner;
+-- -- PostgreSQL ALTER OWNER requires target role CREATE privilege on public;
+-- -- installer must prove they may grant it. Grant only within the migration
+-- -- transaction, then revoke BEFORE COMMIT.
+-- GRANT CREATE ON SCHEMA public TO thrive_support_notification_owner;
 --
 -- CREATE TABLE public.support_notification_outbox (
 --   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -147,6 +151,7 @@
 --   FROM PUBLIC,anon,authenticated,service_role;
 -- GRANT EXECUTE ON FUNCTION public.thrive_worker_finish_support_notification(uuid,uuid,boolean,text)
 --   TO thrive_support_notifier;
+-- REVOKE CREATE ON SCHEMA public FROM thrive_support_notification_owner;
 -- COMMIT;
 --
 -- INSTALL BLOCKERS: Confirm Supabase permits intended role ownership, the
