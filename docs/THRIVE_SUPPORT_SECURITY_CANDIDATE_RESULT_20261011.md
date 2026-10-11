@@ -18,3 +18,11 @@ REVIEW ONLY. Draft PR #66. Production unchanged.
 - Only then privately supply a dedicated worker password/connection URL, protected cron secret, SMTP app password, alias sender verification, and keep THRIVE_SUPPORT_NOTIFICATION_ENABLED=false until authorized end-to-end smoke test.
 
 Current next gate: persist candidate dependency upgrade and analyze remaining two security findings. Do not merge, install SQL or activate notifications.
+
+## Follow-up 2026-10-11: full candidate security trial
+- Commit 9d785e8, GitHub Actions run 38159703808: SUCCESS. Both PostgreSQL CI workflows and Vercel preview: SUCCESS.
+- Disposable CI trial installed Next.js 16.4.0 and eslint-config-next 16.4.0, applied non-forced npm audit fix, and successfully ran seven isolated Support tests and a full Next.js build.
+- `npm audit --omit=dev` on the updated ephemeral lockfile: ZERO production dependency vulnerabilities (critical/high/moderate/low all zero).
+- `npm audit fix` itself returned a nonzero exit due to remaining DEV-toolchain advisory in `braces` through eslint-config-next; this was deliberately allowed to continue only so the independent production-only audit and build could run. Do not treat total dependency audit as clean.
+- CRITICAL: candidate package.json / package-lock.json were modified only inside ephemeral GitHub Actions; repository dependency manifests still pin Next.js 16.2.12. They MUST be persisted to the PR and retested before merging or approving production. Avoid claiming patched production until then.
+- Pooler database `SESSION_USER` and Vercel TLS real connection remain unverified until protected worker credentials are established. No SQL or production environment changes authorized.
