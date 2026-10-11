@@ -118,3 +118,14 @@ test("batch halts after first failure", async () => {
   assert.equal(result.failed, 1);
   assert.equal(claimed,1);
 });
+
+test("worker connection URL is restricted to direct role or THRIVE session pooler tenant", () => {
+  const validate = load("supportNotificationDatabaseConfig").validateSupportWorkerDatabaseUrl;
+  const direct = "postgresql://thrive_support_notifier:synthetic@db.example.supabase.co:5432/postgres";
+  const session = "postgresql://thrive_support_notifier.ovzifochmrsaxabclxoe:synthetic@aws-0-us-east-1.pooler.supabase.com:5432/postgres";
+  assert.equal(validate(direct), direct);
+  assert.equal(validate(session), session);
+  assert.throws(() => validate(session.replace("ovzifochmrsaxabclxoe","anotherproject")), /Dedicated worker/);
+  assert.throws(() => validate(session.replace(":5432",":6543")), /Dedicated worker/);
+  assert.throws(() => validate(direct + "?sslmode=disable"), /TLS/);
+});
