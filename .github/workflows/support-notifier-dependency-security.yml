@@ -41,6 +41,19 @@ jobs:
           npm audit --omit=dev --json > security-audit.json || true
           node -e "const a=require('./security-audit.json'); console.log('Vulnerability totals', JSON.stringify(a.metadata?.vulnerabilities || {}))"
           node -e "const a=require('./security-audit.json'); console.log('Remaining packages',Object.entries(a.vulnerabilities||{}).map(([n,v])=>n+':'+v.severity).join(','))"
+      - name: Verify remediated runtime tree
+        run: |
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));const a=JSON.parse(fs.readFileSync('security-audit.json'));if(p.dependencies.next!=='16.4.0'||p.devDependencies['eslint-config-next']!=='16.4.0')process.exit(1);if(a.metadata.vulnerabilities.total!==0)process.exit(1)"
+          npm ci --ignore-scripts
+          node --test tests/support-notification-isolated.test.cjs
+      - name: Export reviewed dependency manifest and lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: thrive-patched-dependency-manifests
+          path: |
+            package.json
+            package-lock.json
+          retention-days: 7
       - name: Upload candidate audit report
         uses: actions/upload-artifact@v4
         with:
