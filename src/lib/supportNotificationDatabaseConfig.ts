@@ -17,7 +17,9 @@ export function validateSupportWorkerDatabaseUrl(raw: string | undefined): strin
   if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
     throw new Error("Worker database protocol invalid");
   }
-  // Supabase direct connections use the bare LOGIN role. Shared session\n  // pooling identifies a custom role as role.project-ref. No other tenant.\n  const directRole = url.username === "thrive_support_notifier";\n  const sessionRole = url.username === "thrive_support_notifier.ovzifochmrsaxabclxoe" &&\n    url.hostname.endsWith(".pooler.supabase.com") && url.port === "5432";\n  if ((!directRole && !sessionRole) || !url.password) {
+  // Supabase direct connections use the bare LOGIN role. Shared session
+  // pooling identifies a custom role as role.project-ref. No other tenant.
+  const directRole = url.username === "thrive_support_notifier";\n  const sessionRole = url.username === "thrive_support_notifier.ovzifochmrsaxabclxoe" &&\n    url.hostname.endsWith(".pooler.supabase.com") && url.port === "5432";\n  if ((!directRole && !sessionRole) || !url.password) {
     throw new Error("Dedicated worker database role required");
   }
   if (!url.hostname || !url.port || !/^\d+$/.test(url.port)) {
