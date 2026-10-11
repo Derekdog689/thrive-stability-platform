@@ -8,7 +8,7 @@ import type { MailTransport } from "./supportNotificationDelivery";
  * No external packages, public routes, or Supabase service-role credentials.
  * Intended for a private, authorized server worker only.
  */
-type SmtpOptions = {
+export class AmbiguousSmtpDeliveryError extends Error {\n  constructor() { super("SMTP acceptance uncertain; manual reconciliation required"); this.name = "AmbiguousSmtpDeliveryError"; }\n}\n\ntype SmtpOptions = {
   host: string;
   port: number;
   username: string;
@@ -137,7 +137,7 @@ export function createGoogleSmtpTransport(options: SmtpOptions): MailTransport {
           "",
           smtpText(text),
         ].join("\r\n");
-        await command(mime + "\r\n.", 250);
+        dataSubmitted = true;\n        await command(mime + "\r\n.", 250);
         socket.write("QUIT\r\n");
       } finally {
         socket.end();
