@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildContextualWellnessReturn } from "./contextualWellnessReturn";
+import { supportedActionSuggestion } from "./supportedActionSuggestion";
 import WellnessCheckinPreview from "./WellnessCheckinPreview";
 import WellnessExpandedExperience from "./WellnessExpandedExperience";
 import {
@@ -132,6 +133,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
     INITIAL_WELLNESS_FLOW_STATE,
   );
   const [actionMessage, setActionMessage] = useState("");
+  const [showSupportedAction, setShowSupportedAction] = useState(false);
   const [savedCheckin, setSavedCheckin] = useState<WellnessCheckinRow | null>(null);
   const [historyDay, setHistoryDay] = useState<string | null>(null);
 
@@ -294,6 +296,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
 
     setSavedCheckin(result.row);
     setActionMessage("");
+    setShowSupportedAction(false);
 
     if (href) router.push(href);
   }
@@ -302,6 +305,7 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
     setDraft(emptyDraft);
     setSavedCheckin(null);
     setActionMessage("");
+    setShowSupportedAction(false);
     dispatch({ type: "START_NEW_CHECKIN" });
   }
 
@@ -327,6 +331,8 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
     savedCheckin?.stress === "high" ||
     savedCheckin?.sleep === "poor" ||
     savedCheckin?.energy === "low";
+
+  const suggestion = savedCheckin ? supportedActionSuggestion(savedCheckin) : null;
 
   const taskRelevant =
     savedCheckin?.confidence === "low" ||
@@ -540,13 +546,25 @@ export default function WellnessCheckinCandidate({ onHeroChange }: Props) {
                 {taskRelevant ? (
                   <button
                     type="button"
-                    onClick={() => void chooseAction("choose_one_task")}
+                    onClick={() => setShowSupportedAction((current) => !current)}
                     className="rounded-[1.35rem] border border-[#4fc39c]/25 bg-[#4fc39c]/14 px-5 py-4 text-left font-black text-white"
                   >
                     Choose one useful thing
                   </button>
                 ) : null}
               </div>
+              {showSupportedAction && suggestion ? (
+                <div className="mt-4 rounded-[1.3rem] border border-[#4fc39c]/30 bg-white/10 p-4" aria-live="polite">
+                  <p className="text-xs font-black uppercase tracking-wide text-[#8ce8df]">One thing you could try</p>
+                  <h4 className="mt-2 text-lg font-black">{suggestion.title}</h4>
+                  <p className="mt-2 text-sm leading-6 text-slate-200">{suggestion.detail}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => void chooseAction("choose_one_task")} className="rounded-full bg-[#56d2c9] px-4 py-2 text-sm font-black text-[#082c35]">I’ll try this</button>
+                    <button type="button" onClick={() => setShowSupportedAction(false)} className="rounded-full border border-white/30 px-4 py-2 text-sm font-bold">Not for me</button>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-300">Choosing to try does not mean you completed it. You can finish without doing anything else.</p>
+                </div>
+              ) : null}
             </div>
           ) : (
             <p className="mt-6 text-sm font-semibold leading-6 text-slate-300">
