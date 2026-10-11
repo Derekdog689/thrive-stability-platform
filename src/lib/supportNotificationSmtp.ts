@@ -118,6 +118,7 @@ export function createGoogleSmtpTransport(options: SmtpOptions): MailTransport {
         const reply = await read();
         if (reply.code !== expected) throw new Error("SMTP command rejected: " + reply.code);
       };
+      let dataSubmitted = false;
       try {
         const greeting = await read();
         if (greeting.code !== 220) throw new Error("SMTP greeting rejected");
@@ -137,8 +138,12 @@ export function createGoogleSmtpTransport(options: SmtpOptions): MailTransport {
           "",
           smtpText(text),
         ].join("\r\n");
-        dataSubmitted = true;\n        await command(mime + "\r\n.", 250);
+        dataSubmitted = true;
+        await command(mime + "\r\n.", 250);
         socket.write("QUIT\r\n");
+      } catch (error) {
+        if (dataSubmitted) throw new AmbiguousSmtpDeliveryError();
+        throw error;
       } finally {
         socket.end();
         socket.destroy();
