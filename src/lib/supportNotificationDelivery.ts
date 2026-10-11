@@ -1,4 +1,5 @@
 import "server-only";
+import { AmbiguousSmtpDeliveryError } from "./supportNotificationSmtp";
 import { buildSupportNotificationEmail, type SupportNotificationKind } from "./supportNotificationEmail";
 
 /**
@@ -57,6 +58,7 @@ export async function deliverOneSupportNotification(
     const { subject, text } = buildSupportNotificationEmail(job.eventKind, { origin: bodyOrigin });
     await transport.send({ from, to, subject, text });
   } catch (error) {
+    if (error instanceof AmbiguousSmtpDeliveryError) throw error;
     // The transport failed before accepting this delivery.
     const category = error instanceof TypeError ? "configuration" : "transport";
     await outbox.markFailed(job.id, category);
