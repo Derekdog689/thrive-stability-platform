@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { createGoogleSmtpTransport } from "@/lib/supportNotificationSmtp";
 
 export const runtime = "nodejs";
@@ -17,8 +18,7 @@ function isAuthorized(header: string | null, token: string | undefined): boolean
   if (!token || token.length < 32 || !header?.startsWith("Bearer ")) return false;
   const provided = header.slice(7);
   if (provided.length !== token.length) return false;
-  const crypto = require("node:crypto") as typeof import("node:crypto");
-  return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(token));
+  return timingSafeEqual(Buffer.from(provided), Buffer.from(token));
 }
 
 export async function POST(request: NextRequest) {
