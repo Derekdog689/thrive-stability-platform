@@ -18,7 +18,7 @@ test("a disrupted routine returns a small practical step", () => {
 
 test("low confidence does not interpret the participant clinically", () => {
   const action = supportedActionSuggestion({ ...blank, confidence: "low" });
-  assert.match(action.detail, /familiar/i);
+  assert.match(action.detail, /ordinary thing/i);
   assert.doesNotMatch(action.detail, /disorder|diagnosis|failure/i);
 });
 
