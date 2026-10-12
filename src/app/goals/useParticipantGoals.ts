@@ -25,6 +25,10 @@ export type ParticipantGoal = {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
+  guidance_choice: "example" | "smaller" | "think" | null;
+  guidance_title: string | null;
+  guidance_body: string | null;
+  guidance_usefulness: "yes" | "not_really" | "not_sure_yet" | null;
 };
 
 type SupportedPerson = {
@@ -54,7 +58,7 @@ type GoalMutationResult =
   | { ok: false; message: string };
 
 const GOAL_SELECT =
-  "id, workspace_id, program_id, supported_person_id, title, why_it_matters, next_step, goal_area, progress_status, ownership_source, created_by, created_at, updated_at, archived_at";
+  "id, workspace_id, program_id, supported_person_id, title, why_it_matters, next_step, goal_area, progress_status, ownership_source, created_by, created_at, updated_at, archived_at, guidance_choice, guidance_title, guidance_body, guidance_usefulness";
 
 export function useParticipantGoals() {
   const [participant, setParticipant] = useState<SupportedPerson | null>(null);
@@ -228,6 +232,10 @@ export function useParticipantGoals() {
       next_step: string;
       goal_area: string | null;
       progress_status: Exclude<GoalProgressStatus, "archived">;
+      guidance_choice: ParticipantGoal["guidance_choice"];
+      guidance_title: string | null;
+      guidance_body: string | null;
+      guidance_usefulness: ParticipantGoal["guidance_usefulness"];
     }>,
   ): Promise<GoalMutationResult> {
     setWorking(true);
