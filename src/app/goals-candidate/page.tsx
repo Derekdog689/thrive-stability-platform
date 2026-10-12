@@ -137,12 +137,19 @@ function goalSupportHref(goal: ParticipantGoal) {
   return `/support?${params.toString()}`;
 }
 
-function GoalThreadCard({ goal, working, onStatusChange, focused = false }: { goal: ParticipantGoal; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void>; focused?: boolean }) {
+function GoalThreadCard({ goal, working, onStatusChange, onGuidanceSave, focused = false }: { goal: ParticipantGoal; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void>; onGuidanceSave: (goal: ParticipantGoal, changes: Partial<Pick<ParticipantGoal, "guidance_choice" | "guidance_title" | "guidance_body" | "guidance_usefulness">>) => Promise<boolean>; focused?: boolean }) {
   const visual = statusVisuals[goal.progress_status];
   const [guidanceChoice, setGuidanceChoice] = useState<GoalGuidanceChoice>(null);
   const [isOpen, setIsOpen] = useState(false);
   const job = goalGuidanceJob(goal);
   const guidance = guidanceChoice ? guidanceCopy(job, guidanceChoice, goal) : null;
+  const [guidanceError, setGuidanceError] = useState("");
+  async function keepGuidance() {
+    if (!guidance || !guidanceChoice) return;
+    const ok = await onGuidanceSave(goal, { guidance_choice: guidanceChoice, guidance_title: guidance.title, guidance_body: guidance.body, guidance_usefulness: null });
+    setGuidanceError(ok ? "" : "Guidance was not saved. Please try again.");
+    if (ok) setGuidanceChoice(null);
+  }
 
   useEffect(() => {
     if (focused) setIsOpen(true);
@@ -180,10 +187,12 @@ function GoalThreadCard({ goal, working, onStatusChange, focused = false }: { go
           <button type="button" onClick={() => setGuidanceChoice("smaller")} className="rounded-2xl bg-white px-4 py-3 text-left text-sm font-black text-slate-800 shadow-sm">Make this smaller</button>
           <button type="button" onClick={() => setGuidanceChoice("think")} className="rounded-2xl bg-white px-4 py-3 text-left text-sm font-black text-slate-800 shadow-sm">Help me think it through</button>
         </div>
+        {goal.guidance_choice && goal.guidance_title && goal.guidance_body ? <div className="mt-3 rounded-2xl border border-emerald-200 bg-white p-4"><p className="text-xs font-black uppercase tracking-wide text-emerald-800">Guidance you kept</p><h4 className="mt-2 font-black">{goal.guidance_title}</h4><p className="mt-2 text-sm">{goal.guidance_body}</p><p className="mt-4 text-sm font-bold">Was this useful?</p><div className="mt-2 flex flex-wrap gap-2">{([["yes","Yes"],["not_really","Not really"],["not_sure_yet","Not sure yet"]] as const).map(([value,label]) => <button key={value} type="button" disabled={working} aria-pressed={goal.guidance_usefulness === value} onClick={() => void onGuidanceSave(goal, {guidance_usefulness:value})} className={`rounded-full border px-3 py-2 text-sm font-bold ${goal.guidance_usefulness === value ? "border-emerald-700 bg-emerald-100" : "border-slate-200"}`}>{label}</button>)}</div><p className="mt-2 text-xs text-slate-500">This is feedback about guidance, not goal completion.</p></div> : null}
         {guidance ? <div className="mt-3 rounded-2xl bg-white p-4 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">{guidance.title}</p>
-          <p className="mt-2 text-lg font-black leading-7 text-slate-900">{guidance.body}</p>
+          <p className="mt-2 text-lg font-black leading-7 text-slate-900">{guidance.body}</p><button type="button" disabled={working} onClick={() => void keepGuidance()} className="mt-3 rounded-full bg-emerald-700 px-4 py-2 text-sm font-bold text-white">Keep this guidance</button>
         </div> : null}
+        {guidanceError ? <p role="alert" className="mt-2 text-sm text-red-700">{guidanceError}</p> : null}
         <div className="mt-3 flex flex-wrap gap-2">
           <Link href="/resources" className="rounded-full border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-800">Find a resource</Link>
           <Link href={goalSupportHref(goal)} className="rounded-full border border-violet-200 bg-white px-4 py-2.5 text-sm font-black text-violet-800">Ask for support</Link>
@@ -199,7 +208,7 @@ function GoalThreadCard({ goal, working, onStatusChange, focused = false }: { go
   </details>;
 }
 
-function GoalThreadGroup({ title, note, goals, working, onStatusChange, focusedGoalId }: { title: string; note: string; goals: ParticipantGoal[]; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void>; focusedGoalId?: string }) {
+function GoalThreadGroup({ title, note, goals, working, onStatusChange, onGuidanceSave, focusedGoalId }: { title: string; note: string; goals: ParticipantGoal[]; working: boolean; onStatusChange: (goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) => Promise<void>; onGuidanceSave: (goal: ParticipantGoal, changes: Partial<Pick<ParticipantGoal, "guidance_choice" | "guidance_title" | "guidance_body" | "guidance_usefulness">>) => Promise<boolean>; focusedGoalId?: string }) {
   if (goals.length === 0) return null;
 
   return <section className="rounded-[2rem] border border-white/80 bg-white/58 p-5 shadow-sm backdrop-blur-xl sm:p-6">
@@ -211,7 +220,7 @@ function GoalThreadGroup({ title, note, goals, working, onStatusChange, focusedG
       <span className="rounded-full bg-white/80 px-3 py-1.5 text-sm font-black text-slate-600">{goals.length}</span>
     </div>
     <div className="mt-4 space-y-3">
-      {goals.map((goal) => <GoalThreadCard key={goal.id} goal={goal} working={working} onStatusChange={onStatusChange} focused={goal.id === focusedGoalId} />)}
+      {goals.map((goal) => <GoalThreadCard key={goal.id} goal={goal} working={working} onStatusChange={onStatusChange} onGuidanceSave={onGuidanceSave} focused={goal.id === focusedGoalId} />)}
     </div>
   </section>;
 }
@@ -317,6 +326,11 @@ export default function GoalsCandidatePage() {
     setJustSavedGoal(result.row); setDraft(emptyDraft); setStep(1); setShowCreate(false);
   }
 
+  async function saveGuidance(goal: ParticipantGoal, changes: Partial<Pick<ParticipantGoal, "guidance_choice" | "guidance_title" | "guidance_body" | "guidance_usefulness">>): Promise<boolean> {
+    const result = await updateGoal(goal.id, changes);
+    return result.ok;
+  }
+
   async function changeStatus(goal: ParticipantGoal, status: Exclude<GoalProgressStatus, "archived">) {
     const result = await updateGoal(goal.id, { progress_status: status });
     if (!result.ok) { setNotice(result.message); return; }
@@ -368,11 +382,11 @@ export default function GoalsCandidatePage() {
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#157a73]">Current focus</p>
             <h2 className="mt-1 text-2xl font-black text-[#21173a]">One thing to move</h2>
           </div>
-          <GoalThreadCard goal={primaryGoal} working={working} onStatusChange={changeStatus} focused={primaryGoal.id === focusedGoalId} />
+          <GoalThreadCard goal={primaryGoal} working={working} onStatusChange={changeStatus} onGuidanceSave={saveGuidance} focused={primaryGoal.id === focusedGoalId} />
         </section> : null}
-        <GoalThreadGroup title="Also in motion" note="Other things you can return to when they matter." goals={secondaryActiveGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
-        <GoalThreadGroup title="Ready" note="Things waiting for you to start." goals={secondaryReadyGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
-        <GoalThreadGroup title="Paused" note="Things you chose to set aside for now." goals={secondaryPausedGoals} working={working} onStatusChange={changeStatus} focusedGoalId={focusedGoalId} />
+        <GoalThreadGroup title="Also in motion" note="Other things you can return to when they matter." goals={secondaryActiveGoals} working={working} onStatusChange={changeStatus} onGuidanceSave={saveGuidance} focusedGoalId={focusedGoalId} />
+        <GoalThreadGroup title="Ready" note="Things waiting for you to start." goals={secondaryReadyGoals} working={working} onStatusChange={changeStatus} onGuidanceSave={saveGuidance} focusedGoalId={focusedGoalId} />
+        <GoalThreadGroup title="Paused" note="Things you chose to set aside for now." goals={secondaryPausedGoals} working={working} onStatusChange={changeStatus} onGuidanceSave={saveGuidance} focusedGoalId={focusedGoalId} />
       </section> : null}
 
       {!justSavedGoal && !justCompletedGoal && !showCreate ? <>
