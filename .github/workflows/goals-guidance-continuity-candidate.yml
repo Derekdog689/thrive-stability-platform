@@ -1,0 +1,27 @@
+name: Goals guidance continuity candidate
+on:
+  pull_request:
+    paths:
+      - "src/app/goals-candidate/**"
+      - "src/app/goals/useParticipantGoals.ts"
+      - "tests/goals-guidance-continuity-candidate.test.mjs"
+      - "supabase/migrations/20261012001000_goals_guidance_continuity_v0_1.sql"
+      - ".github/workflows/goals-guidance-continuity-candidate.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/goals-guidance-continuity-candidate.test.mjs
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://build-only.invalid
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-build-only-key
